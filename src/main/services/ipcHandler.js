@@ -10,11 +10,16 @@ ipcMain.handle('get-active-connections', () => {
 });
 
 // 处理终端输入
-ipcMain.on('terminal-input', (event, { id, data }) => {
+ipcMain.handle('terminal-input', async (event, { id, data }) => {
   const connection = activeConnections.get(id);
   if (connection) {
-    connection.stream.write(data); // 将用户输入发送到 SSH 服务器
+    console.log('发送命令', data)
+    // 将用户输入发送到 SSH 服务器
+    const result = await SshService.sendCommand(id, data)
+    console.log('发送命令结果', result)
+    return result
   }
+  return null
 });
 
 

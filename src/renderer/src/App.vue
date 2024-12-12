@@ -11,7 +11,7 @@
         <a-button type="primary" @click="openNewTerminal">添加连接</a-button>
       </div>
       <div class="content">
-        <Terminal ref="terminal" :fontSize="16" />
+        <Terminal ref="terminal" :fontSize="13" :connectionId="currentConnectionId" />
       </div>
     </div>
   </div>
@@ -20,11 +20,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import Sidebar from './components/sidebar.vue'
-import Terminal from './components/Terminal.vue';
+import Terminal from './components/Terminal.vue'
 // 用于管理终端输出和连接状态
 const terminalData = ref([])
 const activeConnections = ref([])
-
+// 当前连接ID
+const currentConnectionId = ref(null)
+// 终端实例
+const terminal = ref(null)
 // 处理连接
 const startResize = (e) => {
   const resizer = e.target
@@ -65,45 +68,17 @@ const connectToServer = (serverInfo) => {
     .then((response) => {
       console.log(response)
       activeConnections.value.push(response.id) // 添加连接 ID
+      currentConnectionId.value = response.id
+      terminal.value?.write('连接成功！')
     })
     .catch((error) => {
       console.error('连接失败', error)
     })
 }
 
-// 监听终端输出
-window.electron.ipcRenderer.on('terminal-output', (event, { id, data }) => {
-  if (activeConnections.value.includes(id)) {
-    terminalData.value.push({ id, data }) // 收集终端输出
-  }
-})
-
-// 处理终端输入
-const sendTerminalInput = (id, input) => {
-  window.electron.ipcRenderer.send('terminal-input', { id, data: input })
-}
-
-
-
-const terminal = ref(null);
-
-// 示例：写入自定义消息到终端
-const writeMessage = () => {
-  terminal.value?.write('Hello, this is a test message!\r\n');
-};
-
-// 示例：监听用户输入
-const sendCommand = () => {
-  terminal.value?.onData((data) => {
-    console.log('User input:', data);
-    terminal.value?.write(`You typed: ${data}`);
-  });
-};
 
 onMounted(() => {
-  // 初始化后可以先写入一些提示信息
-  terminal.value?.write('Welcome! Type something to interact...\r\n');
-});
+})
 </script>
 <style>
 .container {
