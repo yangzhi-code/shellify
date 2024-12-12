@@ -1,0 +1,40 @@
+import { ipcMain } from 'electron';
+import SshService from './sshService';
+
+// 存储活动的连接
+const activeConnections = new Map();
+
+// 获取所有活动连接
+ipcMain.handle('get-active-connections', () => {
+  return Array.from(activeConnections.keys()).map((id) => ({ id }));
+});
+
+// 处理终端输入
+ipcMain.on('terminal-input', (event, { id, data }) => {
+  const connection = activeConnections.get(id);
+  if (connection) {
+    connection.stream.write(data); // 将用户输入发送到 SSH 服务器
+  }
+});
+
+
+// 创建新连接
+ipcMain.handle('new-connection', async (event, serverInfo) => {
+  try {
+    // 等待连接建立并获得连接信息
+    const { connectionId, client } = await SshService.connect(serverInfo);
+    
+    // 确保 ssh 存在
+    if (!client) {
+      throw new Error('连接失败: client 是空的');
+    }
+    // 存储连接信息client
+    activeConnections.set(connectionId, client);
+
+    // 返回连接信息
+    return { id: connectionId, message: '连接成功' };
+  } catch (error) {
+    console.error('Failed to connect:', error);
+    throw new Error('连接失败: ' + error.message);
+  }
+});
