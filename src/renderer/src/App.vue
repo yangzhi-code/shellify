@@ -1,7 +1,26 @@
-<script setup>
-import { ref } from 'vue'
-import Sidebar from './components/sidebar.vue'
 
+
+<template>
+  <div class="container">
+    <div class="sidebar">
+      <Sidebar />
+    </div>
+    <div class="resizer" @mousedown="startResize"></div>
+    <div class="main">
+      <div class="top-bar">
+        <a-button type="primary" @click="openNewTerminal">添加连接</a-button>
+      </div>
+      <div class="content">
+        <Terminal ref="terminal" :fontSize="16" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import Sidebar from './components/sidebar.vue'
+import Terminal from './components/Terminal.vue';
 // 用于管理终端输出和连接状态
 const terminalData = ref([])
 const activeConnections = ref([])
@@ -63,30 +82,29 @@ window.electron.ipcRenderer.on('terminal-output', (event, { id, data }) => {
 const sendTerminalInput = (id, input) => {
   window.electron.ipcRenderer.send('terminal-input', { id, data: input })
 }
+
+
+
+const terminal = ref(null);
+
+// 示例：写入自定义消息到终端
+const writeMessage = () => {
+  terminal.value?.write('Hello, this is a test message!\r\n');
+};
+
+// 示例：监听用户输入
+const sendCommand = () => {
+  terminal.value?.onData((data) => {
+    console.log('User input:', data);
+    terminal.value?.write(`You typed: ${data}`);
+  });
+};
+
+onMounted(() => {
+  // 初始化后可以先写入一些提示信息
+  terminal.value?.write('Welcome! Type something to interact...\r\n');
+});
 </script>
-
-<template>
-  <div class="container">
-    <div class="sidebar">
-      <Sidebar />
-    </div>
-    <div class="resizer" @mousedown="startResize"></div>
-    <div class="main">
-      <div class="top-bar">
-        <a-button type="primary" @click="openNewTerminal">添加连接</a-button>
-      </div>
-      <div class="content">
-        <div v-for="(data, index) in terminalData" :key="index">
-          <div v-if="data.id === activeConnections[activeConnections.length - 1]">
-            <pre>{{ data.data }}</pre>
-          </div>
-        </div>
-        <input v-if="activeConnections.length" v-model="terminalInput" @keydown.enter="sendTerminalInput(activeConnections[activeConnections.length - 1], terminalInput)" placeholder="输入命令" />
-      </div>
-    </div>
-  </div>
-</template>
-
 <style>
 .container {
   margin-top: 80px;

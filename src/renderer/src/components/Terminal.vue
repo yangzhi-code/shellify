@@ -1,67 +1,75 @@
-
 <template>
-    <div>
-      <div v-for="conn in connections" :key="conn.id">
-        <div :id="`terminal-${conn.id}`" style="width: 100%; height: 100%;"></div>
-      </div>
-    </div>
-  </template>
-  
-<script>
-import { ref, onMounted } from 'vue';
+  <div ref="terminalContainer" class="terminal-container"></div>
+</template>
+
+<script setup>
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
-import { ipcRenderer } from 'electron';
+import 'xterm/css/xterm.css';
 
-export default {
-  setup() {
-    const connections = ref([]);
+// Props
+const props = defineProps({
+  fontSize: { type: Number, default: 14 },
+  rows: { type: Number, default: 30 },
+  cols: { type: Number, default: 80 },
+});
 
-    onMounted(() => {
-      // 初始化已有连接
-      ipcRenderer.invoke('get-active-connections').then((activeConnections) => {
-        activeConnections.forEach(({ id }) => {
-          const term = new Terminal();
-          const fitAddon = new FitAddon();
-          term.loadAddon(fitAddon);
-          term.open(document.getElementById(`terminal-${id}`));
-          fitAddon.fit();
+// 定义引用和状态
+const terminalContainer = ref(null);
+const terminal = ref(null);
+const fitAddon = ref(null);
 
-          // 监听终端输入
-          term.onData((data) => {
-            ipcRenderer.send('terminal-input', { id, data });
-          });
+// 初始化终端
+const initTerminal = () => {
+  terminal.value = new Terminal({
+    fontSize: props.fontSize,
+    rows: props.rows,
+    cols: props.cols,
+    cursorBlink: true,
+  });
 
-          connections.value.push({ id, term, fitAddon });
-        });
-      });
+  fitAddon.value = new FitAddon();
+  terminal.value.loadAddon(fitAddon.value);
 
-      // 监听新连接事件
-      ipcRenderer.on('new-connection', (event, { id }) => {
-        const term = new Terminal();
-        const fitAddon = new FitAddon();
-        term.loadAddon(fitAddon);
-        term.open(document.getElementById(`terminal-${id}`));
-        fitAddon.fit();
+  if (terminalContainer.value) {
+    terminal.value.open(terminalContainer.value);
+    fitAddon.value.fit();
+  }
 
-        // 监听终端输入
-        term.onData((data) => {
-          ipcRenderer.send('terminal-input', { id, data });
-        });
-
-        connections.value.push({ id, term, fitAddon });
-      });
-
-      // 监听主进程发送到终端的数据
-      ipcRenderer.on('terminal-output', (event, { id, data }) => {
-        const conn = connections.value.find((c) => c.id === id);
-        if (conn) {
-          conn.term.write(data);
-        }
-      });
-    });
-
-    return { connections };
-  },
+  // 示例输出
+  terminal.value.writeln('Welcome to your custom terminal!');
+  terminal.value.writeln('Type commands below...');
 };
+
+// 调整终端大小
+const resizeTerminal = () => {
+  if (fitAddon.value) fitAddon.value.fit();
+};
+
+// 初始化和销毁生命周期
+onMounted(() => {
+  initTerminal();
+  window.addEventListener('resize', resizeTerminal);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resizeTerminal);
+  terminal.value?.dispose();
+});
+
+// 曝露方法
+defineExpose({
+  write: (data) => terminal.value?.write(data),
+  onData: (callback) => terminal.value?.onData(callback),
+});
 </script>
+
+<style>
+.terminal-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #1e1e1e;
+}
+</style>
