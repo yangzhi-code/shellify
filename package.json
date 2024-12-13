@@ -22,6 +22,7 @@
     "@electron-toolkit/utils": "^3.0.0",
     "ant-design-vue": "^4.2.6",
     "electron-updater": "^6.1.7",
+    "element-plus": "^2.9.1",
     "node-ssh": "^13.2.0",
     "pinia": "^2.3.0",
     "ssh2": "^1.16.0",

@@ -1,14 +1,19 @@
-
-
 <template>
   <div class="container">
     <div class="sidebar">
       <Sidebar />
+      
     </div>
     <div class="resizer" @mousedown="startResize"></div>
     <div class="main">
       <div class="top-bar">
-        <a-button type="primary" @click="openNewTerminal">添加连接</a-button>
+        <div class="top-bar-left">
+          <i class="iconfont icon-wenjianjia" style="font-size: 30px;" @click="openNewTerminal"></i>
+        </div>
+        <div class="top-bar-right">
+          <TabBar/>
+        </div>
+       
       </div>
       <div class="content">
         <Terminal ref="terminal" :fontSize="13" :connectionId="currentConnectionId" />
@@ -21,6 +26,7 @@
 import { ref, onMounted } from 'vue'
 import Sidebar from './components/sidebar.vue'
 import Terminal from './components/Terminal.vue'
+import TabBar from './components/TabBar.vue'
 // 用于管理终端输出和连接状态
 const terminalData = ref([])
 const activeConnections = ref([])
@@ -28,6 +34,8 @@ const activeConnections = ref([])
 const currentConnectionId = ref(null)
 // 终端实例
 const terminal = ref(null)
+
+
 // 处理连接
 const startResize = (e) => {
   const resizer = e.target
@@ -82,12 +90,36 @@ onMounted(() => {
 </script>
 <style>
 .container {
-  margin-top: 80px;
   display: flex;
   height: 100vh;
   width: 100vw;
   background: #fff;
 }
+/* 标签栏 */
+.top-bar {
+  background: #dfcece;
+  height: 30px;
+  display: flex;
+  flex-direction: row;
+
+}
+/* 添加连接位置 */
+.top-bar-left {
+  height: 30px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+/* 标签栏 */
+.top-bar-right {
+  height: 30px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
 
 .sidebar {
   width: 200px;
@@ -117,16 +149,6 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 标签栏 */
-.top-bar {
-  height: 30px;
-  background: #b2a2a2;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
 /* 防止文本被选中 */
 .resizer,
 .top-bar {
@@ -140,6 +162,14 @@ onMounted(() => {
   color: #fff;
   height: 100%;
   overflow-y: auto;
+}
+.iconfont {
+  transition: transform 0.2s ease, box-shadow 0.2s ease; /* 平滑过渡 */
+}
+
+.iconfont:active {
+  transform: scale(0.9) translateY(-2px); /* 点击时缩小并上移 */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 添加轻微阴影 */
 }
 
 input {
