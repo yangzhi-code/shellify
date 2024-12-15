@@ -6,6 +6,13 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "39694308",
+      "name": "远程文件夹",
+      "font_class": "a-wangluowenjianjiayuanchengwenjianjia",
+      "unicode": "e7c4",
+      "unicode_decimal": 59332
+    },
+    {
       "icon_id": "3542176",
       "name": "添加",
       "font_class": "tianjia",

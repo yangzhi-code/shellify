@@ -2,23 +2,22 @@
   <div class="container">
     <div class="sidebar">
       <Sidebar />
-      
     </div>
     <div class="resizer" @mousedown="startResize"></div>
     <div class="main">
       <div class="top-bar">
+        <!-- 连接文件夹 -->
         <div class="top-bar-left">
-          <i class="iconfont icon-wenjianjia" style="font-size: 30px;" @click="openNewTerminal"></i>
+          <TabFolder />
         </div>
         <!-- 标签栏 -->
         <div class="top-bar-right">
-          <TabBar/>
+          <TabBar />
         </div>
         <!-- 菜单 -->
         <div class="top-bar-menu">
-          <TabMenu/>
+          <TabMenu />
         </div>
-       
       </div>
       <div class="content">
         <Terminal ref="terminal" :fontSize="13" :connectionId="currentConnectionId" />
@@ -33,6 +32,7 @@ import Sidebar from './components/sidebar.vue'
 import Terminal from './components/Terminal.vue'
 import TabBar from './components/TabBar.vue'
 import TabMenu from './components/TabMenu.vue'
+import TabFolder from './components/TabFolder.vue'
 // 用于管理终端输出和连接状态
 const terminalData = ref([])
 const activeConnections = ref([])
@@ -40,7 +40,6 @@ const activeConnections = ref([])
 const currentConnectionId = ref(null)
 // 终端实例
 const terminal = ref(null)
-
 
 // 处理连接
 const startResize = (e) => {
@@ -90,9 +89,7 @@ const connectToServer = (serverInfo) => {
     })
 }
 
-
-onMounted(() => {
-})
+onMounted(() => {})
 </script>
 <style>
 .container {
@@ -108,15 +105,10 @@ onMounted(() => {
   width: 100%;
   display: flex;
   flex-direction: row;
-
 }
 /* 添加连接位置 */
 .top-bar-left {
-  height: 30px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
+  margin-left: auto;
 }
 /* 标签栏 */
 .top-bar-right {
@@ -127,7 +119,6 @@ onMounted(() => {
   align-items: center;
   justify-content: flex-start;
 }
-
 
 .sidebar {
   width: 200px;
@@ -180,12 +171,12 @@ onMounted(() => {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 添加轻微阴影 */
 }
 /* 靠右 */
-.tab-bar-menu{
-    margin: 3px;   
-    padding: 2px;
-    border-radius: 2px;
-    margin-left: auto;
-} 
+.tab-bar-menu {
+  margin: 3px;
+  padding: 2px;
+  border-radius: 2px;
+  margin-right: auto;
+}
 
 input {
   margin-top: 10px;
