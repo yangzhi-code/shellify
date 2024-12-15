@@ -33,6 +33,7 @@ import Terminal from './components/Terminal.vue'
 import TabBar from './components/TabBar.vue'
 import TabMenu from './components/TabMenu.vue'
 import TabFolder from './components/TabFolder.vue'
+
 // 用于管理终端输出和连接状态
 const terminalData = ref([])
 const activeConnections = ref([])
@@ -62,31 +63,6 @@ const startResize = (e) => {
 
   document.addEventListener('mousemove', doDrag)
   document.addEventListener('mouseup', stopDrag)
-}
-
-const openNewTerminal = () => {
-  const serverInfo = {
-    host: '47.108.49.80',
-    port: 22,
-    username: 'root',
-    password: '419199yZ'
-  }
-  connectToServer(serverInfo)
-}
-
-// 连接到服务器
-const connectToServer = (serverInfo) => {
-  window.electron.ipcRenderer
-    .invoke('new-connection', serverInfo)
-    .then((response) => {
-      console.log(response)
-      activeConnections.value.push(response.id) // 添加连接 ID
-      currentConnectionId.value = response.id
-      terminal.value?.write('连接成功！')
-    })
-    .catch((error) => {
-      console.error('连接失败', error)
-    })
 }
 
 onMounted(() => {})

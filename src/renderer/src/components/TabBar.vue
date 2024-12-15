@@ -1,73 +1,36 @@
+<!-- 连接标签组件 -->
 <template>
   <div class="tab-bar">
     <!-- 标签列表 -->
-    <div class="tab-bar-item" v-for="item in editableTabs" 
-    :class="{ active: item.id === editableTabsValue }"
-    :key="item.id">
-      <div
-        class="tab-bar-item-title"
-        @click="selectTab(item.id)"
-      >
+    <div
+      class="tab-bar-item"
+      v-for="item in tabsStore.editableTabs"
+      :class="{ active: item.id === tabsStore.editableTabsValue }"
+      :key="item.id"
+    >
+      <div class="tab-bar-item-title" @click="tabsStore.selectTab(item.id)">
         {{ item.title }}
       </div>
       <i
         class="iconfont icon-shanchu iconfont-del"
         style="font-size: 10px"
-        @click="deleteTabById(item.id)"
+        @click="tabsStore.deleteTabById(item.id)" 
+        v-if="tabsStore.editableTabs.length>1"
       ></i>
     </div>
     <!-- 添加连接 -->
     <div class="tab-bar-add">
-      <i class="iconfont icon-tianjia" @click="openNewTerminal"></i>
+      <i class="iconfont icon-tianjia" @click="tabsStore.openNewTerminal()"></i>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useTabsStore } from '../store/terminalStore'
 
-// 当前选中的 tab id
-const editableTabsValue = ref(1)
-// 标签列表
-const editableTabs = ref([
-  {
-    id: 1,
-    title: 'linux',
-    type: 'ssh',
-    ip: '192.168.1.1',
-    port: '22'
-  },
-  {
-    id: 2,
-    title: 'windows',
-    type: 'rdp',
-    ip: '192.168.1.1',
-    port: '3389'
-  }
-])
-// 创建新连接
-const openNewTerminal = () => {
-  // 每次调用时重新计算最大 id
-  const maxId = Math.max(...editableTabs.value.map((tab) => tab.id), 0) // 如果数组为空，则最大值为 0
-  const newTab = {
-    id: maxId + 1,
-    title: '新标签页',
-    type: null,
-    ip: null,
-    port: null
-  }
-  editableTabs.value.push(newTab) // 添加新项到列表
-}
+const tabsStore = useTabsStore();
 
-// 选择标签
-const selectTab = (id) => {
-  editableTabsValue.value = id
-}
-
-//删除标签
-const deleteTabById = (idToDelete) => {
-  editableTabs.value = editableTabs.value.filter((tab) => tab.id !== idToDelete)
-}
 </script>
   
 <style scoped>
@@ -101,7 +64,7 @@ const deleteTabById = (idToDelete) => {
 }
 
 .tab-bar-item-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
   color: #333;
   padding-left: 2px;
