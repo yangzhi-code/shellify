@@ -10,8 +10,13 @@
         <div class="top-bar-left">
           <i class="iconfont icon-wenjianjia" style="font-size: 30px;" @click="openNewTerminal"></i>
         </div>
+        <!-- 标签栏 -->
         <div class="top-bar-right">
           <TabBar/>
+        </div>
+        <!-- 菜单 -->
+        <div class="top-bar-menu">
+          <TabMenu/>
         </div>
        
       </div>
@@ -27,6 +32,7 @@ import { ref, onMounted } from 'vue'
 import Sidebar from './components/sidebar.vue'
 import Terminal from './components/Terminal.vue'
 import TabBar from './components/TabBar.vue'
+import TabMenu from './components/TabMenu.vue'
 // 用于管理终端输出和连接状态
 const terminalData = ref([])
 const activeConnections = ref([])
@@ -99,6 +105,7 @@ onMounted(() => {
 .top-bar {
   background: #dfcece;
   height: 30px;
+  width: 100%;
   display: flex;
   flex-direction: row;
 
@@ -114,10 +121,11 @@ onMounted(() => {
 /* 标签栏 */
 .top-bar-right {
   height: 30px;
+  width: 100%;
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 
@@ -171,6 +179,13 @@ onMounted(() => {
   transform: scale(0.9) translateY(-2px); /* 点击时缩小并上移 */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 添加轻微阴影 */
 }
+/* 靠右 */
+.tab-bar-menu{
+    margin: 3px;   
+    padding: 2px;
+    border-radius: 2px;
+    margin-left: auto;
+} 
 
 input {
   margin-top: 10px;
