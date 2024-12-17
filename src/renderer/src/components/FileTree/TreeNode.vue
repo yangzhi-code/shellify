@@ -2,6 +2,7 @@
   <div
     :class="['tree-node', { disabled: node.disabled, 'drag-disabled': node.dragDisabled }]"
     @click.stop="handleClick"
+    draggable="true"
   >
     <div class="tree-node-content">
       <div class="node-header">
@@ -17,12 +18,22 @@
         </div>
 
         <!-- 文件夹图标 -->
-        <i class="folder-icon">📁</i>
-        <span>{{ node.name }}</span>
+        <div v-if="node.type === 'folder'">
+          <i class="folder-icon">📁</i>
+          <span>{{ node.name }}</span>
+        </div>
+        <!-- 文件图标 -->
+        <div v-if="node.type === 'file'">
+          <i class="folder-icon">📄</i>
+          <span>{{ node.name }}</span>
+        </div>
 
         <!-- 操作按钮 -->
         <div class="node-actions">
-          <button @click.stop="addChild">➕</button>
+            <!-- 添加文件夹 按钮 -->
+          <button v-if="node.type === 'folder'" @click.stop="addfolder">📁</button>
+            <!-- 添加文件 按钮 -->
+          <button @click.stop="addFile">➕</button>
           <button @click.stop="editNode">✏️</button>
           <button @click.stop="deleteNode">🗑️</button>
         </div>
@@ -38,14 +49,14 @@
     <!-- 子节点纵向展示 -->
     <div class="children" v-if="isChildrenVisible && node.children && node.children.length">
       <div class="child-node" v-for="child in node.children" :key="child.id">
-        <TreeNode :node="child" @add-node="onAddNode" @delete-node="onDeleteNode" />
+        <TreeNode :node="child" @add-folder-node="onAddFolderNode" @add-file-node="onAddFileNode" @delete-node="onDeleteNode" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref } from 'vue'
+import { ref } from 'vue'
 
 // 接收父组件传递的节点数据
 const props = defineProps({
@@ -53,7 +64,7 @@ const props = defineProps({
 })
 
 // 事件发射器
-const emit = defineEmits(['add-node', 'delete-node'])
+const emit = defineEmits(['add-folder-node','add-file-node', 'delete-node'])
 
 // 控制子节点是否可见的变量
 const isChildrenVisible = ref(false)
@@ -63,13 +74,21 @@ const handleClick = () => {
   console.log(`点击节点: ${props.node.name}`)
 }
 
-// 添加子节点
-const addChild = () => {
+// 添加文件夹子节点
+const addfolder = () => {
   // 在添加子节点后，展开子节点
   if (!isChildrenVisible.value) {
     isChildrenVisible.value = true
   }
-  emit('add-node', props.node.id)
+  emit('add-folder-node', props.node.id)
+}
+// 添加文件节点
+const addFile = () => {
+  // 在添加子节点后，展开子节点
+  if (!isChildrenVisible.value) {
+    isChildrenVisible.value = true
+  }
+  emit('add-file-node', props.node.id)
 }
 
 // 编辑节点
@@ -87,8 +106,10 @@ const toggleChildren = () => {
   isChildrenVisible.value = !isChildrenVisible.value
 }
 
-// 子节点操作传递
-const onAddNode = (id) => emit('add-node', id)
+// 文件夹子节点操作传递
+const onAddFolderNode = (id) => emit('add-folder-node', id)
+// 文件子节点操作传递
+const onAddFileNode = (id) => emit('add-file-node', id)
 const onDeleteNode = (id) => emit('delete-node', id)
 </script>
 
@@ -138,16 +159,15 @@ const onDeleteNode = (id) => emit('delete-node', id)
 .node-actions {
   display: flex;
   justify-content: flex-start;
-  visibility: hidden;  /* 默认隐藏 */
-  opacity: 0;  /* 初始透明度为0 */
-  transition: opacity 0.3s ease, visibility 0.3s ease;  /* 平滑过渡 */
+  visibility: hidden; /* 默认隐藏 */
+  opacity: 0; /* 初始透明度为0 */
+  transition: opacity 0.3s ease, visibility 0.3s ease; /* 平滑过渡 */
 }
 
 .tree-node-content:hover .node-actions {
-  visibility: visible;  /* 悬停时显示 */
-  opacity: 1;  /* 悬停时透明度为1 */
+  visibility: visible; /* 悬停时显示 */
+  opacity: 1; /* 悬停时透明度为1 */
 }
-
 
 .node-actions button {
   margin: 0;

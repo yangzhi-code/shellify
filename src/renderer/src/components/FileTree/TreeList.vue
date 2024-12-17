@@ -1,15 +1,16 @@
 <template>
   <div>
     <!-- 全局新增节点按钮 -->
-    <button class="new-node-btn" @click="addNewNode">+ New Treenode</button>
-    <div style="height: 5px; background: #f0f0f0;"></div>
+    <button class="new-node-btn" @click="addNewNode">+ 根目录</button>
+    <div style="height: 5px; background: #f0f0f0"></div>
     <!-- 渲染树节点 -->
     <div class="tree-container">
       <TreeNode
         v-for="node in treeData"
         :key="node.id"
         :node="node"
-        @add-node="handleAddNode"
+        @add-folder-node="handleAddFolderNode"
+        @add-file-node="handleAddFileNode"
         @delete-node="handleDeleteNode"
       />
     </div>
@@ -24,25 +25,33 @@ import TreeNode from './TreeNode.vue'
 const treeData = reactive([
   {
     id: 1,
-    name: 'Node 1',
-    children: [{ id: 2, name: 'new child node', children: [] }]
+    name: '阿里云服务器',
+    type: 'folder',
+    children: [{ id: 2, name: 'centos7-4核8G', type: 'file', children: [] }]
   },
-  { id: 3, name: 'Node 2', disabled: true },
-  { id: 4, name: 'Node 3', children: [] },
-  { id: 5, name: 'new node' }
+  { id: 3, name: '本地服务器', type: 'folder' }
 ])
 
-// 新增全局节点
+// 新增根文件
 const addNewNode = () => {
-  treeData.push({ id: Date.now(), name: 'new node', children: [] })
+  treeData.push({ id: Date.now(), name: '新建文件', type: 'folder', children: [] })
 }
 
-// 添加子节点
-const handleAddNode = (parentId) => {
+// 添加文件夹子节点
+const handleAddFolderNode = (parentId) => {
   const parent = findNode(treeData, parentId)
   if (parent) {
     if (!parent.children) parent.children = []
-    parent.children.push({ id: Date.now(), name: 'new child node', children: [] })
+    parent.children.push({ id: Date.now(), name: '新建文件夹', type: 'folder', children: [] })
+  }
+}
+
+// 添加文件节点
+const handleAddFileNode = (parentId) => {
+  const parent = findNode(treeData, parentId)
+  if (parent) {
+    if (!parent.children) parent.children = []
+    parent.children.push({ id: Date.now(), name: 'linux', type: 'file', children: [] })
   }
 }
 
@@ -81,7 +90,7 @@ const deleteNode = (nodes, id) => {
 <style scoped>
 .new-node-btn {
   margin-bottom: 3px;
-  padding: 5px 10px;
+  padding: 3px;
   background-color: #28c9b6;
   color: white;
   border: none;
@@ -89,7 +98,6 @@ const deleteNode = (nodes, id) => {
   cursor: pointer;
 }
 .tree-container {
-    
   height: 300px;
   overflow-y: auto; /* 使内容区域可以滚动 */
 }

@@ -22,7 +22,6 @@
   </div>
 </template>
 <script setup>
-import ConnectionManager from './ConnectionManager.vue'
 import TreeList from './FileTree/TreeList.vue'
 import { ref } from 'vue'
 
