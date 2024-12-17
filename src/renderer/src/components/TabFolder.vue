@@ -3,11 +3,31 @@
   <div class="tab-folder">
     <div class="tab-folder-item">
       <i class="iconfont icon-a-wangluowenjianjiayuanchengwenjianjia" style="font-size: 20px; " @click="openNewTerminal"></i>
+      
+    </div>
+    <div>
+      <!-- 弹窗容器 -->
+      <el-dialog
+        v-model="visible"
+        draggable="true"
+        custom-class="custom-dialog"
+        title="连接管理器"
+        width="550px"
+        height="500px"
+        @close="handleClose"
+      >
+        <TreeList/>
+      </el-dialog>
     </div>
   </div>
 </template>
 <script setup>
-import { connectToServer } from '../api/sshApi'
+import ConnectionManager from './ConnectionManager.vue'
+import TreeList from './FileTree/TreeList.vue'
+import { ref } from 'vue'
+
+// 弹窗显示控制
+const visible = defineModel('visible', { type: Boolean, default: false })
 //连接到服务器
 const openNewTerminal = () => {
   const serverInfo = {
@@ -16,7 +36,8 @@ const openNewTerminal = () => {
     username: 'root',
     password: '419199yZ'
   }
-  //connectToServer(serverInfo,1)
+
+  visible.value = true
 }
 </script>
 <style scoped>
@@ -33,6 +54,8 @@ const openNewTerminal = () => {
   align-items: center;
   justify-content: center;
 }
+
+
 </style>
 
 

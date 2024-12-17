@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import SshService from './sshService';
+import connectionStore from './store';
 
 // 存储活动的连接
 const activeConnections = new Map();
@@ -42,4 +43,23 @@ ipcMain.handle('new-connection', async (event, serverInfo) => {
     console.error('Failed to connect:', error);
     throw new Error('连接失败: ' + error.message);
   }
+});
+
+
+//连接存储
+// 监听渲染进程的请求，调用封装好的 store 方法
+ipcMain.handle('save-connection', (event, connection) => {
+  return connectionStore.saveConnection(connection);
+});
+
+ipcMain.handle('get-connections', () => {
+  return connectionStore.getAllConnections();
+});
+
+ipcMain.handle('delete-connection', (event, index) => {
+  return connectionStore.deleteConnection(index);
+});
+
+ipcMain.handle('clear-connections', () => {
+  return connectionStore.clearConnections();
 });

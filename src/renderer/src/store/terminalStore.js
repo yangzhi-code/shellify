@@ -10,7 +10,6 @@ export const useTabsStore = defineStore('tabs', () => {
 
   // 选择标签
   const selectTab = (id) => {
-    console.log("112343")
     editableTabsValue.value = id
   }
 
@@ -26,6 +25,7 @@ export const useTabsStore = defineStore('tabs', () => {
       data: null
     }
     editableTabs.value.push(newTab)
+    selectTab(newTab.id)
   }
 
   // 删除标签
