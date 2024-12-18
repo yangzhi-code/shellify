@@ -12,25 +12,67 @@
         @add-folder-node="handleAddFolderNode"
         @add-file-node="handleAddFileNode"
         @delete-node="handleDeleteNode"
+        @updata-node="onUpdateNode"
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, watch, toRaw } from 'vue'
 import TreeNode from './TreeNode.vue'
 
 // 树状数据
 const treeData = reactive([
   {
     id: 1,
-    name: '阿里云服务器',
+    name: '新建文件夹',
     type: 'folder',
-    children: [{ id: 2, name: 'centos7-4核8G', type: 'file', children: [] }]
-  },
-  { id: 3, name: '本地服务器', type: 'folder' }
+    children: [
+      {
+        id: 2,
+        name: 'centos7-4核8G',
+        type: 'file',
+        children: []
+      }
+    ]
+  }
 ])
+// 初始化数据
+const init = () => {
+  window.electron.ipcRenderer
+    .invoke('get-connections')
+    .then((response) => {
+      console.log('获取连接数据成功', response)
+      if (response.length === 0) return
+      treeData.splice(0, treeData.length, ...response) // 更新数据
+    })
+    .catch((error) => {
+      console.error('获取连接数据失败', error)
+    })
+}
+init()
+// 保存数据到本地存储
+const saveTreeData = () => {
+  const rawTreeData = toRaw(treeData) // 使用 toRaw 获取原始数据
+  window.electron.ipcRenderer
+    .invoke('save-connection', rawTreeData) // 传递原始数据
+    .then((response) => {
+      console.log('保存连接数据成功', response)
+    })
+    .catch((error) => {
+      console.error('保存连接数据失败', error)
+    })
+}
+
+// 监听数据变化，保存到本地存储
+watch(
+  () => treeData,
+  (newValue, oldValue) => {
+    saveTreeData() // 数据发生变化时保存
+  },
+  { deep: true } // 深度监听，确保嵌套的子节点变化也会触发
+)
 
 // 新增根文件
 const addNewNode = () => {
@@ -51,8 +93,16 @@ const handleAddFileNode = (parentId) => {
   const parent = findNode(treeData, parentId)
   if (parent) {
     if (!parent.children) parent.children = []
-    parent.children.push({ id: Date.now(), name: 'linux', type: 'file', children: [] })
+    parent.children.push({ id: Date.now(), name: 'linux', type: 'file',info:{}, children: [] })
   }
+}
+//修改文件节点
+const onUpdateNode = (nodeId,info) => {
+  const targetItem = treeData.find((item) => item.id === nodeId)
+  if (targetItem) {
+    targetItem.info = info
+  }
+  saveTreeData();
 }
 
 // 删除节点

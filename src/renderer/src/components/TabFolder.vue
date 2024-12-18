@@ -9,12 +9,11 @@
       <!-- 弹窗容器 -->
       <el-dialog
         v-model="visible"
-        draggable="true"
+        :draggable="true"
         custom-class="custom-dialog"
         title="连接管理器"
         width="550px"
-        height="500px"
-        @close="handleClose"
+        :align-center="true"
       >
         <TreeList/>
       </el-dialog>
@@ -30,7 +29,7 @@ const visible = defineModel('visible', { type: Boolean, default: false })
 //连接到服务器
 const openNewTerminal = () => {
   const serverInfo = {
-    host: '47.108.49.80',
+    host: '208.99.44.183',
     port: 22,
     username: 'root',
     password: '419199yZ'

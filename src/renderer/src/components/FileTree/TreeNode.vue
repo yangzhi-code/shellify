@@ -30,12 +30,24 @@
 
         <!-- 操作按钮 -->
         <div class="node-actions">
-            <!-- 添加文件夹 按钮 -->
+          <!-- 添加文件夹 按钮 -->
           <button v-if="node.type === 'folder'" @click.stop="addfolder">📁</button>
-            <!-- 添加文件 按钮 -->
-          <button @click.stop="addFile">➕</button>
+          <!-- 添加文件 按钮 -->
+          <button v-if="node.type === 'folder'" @click.stop="addFile">➕</button>
           <button @click.stop="editNode">✏️</button>
           <button @click.stop="deleteNode">🗑️</button>
+        </div>
+        <!-- 服务器配置对话框 -->
+        <div>
+          <!-- 弹窗容器 -->
+          <el-dialog
+            v-model="visible"
+            title="编辑"
+            width="400px"
+            :align-center="true"
+          >
+            <ServerConfigDialog :node="node" @updata-node="updateNode"></ServerConfigDialog>
+          </el-dialog>
         </div>
       </div>
 
@@ -49,7 +61,13 @@
     <!-- 子节点纵向展示 -->
     <div class="children" v-if="isChildrenVisible && node.children && node.children.length">
       <div class="child-node" v-for="child in node.children" :key="child.id">
-        <TreeNode :node="child" @add-folder-node="onAddFolderNode" @add-file-node="onAddFileNode" @delete-node="onDeleteNode" />
+        <TreeNode
+          :node="child"
+          @add-folder-node="onAddFolderNode"
+          @add-file-node="onAddFileNode"
+          @delete-node="onDeleteNode"
+          @updata-node="onupdateNode"
+        />
       </div>
     </div>
   </div>
@@ -57,6 +75,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import ServerConfigDialog from './ServerConfigDialog.vue'
+
+// 弹窗显示控制
+const visible = defineModel('visible', { type: Boolean, default: false })
 
 // 接收父组件传递的节点数据
 const props = defineProps({
@@ -64,7 +86,7 @@ const props = defineProps({
 })
 
 // 事件发射器
-const emit = defineEmits(['add-folder-node','add-file-node', 'delete-node'])
+const emit = defineEmits(['add-folder-node', 'add-file-node', 'delete-node', 'updata-node'])
 
 // 控制子节点是否可见的变量
 const isChildrenVisible = ref(false)
@@ -90,10 +112,15 @@ const addFile = () => {
   }
   emit('add-file-node', props.node.id)
 }
+//更新节点
+const updateNode = (formData) => {
+  emit('updata-node',props.node.id,formData)
+  visible.value = false
+}
 
 // 编辑节点
 const editNode = () => {
-  alert(`编辑节点: ${props.node.name}`)
+  visible.value = true
 }
 
 // 删除节点
@@ -111,6 +138,7 @@ const onAddFolderNode = (id) => emit('add-folder-node', id)
 // 文件子节点操作传递
 const onAddFileNode = (id) => emit('add-file-node', id)
 const onDeleteNode = (id) => emit('delete-node', id)
+const onupdateNode = (id,formData) => emit('updata-node', id,formData)
 </script>
 
 <style scoped>

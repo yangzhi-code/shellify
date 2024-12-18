@@ -4,6 +4,7 @@ let Store;
   Store = (await import('electron-store')).default;
 })();
 
+// 连接信息存储
 class ConnectionStore {
   constructor() {
     this.store = null;
@@ -27,10 +28,8 @@ class ConnectionStore {
   // 保存新的连接信息
   async saveConnection(connection) {
     if (!this.store) await this.init();
-    const connections = await this.getAllConnections();
-    connections.push(connection);
-    this.store.set(this.key, connections);
-    return connections;
+    this.store.set(this.key, connection);
+    return connection;
   }
 
   // 删除指定连接信息
