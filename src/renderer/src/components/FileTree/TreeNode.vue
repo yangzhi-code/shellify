@@ -2,6 +2,7 @@
   <div
     :class="['tree-node', { disabled: node.disabled, 'drag-disabled': node.dragDisabled }]"
     @click.stop="handleClick"
+    @dblclick="handleDoubleClick"
     draggable="true"
   >
     <div class="tree-node-content">
@@ -67,6 +68,7 @@
           @add-file-node="onAddFileNode"
           @delete-node="onDeleteNode"
           @updata-node="onupdateNode"
+          @close-dialog="oncloseDialog"
         />
       </div>
     </div>
@@ -76,7 +78,8 @@
 <script setup>
 import { ref } from 'vue'
 import ServerConfigDialog from './ServerConfigDialog.vue'
-
+import { useTabsStore } from '../../store/terminalStore'
+const tabsStore = useTabsStore();
 // 弹窗显示控制
 const visible = defineModel('visible', { type: Boolean, default: false })
 
@@ -86,7 +89,7 @@ const props = defineProps({
 })
 
 // 事件发射器
-const emit = defineEmits(['add-folder-node', 'add-file-node', 'delete-node', 'updata-node'])
+const emit = defineEmits(['add-folder-node', 'add-file-node', 'delete-node', 'updata-node','close-dialog'])
 
 // 控制子节点是否可见的变量
 const isChildrenVisible = ref(false)
@@ -94,6 +97,17 @@ const isChildrenVisible = ref(false)
 // 点击节点事件
 const handleClick = () => {
   console.log(`点击节点: ${props.node.name}`)
+}
+
+//双击节点事件  
+const handleDoubleClick = () => {
+  if (props.node.type === 'folder') {
+    return
+  }
+  // 打开终端窗口
+  tabsStore.fileOpenNewTerminal(props.node)
+  emit('close-dialog')
+
 }
 
 // 添加文件夹子节点
@@ -139,6 +153,8 @@ const onAddFolderNode = (id) => emit('add-folder-node', id)
 const onAddFileNode = (id) => emit('add-file-node', id)
 const onDeleteNode = (id) => emit('delete-node', id)
 const onupdateNode = (id,formData) => emit('updata-node', id,formData)
+
+const oncloseDialog = () => emit('close-dialog')
 </script>
 
 <style scoped>

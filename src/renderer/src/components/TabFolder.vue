@@ -2,8 +2,11 @@
 <template>
   <div class="tab-folder">
     <div class="tab-folder-item">
-      <i class="iconfont icon-a-wangluowenjianjiayuanchengwenjianjia" style="font-size: 20px; " @click="openNewTerminal"></i>
-      
+      <i
+        class="iconfont icon-a-wangluowenjianjiayuanchengwenjianjia"
+        style="font-size: 20px"
+        @click="openNewTerminal"
+      ></i>
     </div>
     <div>
       <!-- 弹窗容器 -->
@@ -15,7 +18,7 @@
         width="550px"
         :align-center="true"
       >
-        <TreeList/>
+        <TreeList @close-dialog="closedialog" />
       </el-dialog>
     </div>
   </div>
@@ -26,6 +29,11 @@ import { ref } from 'vue'
 
 // 弹窗显示控制
 const visible = defineModel('visible', { type: Boolean, default: false })
+// 关闭弹窗
+const closedialog = () => {
+ 
+  visible.value = false
+}
 //连接到服务器
 const openNewTerminal = () => {
   const serverInfo = {
@@ -52,8 +60,6 @@ const openNewTerminal = () => {
   align-items: center;
   justify-content: center;
 }
-
-
 </style>
 
 

@@ -15,9 +15,6 @@
     <el-form-item label="端口" prop="port">
       <el-input-number v-model="form.port" :min="1" :max="65535" />
     </el-form-item>
-    <el-form-item label="备注">
-      <el-input type="textarea" v-model="form.remark" placeholder="备注" />
-    </el-form-item>
     <el-form-item label="认证" prop="authMethod">
       <el-select v-model="form.authMethod" placeholder="认证方法">
         <el-option label="密码" value="password" />
@@ -40,6 +37,10 @@
       >
         <el-button type="primary" size="mini">选择文件</el-button>
       </el-upload>
+      
+    </el-form-item>
+    <el-form-item label="备注">
+      <el-input type="textarea" v-model="form.remark" placeholder="备注" />
     </el-form-item>
     <!-- 按钮区域 -->
     <el-form-item>
@@ -60,6 +61,7 @@ const form = ref({
   host: "",
   port: 22,
   remark: "",
+  type: "ssh",
   authMethod: "password",
   username: "root",
   password: "",
@@ -120,7 +122,7 @@ onMounted(() => {
 }
 
 .el-form-item {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .form-buttons {
@@ -139,8 +141,6 @@ onMounted(() => {
 .el-button {
   margin: 0;
 }
-.el-form-item__label {
-  text-align: left; /* 设置文字左对齐 */
-}
+
 
 </style>

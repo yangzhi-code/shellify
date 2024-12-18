@@ -13,6 +13,7 @@
         @add-file-node="handleAddFileNode"
         @delete-node="handleDeleteNode"
         @updata-node="onUpdateNode"
+        @close-dialog="closeDialog"
       />
     </div>
   </div>
@@ -28,11 +29,13 @@ const treeData = reactive([
     id: 1,
     name: '新建文件夹',
     type: 'folder',
+    info:{},
     children: [
       {
         id: 2,
         name: 'centos7-4核8G',
         type: 'file',
+        info:{},
         children: []
       }
     ]
@@ -64,7 +67,13 @@ const saveTreeData = () => {
       console.error('保存连接数据失败', error)
     })
 }
+// 事件发射器
+const emit = defineEmits(['close-dialog'])
 
+//关闭对话框
+const closeDialog = () => {
+  emit('close-dialog')
+}
 // 监听数据变化，保存到本地存储
 watch(
   () => treeData,

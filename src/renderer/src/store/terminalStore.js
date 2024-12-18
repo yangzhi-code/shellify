@@ -27,6 +27,22 @@ export const useTabsStore = defineStore('tabs', () => {
     editableTabs.value.push(newTab)
     selectTab(newTab.id)
   }
+  //从文件夹打开连接
+  const fileOpenNewTerminal = (data) => {
+    console.log("调试",data)
+    const maxId = Math.max(...editableTabs.value.map((tab) => tab.id), 0)
+    const newTab = {
+      id: maxId + 1,
+      title: data.info.name,
+      type: data.info.type,
+      ip: data.info.host,
+      port: data.info.port,
+      info: data.info,
+      data: null
+    }
+    editableTabs.value.push(newTab)
+    selectTab(newTab.id)
+  }
 
   // 删除标签
   const deleteTabById = (idToDelete) => {
@@ -67,6 +83,7 @@ export const useTabsStore = defineStore('tabs', () => {
     editableTabs,
     selectTab,
     openNewTerminal,
+    fileOpenNewTerminal,
     deleteTabById
   }
 })
