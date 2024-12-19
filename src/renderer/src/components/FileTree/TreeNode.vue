@@ -26,7 +26,7 @@
         <!-- 文件图标 -->
         <div v-if="node.type === 'file'">
           <i class="folder-icon">📄</i>
-          <span>{{ node.name }}</span>
+          <span>{{ node.info.name }}</span>
         </div>
 
         <!-- 操作按钮 -->
@@ -104,7 +104,7 @@ const handleDoubleClick = () => {
   if (props.node.type === 'folder') {
     return
   }
-  // 打开终端窗口
+  // 保存一个终端窗口
   tabsStore.fileOpenNewTerminal(props.node)
   emit('close-dialog')
 

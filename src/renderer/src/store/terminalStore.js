@@ -5,7 +5,7 @@ export const useTabsStore = defineStore('tabs', () => {
   // 定义响应式数据
   const editableTabsValue = ref(1)
   const editableTabs = ref([
-    { id: 1, title: '新建标签', type: 'ssh', ip: '192.168.1.1', port: '22', data: null }
+    { id: 1,info:{name:"新建标签"}, data: null }
   ])
 
   // 选择标签
@@ -18,10 +18,7 @@ export const useTabsStore = defineStore('tabs', () => {
     const maxId = Math.max(...editableTabs.value.map((tab) => tab.id), 0)
     const newTab = {
       id: maxId + 1,
-      title: '新标签页',
-      type: null,
-      ip: null,
-      port: null,
+      info:{name:"新建标签"},
       data: null
     }
     editableTabs.value.push(newTab)
@@ -33,10 +30,6 @@ export const useTabsStore = defineStore('tabs', () => {
     const maxId = Math.max(...editableTabs.value.map((tab) => tab.id), 0)
     const newTab = {
       id: maxId + 1,
-      title: data.info.name,
-      type: data.info.type,
-      ip: data.info.host,
-      port: data.info.port,
       info: data.info,
       data: null
     }

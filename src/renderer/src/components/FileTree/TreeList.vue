@@ -102,7 +102,7 @@ const handleAddFileNode = (parentId) => {
   const parent = findNode(treeData, parentId)
   if (parent) {
     if (!parent.children) parent.children = []
-    parent.children.push({ id: Date.now(), name: 'linux', type: 'file',info:{}, children: [] })
+    parent.children.push({ id: Date.now(), type: 'file',info:{name:"新连接"}, children: [] })
   }
 }
 //修改文件节点

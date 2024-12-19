@@ -9,7 +9,7 @@
       :key="item.id"
     >
       <div class="tab-bar-item-title" @click="tabsStore.selectTab(item.id)">
-        {{ item.title }}
+        {{ item.info.name }}
       </div>
       <i
         class="iconfont icon-shanchu iconfont-del"

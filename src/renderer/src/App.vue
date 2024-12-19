@@ -20,7 +20,12 @@
         </div>
       </div>
       <div class="content">
-        <Terminal ref="terminal" :fontSize="13" :connectionId="currentConnectionId" />
+        <Terminal
+          v-for="(item) in tabsStore.editableTabs" :key="item.id" 
+          v-show="item.id === tabsStore.editableTabsValue"
+          :connectionId = "item.id"
+          :info = item.info
+        />
       </div>
     </div>
   </div>
@@ -33,14 +38,9 @@ import Terminal from './components/Terminal.vue'
 import TabBar from './components/TabBar.vue'
 import TabMenu from './components/TabMenu.vue'
 import TabFolder from './components/TabFolder.vue'
+import { useTabsStore } from './store/terminalStore'
+const tabsStore = useTabsStore()
 
-// 用于管理终端输出和连接状态
-const terminalData = ref([])
-const activeConnections = ref([])
-// 当前连接ID
-const currentConnectionId = ref(null)
-// 终端实例
-const terminal = ref(null)
 
 // 处理连接
 const startResize = (e) => {

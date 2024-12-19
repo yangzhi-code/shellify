@@ -7,6 +7,9 @@ import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import 'xterm/css/xterm.css'
+import { useTabsStore } from '../store/terminalStore'
+const tabsStore = useTabsStore()
+import { toRaw } from 'vue'
 
 // Props
 const props = defineProps({
@@ -15,6 +18,7 @@ const props = defineProps({
   cols: { type: Number, default: 80 },
   username: { type: String, default: 'root' },
   hostname: { type: String, default: '47.108.49.80' },
+  info: {},
   connectionId: ''
 })
 
@@ -126,24 +130,33 @@ const showPrompt = () => {
 const resizeTerminal = () => {
   if (fitAddon.value) fitAddon.value.fit()
 }
+// 连接服务器
+const connectToServer = (serverInfo) => {
+  window.electron.ipcRenderer
+    .invoke('new-connection', serverInfo)
+    .then((response) => {
+      console.log(response)
+      tabsStore.editableTabs.find((item) => item.id === serverInfo.id).data = response
+    })
+    .catch((error) => {
+      console.error('连接失败', error)
+    })
+}
 
-// 初始化和销毁生命周期
+// 初始化
 onMounted(() => {
   initTerminal()
-
+  //连接服务器
+  console.log('连接信息', props.info)
+  const rawInfo = toRaw(props.info) // 获取非响应式对象
+  if (props.info.host && props.info.port && props.info.username && props.info.password) {
+    connectToServer(rawInfo)
+  }
   // 监听用户输入
   terminal.value.onData(handleInput)
 
   // 监听窗口调整
   window.addEventListener('resize', resizeTerminal)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', resizeTerminal)
-
-  // 检查是否已初始化
-  if (fitAddon.value) fitAddon.value.dispose()
-  if (terminal.value) terminal.value.dispose()
 })
 
 // 曝露方法
