@@ -24,7 +24,7 @@
           v-for="(item) in tabsStore.editableTabs" :key="item.id" 
           v-show="item.id === tabsStore.editableTabsValue"
           :connectionId = "item.id"
-          :info = item.info
+          :item = item
         />
       </div>
     </div>

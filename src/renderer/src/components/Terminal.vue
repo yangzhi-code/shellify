@@ -18,7 +18,7 @@ const props = defineProps({
   cols: { type: Number, default: 80 },
   username: { type: String, default: 'root' },
   hostname: { type: String, default: '47.108.49.80' },
-  info: {},
+  item: {},
   connectionId: ''
 })
 
@@ -27,14 +27,20 @@ const terminalContainer = ref(null)
 const terminal = ref(null)
 const fitAddon = ref(null)
 const currentInput = ref('') // 用户当前输入内容
+const currentDir = ref('~') // 当前工作目录，初始化为 ~
 
 // 构造动态提示符
 const getPrompt = () => {
-  // 判断是否为 root 用户
-  if (props.username === 'root') {
-    return `${props.username}@${props.hostname}:~# `
+  // 获取用户名、主机名和当前目录
+  const username = props.item.info.username
+  const host = props.item.info.host
+  const cwd = currentDir.value // 当前工作目录，直接使用响应式值
+
+  // 判断是否为 root 用户，并根据需要构造提示符
+  if (username === 'root') {
+    return `[${username}@${host} ${cwd}]# `
   } else {
-    return `${props.username}@${props.hostname}:~$ `
+    return `[${username}@${host} ${cwd}]$ `
   }
 }
 
@@ -65,14 +71,13 @@ const initTerminal = () => {
   }
 
   // 初始输出
-  terminal.value.writeln('Welcome to your custom terminal!')
-  terminal.value.write(getPrompt())
+  //terminal.value.writeln('Welcome to your custom terminal!')
 }
 
 // 输入处理逻辑
 const handleInput = (data) => {
   //处理没有登录的情况
-  if (props.connectionId === null) {
+  if (props.item.data === null) {
     terminal.value.writeln('请先连接到服务器！')
     return
   }
@@ -81,7 +86,7 @@ const handleInput = (data) => {
     terminal.value.writeln('')
     const command = currentInput.value.trim()
     // 发送命令到服务器
-    sendTerminalInput(props.connectionId, command)
+    sendTerminalInput(props.item.data.id, command)
     // 示例命令
     if (command === 'clear') {
       terminal.value.clear()
@@ -114,10 +119,28 @@ const sendTerminalInput = (id, input) => {
       outputLines.forEach((line) => {
         terminal.value?.writeln(line) // 写入每一行的输出
       })
-      showPrompt()
+      // 如果是 cd 命令等，会更新当前目录
+      if (input.startsWith('cd ')) {
+        updateCurrentDirectory()
+      } else {
+        showPrompt()
+      }
     })
     .catch((error) => {
       console.error('发送命令失败', error)
+    })
+}
+
+// 更新当前目录
+const updateCurrentDirectory = () => {
+  window.electron.ipcRenderer
+    .invoke('terminal-input', { id: props.item.data.id, data: 'pwd' })
+    .then((cwd) => {
+      currentDir.value = cwd.stdout || '~'
+      showPrompt()
+    })
+    .catch((error) => {
+      console.error('获取当前目录失败', error)
     })
 }
 //终端输出结束后，显示新的提示符
@@ -131,26 +154,33 @@ const resizeTerminal = () => {
   if (fitAddon.value) fitAddon.value.fit()
 }
 // 连接服务器
-const connectToServer = (serverInfo) => {
+const connectToServer = (serverInfo, id) => {
+  terminal.value.writeln('连接主机中...')
   window.electron.ipcRenderer
     .invoke('new-connection', serverInfo)
     .then((response) => {
       console.log(response)
-      tabsStore.editableTabs.find((item) => item.id === serverInfo.id).data = response
+      tabsStore.editableTabs.find((item) => item.id === id).data = response
+      terminal.value.writeln('连接主机成功！')
+      updateCurrentDirectory()
+      terminal.value.write(getPrompt())
     })
     .catch((error) => {
       console.error('连接失败', error)
+      terminal.value.writeln('连接主机失败：' + error)
     })
 }
 
 // 初始化
 onMounted(() => {
   initTerminal()
+
+  const rawInfo = toRaw(props.item.info) // 获取非响应式对象
+  const id = toRaw(props.item.id) // 获取非响应式对象
   //连接服务器
-  console.log('连接信息', props.info)
-  const rawInfo = toRaw(props.info) // 获取非响应式对象
-  if (props.info.host && props.info.port && props.info.username && props.info.password) {
-    connectToServer(rawInfo)
+
+  if (rawInfo.host && rawInfo.port && rawInfo.username && rawInfo.password) {
+    connectToServer(rawInfo, id)
   }
   // 监听用户输入
   terminal.value.onData(handleInput)
