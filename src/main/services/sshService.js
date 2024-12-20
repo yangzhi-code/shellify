@@ -229,6 +229,126 @@ class SshService {
       delete this.buffers[connectionId];
     }
   }
+
+  // 修改获取服务器状态的方法
+  async getServerStatus(connectionId) {
+    try {
+      const client = this.clients[connectionId]
+      if (!client) {
+        throw new Error('SSH session not found')
+      }
+
+      // CPU 使用率
+      const { stdout: cpu } = await this.execCommand(connectionId, "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'")
+
+      // 内存信息
+      const { stdout: memory } = await this.execCommand(connectionId, "free -m | awk 'NR==2{printf \"%s/%s\", $3,$2}'")
+
+      // 运行时间 - 获取秒数后自己转换
+      const { stdout: uptimeSeconds } = await this.execCommand(connectionId, "cat /proc/uptime | awk '{print $1}'")
+
+      // 系统负载 - 获取1分钟、5分钟、15分钟负��
+      const { stdout: load } = await this.execCommand(connectionId, "cat /proc/loadavg | awk '{print $1,$2,$3}'")
+
+      // 磁盘使用情况
+      const { stdout: disks } = await this.execCommand(connectionId, "df -h | grep '^/dev'")
+
+      // 网络流量
+      const { stdout: network } = await this.execCommand(connectionId, "cat /proc/net/dev | grep eth0")
+
+      // IP 地址
+      const { stdout: ip } = await this.execCommand(connectionId, "hostname -I | awk '{print $1}'")
+
+      return {
+        ip: ip.trim(),
+        cpu: parseFloat(cpu),
+        memory: this.parseMemory(memory),
+        load: this.parseLoad(load),
+        uptime: this.formatUptime(parseFloat(uptimeSeconds)),
+        disks: this.parseDiskInfo(disks),
+        network: this.parseNetworkInfo(network)
+      }
+    } catch (error) {
+      console.error('Error getting server status:', error)
+      throw error
+    }
+  }
+
+  // 解析内存信息
+  parseMemory(memoryStr) {
+    const [used, total] = memoryStr.split('/')
+    const percentage = (parseInt(used) / parseInt(total) * 100).toFixed(1)
+    return {
+      used: `${(parseInt(used)/1024).toFixed(1)}GB`,
+      total: `${(parseInt(total)/1024).toFixed(1)}GB`,
+      percentage: parseFloat(percentage)
+    }
+  }
+
+  // 解析磁盘信息
+  parseDiskInfo(diskStr) {
+    return diskStr.split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        const parts = line.split(/\s+/)
+        return {
+          path: parts[5],
+          used: parts[2],
+          total: parts[1],
+          percentage: parseInt(parts[4])
+        }
+      })
+  }
+
+  // 解析网络信息
+  parseNetworkInfo(networkStr) {
+    const parts = networkStr.split(/\s+/)
+    return {
+      download: this.formatSpeed(parts[1]),
+      upload: this.formatSpeed(parts[9])
+    }
+  }
+
+  // 格式化网络速度
+  formatSpeed(bytesStr) {
+    const bytes = parseInt(bytesStr)
+    if (bytes < 1024) return `${bytes} B/s`
+    if (bytes < 1024 * 1024) return `${(bytes/1024).toFixed(1)} KB/s`
+    return `${(bytes/1024/1024).toFixed(1)} MB/s`
+  }
+
+  // 添加格式化运行时间的方法
+  formatUptime(seconds) {
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    
+    const parts = []
+    if (days > 0) parts.push(`${days}天`)
+    if (hours > 0) parts.push(`${hours}小时`)
+    if (minutes > 0) parts.push(`${minutes}分钟`)
+    
+    return parts.join('') || '刚刚启动'
+  }
+
+  // 修改解析负载的方法
+  parseLoad(loadStr) {
+    try {
+      const [load1, load5, load15] = loadStr.trim().split(/\s+/).map(Number)
+      return {
+        '1min': load1.toFixed(2),
+        '5min': load5.toFixed(2),
+        '15min': load15.toFixed(2)
+      }
+    } catch (error) {
+      console.error('Error parsing load:', error)
+      return {
+        '1min': '0.00',
+        '5min': '0.00',
+        '15min': '0.00'
+      }
+    }
+  }
 }
 
 export default new SshService();

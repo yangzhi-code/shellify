@@ -1,7 +1,8 @@
 <template>
   <div class="container">
     <div class="sidebar">
-      <Sidebar />
+      <ServerStatus v-if="currentConnectionId" :connectionId="currentConnectionId" />
+      <Sidebar v-else />
     </div>
     <div class="resizer" @mousedown="startResize"></div>
     <div class="main">
@@ -25,6 +26,7 @@
           v-show="item.id === tabsStore.editableTabsValue"
           :connectionId = "item.id"
           :item = item
+          @connected="handleTerminalConnected"
         />
       </div>
     </div>
@@ -32,17 +34,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import Sidebar from './components/sidebar.vue'
 import Terminal from './components/Terminal.vue'
 import TabBar from './components/TabBar.vue'
 import TabMenu from './components/TabMenu.vue'
 import TabFolder from './components/TabFolder.vue'
+import ServerStatus from './components/ServerStatus.vue'
 import { useTabsStore } from './store/terminalStore'
 const tabsStore = useTabsStore()
+const currentConnectionId = ref(null)
 
+// 处理终端连接成功
+const handleTerminalConnected = (connectionId) => {
+  currentConnectionId.value = connectionId
+}
 
-// 处理连接
+// 处理侧边栏调整大小
 const startResize = (e) => {
   const resizer = e.target
   const sidebar = resizer.previousElementSibling
@@ -64,8 +72,6 @@ const startResize = (e) => {
   document.addEventListener('mousemove', doDrag)
   document.addEventListener('mouseup', stopDrag)
 }
-
-onMounted(() => {})
 </script>
 <style>
 .container {

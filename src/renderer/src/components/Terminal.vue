@@ -36,6 +36,8 @@ const terminalManager = ref(null)
 const inputHandler = ref(null)
 const commandHandler = ref(null)
 
+const emit = defineEmits(['connected'])
+
 // 处理快速连接选择
 const handleQuickConnect = (connection) => {
   // 更新当前标签的连接信息
@@ -81,7 +83,7 @@ const initTerminal = () => {
       }
     })
 
-    // 监听窗口大小变化
+    // 监听��口大小变化
     const handleResize = () => {
       terminalManager.value?.resize()
       if (props.item.data?.id) {
@@ -119,6 +121,7 @@ const connectToServer = async (serverInfo) => {
     
     props.item.data = response;
     terminalManager.value.writeln('连接成功！')
+    emit('connected', response.id)
   } catch (error) {
     terminalManager.value.writeln('连接失败：' + error.message)
   }

@@ -62,3 +62,18 @@ ipcMain.handle('delete-connection', (event, index) => {
 ipcMain.handle('clear-connections', () => {
   return connectionStore.clearConnections();
 });
+
+// 添加获取服务器状态的处理器
+ipcMain.handle('get-server-status', async (event, connectionId) => {
+  try {
+    // 直接使用 sshService 中的 clients 获取连接
+    const client = sshService.clients[connectionId]
+    if (!client) {
+      throw new Error('SSH session not found')
+    }
+    return await sshService.getServerStatus(connectionId)
+  } catch (error) {
+    console.error('Failed to get server status:', error)
+    throw error
+  }
+})
