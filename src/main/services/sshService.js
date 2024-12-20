@@ -1,99 +1,193 @@
-import { NodeSSH } from 'node-ssh';
+import { Client } from 'ssh2';
 import { v4 as uuidv4 } from 'uuid';
 
 class SshService {
   constructor() {
-    this.clients = {}; // 存储多个连接
+    this.clients = {};     // SSH 连接
+    this.shells = {};      // Shell 会话
+    this.callbacks = {};   // 数据回调
   }
 
   // 连接到服务器
-  async connect(serverInfo) {
-    const ssh = new NodeSSH();
-    const connectionId = uuidv4();
+  connect(serverInfo) {
+    return new Promise((resolve, reject) => {
+      const connectionId = uuidv4();
+      const client = new Client();
 
-    try {
-      await ssh.connect(serverInfo);
-      this.clients[connectionId] = ssh;
-      // 确保连接已准备好后，返回连接 ID
-      return { connectionId, client: ssh };
-    } catch (err) {
-      console.error('连接失败:', err);
-      throw err;
+      client
+        .on('ready', () => {
+          this.clients[connectionId] = client;
+          resolve({ connectionId });
+        })
+        .on('error', (err) => {
+          console.error('SSH 连接错误:', err);
+          reject(err);
+        })
+        .connect({
+          host: serverInfo.host,
+          port: serverInfo.port || 22,
+          username: serverInfo.username,
+          password: serverInfo.password
+        });
+    });
+  }
+
+  // 创建交互式 Shell
+  createShell(connectionId, cols = 80, rows = 24) {
+    return new Promise((resolve, reject) => {
+      const client = this.clients[connectionId];
+      if (!client) {
+        reject(new Error(`找不到连接: ${connectionId}`));
+        return;
+      }
+
+      client.shell({
+        term: 'xterm-256color',
+        cols: cols,
+        rows: rows
+      }, (err, stream) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        this.shells[connectionId] = stream;
+
+        stream.on('data', (data) => {
+          if (this.callbacks[connectionId]) {
+            this.callbacks[connectionId](data.toString());
+          }
+        });
+
+        stream.on('close', () => {
+          console.log('Shell session closed');
+          delete this.shells[connectionId];
+        });
+
+        resolve(stream);
+      });
+    });
+  }
+
+  // 执行单个命令
+  execCommand(connectionId, command) {
+    return new Promise((resolve, reject) => {
+      const client = this.clients[connectionId];
+      if (!client) {
+        reject(new Error(`找不到连接: ${connectionId}`));
+        return;
+      }
+
+      client.exec(command, (err, stream) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        let stdout = '';
+        let stderr = '';
+
+        stream.on('data', (data) => {
+          stdout += data;
+        });
+
+        stream.stderr.on('data', (data) => {
+          stderr += data;
+        });
+
+        stream.on('close', () => {
+          resolve({ stdout, stderr });
+        });
+      });
+    });
+  }
+
+  // 文件操作
+  uploadFile(connectionId, localPath, remotePath) {
+    return new Promise((resolve, reject) => {
+      const client = this.clients[connectionId];
+      if (!client) {
+        reject(new Error(`找不到连接: ${connectionId}`));
+        return;
+      }
+
+      client.sftp((err, sftp) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        sftp.fastPut(localPath, remotePath, (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve();
+        });
+      });
+    });
+  }
+
+  downloadFile(connectionId, remotePath, localPath) {
+    return new Promise((resolve, reject) => {
+      const client = this.clients[connectionId];
+      if (!client) {
+        reject(new Error(`找不到连接: ${connectionId}`));
+        return;
+      }
+
+      client.sftp((err, sftp) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        sftp.fastGet(remotePath, localPath, (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve();
+        });
+      });
+    });
+  }
+
+  // Shell 操作
+  onData(connectionId, callback) {
+    this.callbacks[connectionId] = callback;
+  }
+
+  writeToShell(connectionId, data) {
+    const shell = this.shells[connectionId];
+    if (shell && !shell.destroyed) {
+      shell.write(data);
+    }
+  }
+
+  resizeShell(connectionId, cols, rows) {
+    const shell = this.shells[connectionId];
+    if (shell && !shell.destroyed) {
+      shell.setWindow(rows, cols);
     }
   }
 
   // 断开连接
   disconnect(connectionId) {
-    const ssh = this.clients[connectionId];
-    if (ssh) {
-      ssh.dispose(); // 释放连接
+    // 关闭 Shell
+    if (this.shells[connectionId]) {
+      this.shells[connectionId].end();
+      delete this.shells[connectionId];
+    }
+
+    // 关闭 SSH 连接
+    if (this.clients[connectionId]) {
+      this.clients[connectionId].end();
       delete this.clients[connectionId];
-      console.log('SSH Connection closed.');
-    } else {
-      console.warn(`No connection found with ID: ${connectionId}`);
     }
+
+    delete this.callbacks[connectionId];
   }
-
-  // 执行命令
-  async sendCommand(connectionId, command) {
-    const ssh = this.clients[connectionId];
-    if (!ssh) {
-      throw new Error(`No connection found with ID: ${connectionId}`);
-    }
-
-    try {
-      // 执行命令，并返回结果
-      const result = await ssh.execCommand(command);
-      console.log('STDOUT:', result.stdout);
-      console.error('STDERR:', result.stderr);
-      return result;
-    } catch (err) {
-      console.error('Error executing command:', err);
-      throw err;
-    }
-  }
-
-  // 上传文件
-  async uploadFile(connectionId, localPath, remotePath) {
-    const ssh = this.clients[connectionId];
-    if (!ssh) {
-      throw new Error(`No connection found with ID: ${connectionId}`);
-    }
-
-    try {
-      await ssh.putFile(localPath, remotePath);
-      console.log(`File uploaded to ${remotePath}`);
-    } catch (err) {
-      console.error('Error uploading file:', err);
-      throw err;
-    }
-  }
-
-  // 下载文件
-  async downloadFile(connectionId, remotePath, localPath) {
-    const ssh = this.clients[connectionId];
-    if (!ssh) {
-      throw new Error(`No connection found with ID: ${connectionId}`);
-    }
-
-    try {
-      await ssh.getFile(localPath, remotePath);
-      console.log(`File downloaded to ${localPath}`);
-    } catch (err) {
-      console.error('Error downloading file:', err);
-      throw err;
-    }
-  }
-
-  async getSsh(connectionId) {
-    const ssh = this.clients[connectionId];
-    if (!ssh) {
-      throw new Error(`这个连接不存在: ${connectionId}`);
-    }
-    console.log('返回 SSH 连接', ssh);
-    return ssh; // 直接返回 ssh 实例
-  }
-  
 }
 
 export default new SshService();

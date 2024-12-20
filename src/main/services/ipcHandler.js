@@ -1,48 +1,51 @@
 import { ipcMain } from 'electron';
-import SshService from './sshService';
+import sshService from './sshService';
 import connectionStore from './store';
 
 // 存储活动的连接
 const activeConnections = new Map();
 
-// 获取所有活动连接
-ipcMain.handle('get-active-connections', () => {
-  return Array.from(activeConnections.keys()).map((id) => ({ id }));
-});
-
-// 处理终端输入
-ipcMain.handle('terminal-input', async (event, { id, data }) => {
-  const connection = activeConnections.get(id);
-  if (connection) {
-    console.log('发送命令', data)
-    // 将用户输入发送到 SSH 服务器
-    const result = await SshService.sendCommand(id, data)
-    console.log('发送命令结果', result)
-    return result
-  }
-  return null
-});
-
 
 // 创建新连接
 ipcMain.handle('new-connection', async (event, serverInfo) => {
   try {
-    // 等待连接建立并获得连接信息
-    const { connectionId, client } = await SshService.connect(serverInfo);
+    const { connectionId } = await sshService.connect(serverInfo);
     
-    // 确保 ssh 存在
-    if (!client) {
-      throw new Error('连接失败: client 是空的');
-    }
-    // 存储连接信息client
-    activeConnections.set(connectionId, client);
+    // 创建交互式 Shell
+    await sshService.createShell(connectionId);
+    
+    // 设置数据回调
+    sshService.onData(connectionId, (data) => {
+      event.sender.send('terminal-output', {
+        connectionId,
+        output: data
+      });
+    });
 
-    // 返回连接信息
-    return { id: connectionId, message: '连接成功' };
+    // 只返回必要的信息
+    return { 
+      id: connectionId, 
+      message: '连接成功' 
+    };
   } catch (error) {
-    console.error('Failed to connect:', error);
+    console.error('连接失败:', error);
     throw new Error('连接失败: ' + error.message);
   }
+});
+
+// 处理终端输入
+ipcMain.on('terminal-input', (event, { id, data }) => {
+  sshService.writeToShell(id, data);
+});
+
+// 处理终端大小调整
+ipcMain.on('resize-terminal', (event, { connectionId, cols, rows }) => {
+  sshService.resizeShell(connectionId, cols, rows);
+});
+
+// 断开连接
+ipcMain.handle('disconnect', (event, connectionId) => {
+  sshService.disconnect(connectionId);
 });
 
 
