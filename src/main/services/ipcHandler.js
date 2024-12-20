@@ -2,10 +2,6 @@ import { ipcMain } from 'electron';
 import sshService from './sshService';
 import connectionStore from './store';
 
-// 存储活动的连接
-const activeConnections = new Map();
-
-
 // 创建新连接
 ipcMain.handle('new-connection', async (event, serverInfo) => {
   try {

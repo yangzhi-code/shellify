@@ -73,6 +73,7 @@ onMounted(() => {})
   height: 100vh;
   width: 100vw;
   background: #fff;
+  overflow: hidden;
 }
 /* 标签栏 */
 .top-bar {
@@ -103,6 +104,7 @@ onMounted(() => {})
   padding: 5px;
   overflow-y: auto;
   flex-shrink: 0;
+  position: relative;
 }
 
 .resizer {
@@ -122,6 +124,7 @@ onMounted(() => {})
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 /* 防止文本被选中 */
@@ -132,11 +135,12 @@ onMounted(() => {})
 
 /* 终端显示区域 */
 .content {
-  padding: 10px;
+  flex: 1;
+  position: relative;
   background: #000;
   color: #fff;
-  height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
+  padding: 0;
 }
 .iconfont {
   transition: transform 0.2s ease, box-shadow 0.2s ease; /* 平滑过渡 */

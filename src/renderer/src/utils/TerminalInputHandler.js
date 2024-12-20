@@ -20,54 +20,36 @@ export class TerminalInputHandler {
    * @param {Object} context - 终端上下文信息（用户名、主机等）
    */
   handleInput(data, context) {
+    // 只有在有连接ID的情况下才处理输入
+    if (!context.connectionId) {
+      return;
+    }
+
     switch(data) {
-      case '\r':  // 回车键处理
-        this.handleEnter(context)
-        break
+      case '\r':  // 回车键
+        window.electron.ipcRenderer.send('terminal-input', {
+          id: context.connectionId,
+          data: '\n'
+        });
+        this.currentInput = '';
+        break;
       
-      case '\u007F':  // 退格键处理
-        this.handleBackspace()
-        break
+      case '\u007F':  // 退格键
+        if (this.currentInput.length > 0) {
+          this.currentInput = this.currentInput.slice(0, -1);
+          window.electron.ipcRenderer.send('terminal-input', {
+            id: context.connectionId,
+            data: '\b \b'
+          });
+        }
+        break;
       
-      default:  // 普通字符输入处理
-        this.handleCharacter(data, context)
-    }
-  }
-
-  /**
-   * 处理回车键
-   * @param {Object} context - 终端上下文信息
-   */
-  handleEnter(context) {
-    const command = this.currentInput.trim()
-    window.electron.ipcRenderer.send('terminal-input', {
-      id: context.connectionId,
-      data: '\n'
-    })
-    this.currentInput = ''
-  }
-
-  /**
-   * 处理退格键
-   */
-  handleBackspace() {
-    if (this.currentInput.length > 0) {
-      this.currentInput = this.currentInput.slice(0, -1)
-      this.terminalManager.write('\b \b')
-    }
-  }
-
-  /**
-   * 处理普通字符输入
-   * @param {string} char - 输入的字符
-   */
-  handleCharacter(char, context) {
-    if (context.connectionId) {
-      this.currentInput += char
-      window.electron.ipcRenderer.send('terminal-input', {
-        id: context.connectionId,
-        data: char
-      })
+      default:  // 普通字符
+        this.currentInput += data;
+        window.electron.ipcRenderer.send('terminal-input', {
+          id: context.connectionId,
+          data: data
+        });
     }
   }
 

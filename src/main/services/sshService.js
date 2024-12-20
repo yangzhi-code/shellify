@@ -6,6 +6,8 @@ class SshService {
     this.clients = {};     // SSH 连接
     this.shells = {};      // Shell 会话
     this.callbacks = {};   // 数据回调
+    this.buffers = {};        // 添加输出缓冲
+    this.flushInterval = 16;  // 60fps
   }
 
   // 连接到服务器
@@ -41,10 +43,16 @@ class SshService {
         return;
       }
 
+      const env = {
+        TERM: 'xterm-256color',
+        LANG: 'en_US.UTF-8'
+      };
+
       client.shell({
         term: 'xterm-256color',
         cols: cols,
-        rows: rows
+        rows: rows,
+        env: env
       }, (err, stream) => {
         if (err) {
           reject(err);
@@ -53,14 +61,42 @@ class SshService {
 
         this.shells[connectionId] = stream;
 
+        this.buffers[connectionId] = {
+          data: '',
+          timer: null
+        };
+
+        // 处理数据
         stream.on('data', (data) => {
           if (this.callbacks[connectionId]) {
-            this.callbacks[connectionId](data.toString());
+            // 将数据添加到缓冲区
+            this.buffers[connectionId].data += data.toString();
+            
+            // 如果没有定时器在运行，创建一个
+            if (!this.buffers[connectionId].timer) {
+              this.buffers[connectionId].timer = setInterval(() => {
+                if (this.buffers[connectionId].data) {
+                  this.callbacks[connectionId](this.buffers[connectionId].data);
+                  this.buffers[connectionId].data = '';
+                }
+              }, this.flushInterval);
+            }
           }
         });
 
+        // 处理错误
+        stream.on('error', (err) => {
+          console.error('Shell error:', err);
+        });
+
+        // 处理关闭
         stream.on('close', () => {
           console.log('Shell session closed');
+          // 清理缓冲区和定时器
+          if (this.buffers[connectionId]?.timer) {
+            clearInterval(this.buffers[connectionId].timer);
+          }
+          delete this.buffers[connectionId];
           delete this.shells[connectionId];
         });
 
@@ -187,6 +223,11 @@ class SshService {
     }
 
     delete this.callbacks[connectionId];
+
+    if (this.buffers[connectionId]?.timer) {
+      clearInterval(this.buffers[connectionId].timer);
+      delete this.buffers[connectionId];
+    }
   }
 }
 

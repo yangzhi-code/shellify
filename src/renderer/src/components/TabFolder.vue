@@ -31,7 +31,6 @@ import { ref } from 'vue'
 const visible = defineModel('visible', { type: Boolean, default: false })
 // 关闭弹窗
 const closedialog = () => {
- 
   visible.value = false
 }
 //连接到服务器

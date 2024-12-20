@@ -20,8 +20,22 @@ export class TerminalManager {
       cursorBlink: true,                    // 光标闪烁
       mouseEvents: true,                    // 鼠标事件支持
       enableClipboard: true,                // 剪贴板支持
-      copyOnSelection: true                 // 选中自动复制
+      copyOnSelection: true,                 // 选中自动复制
+      scrollback: 1000,                     // 限制历史记录行数
+      disableStdin: false,                 // 启用输入
+      rendererType: 'canvas',              // 使用 canvas 渲染
+      allowTransparency: false,            // 禁用透明度
+      fastScrollModifier: 'alt',           // 快速滚动修饰键
+      screenReaderMode: false,             // 禁用屏幕阅读模式
+      minimumContrastRatio: 1,             // 最小对比度
+      theme: options.theme || {
+        background: '#1e1e1e',
+        foreground: '#ffffff'
+      },
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     }
+    this.writeQueue = [];
+    this.isWriting = false;
   }
 
   /**
@@ -30,13 +44,24 @@ export class TerminalManager {
    * @returns {Terminal} - 终端实例
    */
   init(container) {
+    if (this.terminal) {
+      return this.terminal;
+    }
+
     this.terminal = new Terminal(this.options)
     this.fitAddon = new FitAddon()
-    this.terminal.loadAddon(this.fitAddon)
     
-    if (container) {
-      this.terminal.open(container)
-      this.fitAddon.fit()
+    try {
+      this.terminal.loadAddon(this.fitAddon)
+      
+      if (container) {
+        this.terminal.open(container)
+        setTimeout(() => {
+          this.resize()
+        }, 0)
+      }
+    } catch (error) {
+      console.error('Terminal initialization error:', error)
     }
     
     return this.terminal
@@ -46,7 +71,14 @@ export class TerminalManager {
    * 调整终端大小以适应容器
    */
   resize() {
-    this.fitAddon?.fit()
+    try {
+      if (this.fitAddon && this.terminal) {
+        this.fitAddon.fit()
+        this.terminal.refresh(0, this.terminal.rows - 1)
+      }
+    } catch (error) {
+      console.error('Resize error:', error)
+    }
   }
 
   /**
@@ -54,7 +86,36 @@ export class TerminalManager {
    * @param {string} data - 要写入的数据
    */
   write(data) {
-    this.terminal?.write(data)
+    try {
+      if (!this.terminal) return;
+
+      this.writeQueue.push(data);
+      if (!this.isWriting) {
+        this.processWriteQueue();
+      }
+    } catch (error) {
+      console.error('Write error:', error);
+    }
+  }
+
+  processWriteQueue() {
+    if (!this.writeQueue.length) {
+      this.isWriting = false;
+      return;
+    }
+
+    this.isWriting = true;
+    const chunk = this.writeQueue.join('');
+    this.writeQueue = [];
+
+    requestAnimationFrame(() => {
+      try {
+        this.terminal.write(chunk);
+      } catch (error) {
+        console.error('Write error:', error);
+      }
+      this.processWriteQueue();
+    });
   }
 
   /**
@@ -62,14 +123,26 @@ export class TerminalManager {
    * @param {string} data - 要写入的数据
    */
   writeln(data) {
-    this.terminal?.writeln(data)
+    try {
+      if (this.terminal) {
+        this.terminal.writeln(data)
+      }
+    } catch (error) {
+      console.error('Writeln error:', error)
+    }
   }
 
   /**
    * 清空终端内容
    */
   clear() {
-    this.terminal?.clear()
+    try {
+      if (this.terminal) {
+        this.terminal.clear()
+      }
+    } catch (error) {
+      console.error('Clear error:', error)
+    }
   }
 
   /**
@@ -77,13 +150,30 @@ export class TerminalManager {
    * @param {Function} callback - 数据输入回调函数
    */
   onData(callback) {
-    return this.terminal?.onData(callback)
+    try {
+      if (this.terminal) {
+        return this.terminal.onData(callback)
+      }
+    } catch (error) {
+      console.error('OnData error:', error)
+    }
   }
 
   /**
    * 销毁终端实例
    */
   dispose() {
-    this.terminal?.dispose()
+    try {
+      if (this.fitAddon) {
+        this.fitAddon.dispose()
+        this.fitAddon = null
+      }
+      if (this.terminal) {
+        this.terminal.dispose()
+        this.terminal = null
+      }
+    } catch (error) {
+      console.error('Dispose error:', error)
+    }
   }
 }
