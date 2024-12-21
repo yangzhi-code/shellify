@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import connectionStore from '../services/store/connectStore';
+import connectionStore from '../services/stores/connectStore';
 
 /**
  * 设置连接存储相关的 IPC 处理器

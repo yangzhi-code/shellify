@@ -16,7 +16,7 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue'
 import 'xterm/css/xterm.css'
-import { useTabsStore } from '../store/terminalStore'
+import { useTabsStore } from '../stores/terminalStore'
 import { TerminalManager } from '../utils/TerminalManager'
 import { TerminalInputHandler } from '../utils/TerminalInputHandler'
 import { TerminalCommandHandler } from '../utils/TerminalCommandHandler'

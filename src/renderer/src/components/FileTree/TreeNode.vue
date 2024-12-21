@@ -81,7 +81,7 @@
 <script setup>
 import { ref } from 'vue'
 import ServerConfigDialog from './ServerConfigDialog.vue'
-import { useTabsStore } from '../../store/terminalStore'
+import { useTabsStore } from '../../stores/terminalStore'
 const tabsStore = useTabsStore();
 // 弹窗显示控制
 const visible = defineModel('visible', { type: Boolean, default: false })

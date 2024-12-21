@@ -50,7 +50,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { useTabsStore } from '../store/terminalStore'
+import { useTabsStore } from '../stores/terminalStore'
 
 const tabsStore = useTabsStore()
 const connections = ref([])

@@ -1,5 +1,5 @@
 const { ipcMain } = require('electron');
-const downloadStore = require('../services/store/download');
+const downloadStore = require('../services/stores/download');
 
 /**
  * 设置下载记录相关的 IPC 处理器

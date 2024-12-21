@@ -27,7 +27,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useTabsStore } from '../store/terminalStore'
+import { useTabsStore } from '../stores/terminalStore'
 
 const tabsStore = useTabsStore();
 

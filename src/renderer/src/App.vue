@@ -40,7 +40,7 @@ import TabBar from './components/TabBar.vue'
 import TabMenu from './components/TabMenu.vue'
 import TabFolder from './components/TabFolder.vue'
 import ServerStatus from './components/ServerStatus.vue'
-import { useTabsStore } from './store/terminalStore'
+import { useTabsStore } from './stores/terminalStore'
 import TerminalLayout from './components/TerminalLayout.vue'
 const tabsStore = useTabsStore()
 const currentConnectionId = ref(null)
