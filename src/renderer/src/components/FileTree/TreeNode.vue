@@ -47,7 +47,7 @@
             width="400px"
             :align-center="true"
           >
-            <ServerConfigDialog :node="node" @updata-node="updateNode"></ServerConfigDialog>
+            <ServerConfigDialog :node="node" @update-node="updateNode"></ServerConfigDialog>
           </el-dialog>
         </div>
       </div>
@@ -67,7 +67,7 @@
           @add-folder-node="onAddFolderNode"
           @add-file-node="onAddFileNode"
           @delete-node="onDeleteNode"
-          @updata-node="onupdateNode"
+          @update-node="onupdateNode"
           @close-dialog="oncloseDialog"
         />
       </div>
@@ -89,7 +89,7 @@ const props = defineProps({
 })
 
 // 事件发射器
-const emit = defineEmits(['add-folder-node', 'add-file-node', 'delete-node', 'updata-node','close-dialog'])
+const emit = defineEmits(['add-folder-node', 'add-file-node', 'delete-node', 'update-node','close-dialog'])
 
 // 控制子节点是否可见的变量
 const isChildrenVisible = ref(false)
@@ -120,7 +120,7 @@ const addfolder = () => {
 }
 // 添加文件节点
 const addFile = () => {
-  // 在添加子节点后，展开��节点
+  // 在添加子节点后，展开子节点
   if (!isChildrenVisible.value) {
     isChildrenVisible.value = true
   }
@@ -128,7 +128,7 @@ const addFile = () => {
 }
 //更新节点
 const updateNode = (formData) => {
-  emit('updata-node', props.node.id, formData)
+  emit('update-node', props.node.id, formData)
   visible.value = false
 }
 
@@ -152,7 +152,7 @@ const onAddFolderNode = (id) => emit('add-folder-node', id)
 // 文件子节点操作传递
 const onAddFileNode = (id) => emit('add-file-node', id)
 const onDeleteNode = (id) => emit('delete-node', id)
-const onupdateNode = (id,formData) => emit('updata-node', id,formData)
+const onupdateNode = (id,formData) => emit('update-node', id,formData)
 
 const oncloseDialog = () => emit('close-dialog')
 </script>

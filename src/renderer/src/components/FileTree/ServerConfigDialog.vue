@@ -45,8 +45,8 @@
         </el-form-item>
         <el-form-item label="认证" prop="authMethod" class="auth-item">
           <el-radio-group v-model="form.authMethod">
-            <el-radio label="password">密码</el-radio>
-            <el-radio label="key">密钥</el-radio>
+            <el-radio :value="'password'">密码</el-radio>
+            <el-radio :value="'key'">密钥</el-radio>
           </el-radio-group>
         </el-form-item>
       </div>
@@ -211,8 +211,7 @@ const handleSubmit = () => {
     if (valid) {
       saving.value = true
       try {
-        // 更新节点信息
-        emit('update-node', { ...form.value, name: form.value.name })
+        emit('update-node', form.value)  // 改为 update-node
         ElMessage.success('保存成功')
       } catch (error) {
         ElMessage.error('保存失败')

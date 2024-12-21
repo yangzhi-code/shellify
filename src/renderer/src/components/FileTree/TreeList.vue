@@ -12,7 +12,7 @@
         @add-folder-node="handleAddFolderNode"
         @add-file-node="handleAddFileNode"
         @delete-node="handleDeleteNode"
-        @updata-node="onUpdateNode"
+        @update-node="onUpdateNode"
         @close-dialog="closeDialog"
       />
     </div>
@@ -105,13 +105,30 @@ const handleAddFileNode = (parentId) => {
     parent.children.push({ id: Date.now(), type: 'file',info:{name:"新连接"}, children: [] })
   }
 }
-//修改文件节点
-const onUpdateNode = (nodeId,info) => {
-  const targetItem = treeData.find((item) => item.id === nodeId)
-  if (targetItem) {
-    targetItem.info = info
+// 递归查找和更新节点
+const findAndUpdateNode = (nodes, id, info) => {
+  for (const node of nodes) {
+    if (node.id === id) {
+      node.info = info
+      return true
+    }
+    if (node.children && node.children.length) {
+      if (findAndUpdateNode(node.children, id, info)) {
+        return true
+      }
+    }
   }
-  saveTreeData();
+  return false
+}
+
+// 修改文件节点
+const onUpdateNode = (nodeId, info) => {
+
+  if (findAndUpdateNode(treeData, nodeId, info)) {
+    saveTreeData()
+  } else {
+    console.warn("未找到要修改的节点:", nodeId)
+  }
 }
 
 // 删除节点
