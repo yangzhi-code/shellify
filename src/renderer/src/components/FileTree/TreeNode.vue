@@ -47,7 +47,10 @@
             width="400px"
             :align-center="true"
           >
-            <ServerConfigDialog :node="node" @update-node="updateNode"></ServerConfigDialog>
+            <ServerConfigDialog 
+              :node="currentEditNode" 
+              @update-node="updateNode"
+            ></ServerConfigDialog>
           </el-dialog>
         </div>
       </div>
@@ -118,23 +121,45 @@ const addfolder = () => {
   }
   emit('add-folder-node', props.node.id)
 }
+
+// 添加一个响应式��量来存储当前编辑的节点
+const currentEditNode = ref(null)
+
+// 添加一个标记来区分是新增还是编辑
+const isNewNode = ref(false)
+
 // 添加文件节点
 const addFile = () => {
-  // 在添加子节点后，展开子节点
-  if (!isChildrenVisible.value) {
-    isChildrenVisible.value = true
+  // 标记为新增操作
+  isNewNode.value = true
+  // 创建一个新的空节点对象用于表单显示
+  currentEditNode.value = {
+    type: 'file',
+    info: { name: '新连接' }
   }
-  emit('add-file-node', props.node.id)
-}
-//更新节点
-const updateNode = (formData) => {
-  emit('update-node', props.node.id, formData)
-  visible.value = false
+  // 显示编辑对话框
+  visible.value = true
 }
 
 // 编辑节点
 const editNode = () => {
+  // 标记为编辑操作
+  isNewNode.value = false
+  // 编辑现有节点时，复制一份节点数据
+  currentEditNode.value = { ...props.node }
   visible.value = true
+}
+
+// 更新节点
+const updateNode = (formData) => {
+  if (isNewNode.value) {
+    // 如果是新增节点，则调用添加逻辑
+    emit('add-file-node', props.node.id, formData)
+  } else {
+    // 如果是编辑节点，则调用更新逻辑
+    emit('update-node', currentEditNode.value.id, formData)
+  }
+  visible.value = false
 }
 
 // 删除节点

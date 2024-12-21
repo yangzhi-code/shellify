@@ -78,6 +78,7 @@ const closeDialog = () => {
 watch(
   () => treeData,
   (newValue, oldValue) => {
+    console.log('文件树数据发生变化', newValue, oldValue)
     saveTreeData() // 数据发生变化时保存
   },
   { deep: true } // 深度监听，确保嵌套的子节点变化也会触发
@@ -97,12 +98,21 @@ const handleAddFolderNode = (parentId) => {
   }
 }
 
-// 添加文件节点
-const handleAddFileNode = (parentId) => {
+// 添加连接节点
+const handleAddFileNode = (parentId, formData) => {
+  console.log('添加连接节点', parentId, formData)
   const parent = findNode(treeData, parentId)
+  console.log('找到的父节点', parent)
   if (parent) {
     if (!parent.children) parent.children = []
-    parent.children.push({ id: Date.now(), type: 'file',info:{name:"新连接"}, children: [] })
+    // 使用vue的工具提取出formData的数据，去掉响应式
+    const plainFormData = toRaw(formData)
+    parent.children.push({ 
+      id: Date.now(), 
+      type: 'file',
+      info: plainFormData,  // 使用提取后的表单数据作为节点信息
+      children: [] 
+    })
   }
 }
 // 递归查找和更新节点
