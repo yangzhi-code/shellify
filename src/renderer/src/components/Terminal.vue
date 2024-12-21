@@ -187,6 +187,9 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .terminal-container {
@@ -209,6 +212,7 @@ onBeforeUnmount(() => {
 :deep(.xterm-viewport) {
   padding: 10px;
   box-sizing: border-box;
+  overflow-y: hidden !important;
 }
 
 /* 添加选中文本的样式 */

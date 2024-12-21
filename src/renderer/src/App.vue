@@ -144,7 +144,8 @@ const startResize = (e) => {
   position: relative;
   background: #000;
   color: #fff;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   padding: 0;
 }
 .iconfont {
