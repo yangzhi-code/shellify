@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import './services/ipcHandler';
+import { setupIpcHandlers } from './ipc';
 require('@electron/remote/main').initialize()
 
 
@@ -59,6 +59,8 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  setupIpcHandlers();
 
   createWindow()
 
