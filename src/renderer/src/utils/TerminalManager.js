@@ -21,6 +21,8 @@ export class TerminalManager {
       },
       scrollback: options.scrollback || 1000,
       convertEol: options.convertEol !== false,
+      scrollBottomOffset: 5,
+      scrollOnOutput: true,
       ...options
     }
     this.terminal = null
@@ -139,6 +141,11 @@ export class TerminalManager {
     requestAnimationFrame(() => {
       try {
         this.terminal.write(chunk);
+        const currentLine = this.terminal.buffer.active.baseY + this.terminal.buffer.active.cursorY;
+        const maxLines = this.terminal.rows;
+        if (currentLine > maxLines - this.options.scrollBottomOffset) {
+          this.terminal.scrollLines(currentLine - (maxLines - this.options.scrollBottomOffset));
+        }
       } catch (error) {
         console.error('Write error:', error);
       }

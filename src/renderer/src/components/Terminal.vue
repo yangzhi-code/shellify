@@ -69,7 +69,7 @@ const handleQuickConnect = async (connection) => {
     }
   } catch (error) {
     console.error('连接失败:', error)
-    terminalManager.value?.writeln('连接失败��' + error.message)
+    terminalManager.value?.writeln('连接失败' + error.message)
   }
 }
 
@@ -196,12 +196,14 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .terminal-container {
   width: 100%;
   height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  flex: 1;
 }
 
 :deep(.xterm-viewport),
@@ -212,7 +214,6 @@ onBeforeUnmount(() => {
 }
 
 :deep(.xterm-viewport) {
-  padding: 10px;
   box-sizing: border-box;
   overflow-y: auto !important;
 }

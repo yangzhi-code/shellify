@@ -148,6 +148,7 @@ const startResize = (e) => {
   display: flex;
   flex-direction: column;
   padding: 0;
+  min-height: 0;
 }
 .iconfont {
   transition: transform 0.2s ease, box-shadow 0.2s ease; /* 平滑过渡 */
