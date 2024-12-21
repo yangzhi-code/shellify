@@ -76,6 +76,77 @@ class FileManager {
     perms.push((mode & 0o1) ? 'x' : '-');
     return perms.join('');
   }
+
+  /**
+   * 搜索文件和目录
+   * @param {string} connectionId - SSH连接ID
+   * @param {string} path - 搜索起始路径
+   * @param {string} keyword - 搜索关键词
+   * @param {Object} options - 搜索选项
+   * @param {boolean} options.caseSensitive - 是否区分大小写
+   * @param {boolean} options.recursive - 是否递归搜索子目录
+   */
+  async searchFiles(connectionId, path, keyword, options = {}) {
+    const {
+      caseSensitive = false,
+      recursive = true
+    } = options;
+
+    try {
+      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+      const results = [];
+      
+      // 执行搜索
+      await this._searchInDirectory(sftp, path, keyword, options, results);
+      
+      return results;
+    } catch (error) {
+      console.error('文件搜索失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 在指定目录中搜索
+   * @private
+   */
+  async _searchInDirectory(sftp, path, keyword, options, results) {
+    const { caseSensitive, recursive } = options;
+    const searchPattern = caseSensitive ? keyword : keyword.toLowerCase();
+
+    try {
+      const list = await new Promise((resolve, reject) => {
+        sftp.readdir(path, (err, files) => {
+          if (err) reject(err);
+          else resolve(files);
+        });
+      });
+
+      for (const item of list) {
+        const itemPath = `${path}/${item.filename}`.replace(/\/+/g, '/');
+        const itemName = caseSensitive ? item.filename : item.filename.toLowerCase();
+
+        // 检查文件名是否匹配
+        if (itemName.includes(searchPattern)) {
+          results.push({
+            name: item.filename,
+            path: itemPath,
+            size: item.attrs.size,
+            modifyTime: new Date(item.attrs.mtime * 1000).toLocaleString(),
+            permissions: this._formatPermissions(item.attrs.mode),
+            type: item.attrs.isDirectory() ? 'directory' : 'file'
+          });
+        }
+
+        // 如果是目录且需要递归搜索
+        if (recursive && item.attrs.isDirectory()) {
+          await this._searchInDirectory(sftp, itemPath, keyword, options, results);
+        }
+      }
+    } catch (error) {
+      console.error(`搜索目录 ${path} 失败:`, error);
+    }
+  }
 }
 
 export default new FileManager(); 

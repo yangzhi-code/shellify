@@ -14,18 +14,38 @@
           </el-breadcrumb-item>
         </el-breadcrumb>
       </div>
-      <div class="tools">
-        <el-button-group>
-          <el-button size="small" @click="refresh">
-            <el-icon><Refresh /></el-icon>
-          </el-button>
-          <el-button size="small" @click="uploadFile">
-            <el-icon><Upload /></el-icon>上传
-          </el-button>
-          <el-button size="small" @click="createFolder">
-            <el-icon><FolderAdd /></el-icon>新建文件夹
-          </el-button>
-        </el-button-group>
+      <div class="tools-group">
+        <div class="tools">
+          <el-button-group>
+            <el-button size="small" @click="refresh">
+              <el-icon><Refresh /></el-icon>
+            </el-button>
+            <el-button size="small" @click="uploadFile">
+              <el-icon><Upload /></el-icon>上传
+            </el-button>
+            <el-button size="small" @click="createFolder">
+              <el-icon><FolderAdd /></el-icon>新建文件夹
+            </el-button>
+          </el-button-group>
+        </div>
+        <div class="search-bar">
+          <div class="search-input">
+            <el-icon class="search-icon"><Search /></el-icon>
+            <input
+              v-model="searchKeyword"
+              class="input-field"
+              placeholder="搜索文件..."
+              @keyup.enter="handleSearch"
+            />
+            <el-icon v-if="searchKeyword" class="clear-icon" @click="searchKeyword = ''">
+              <Close />
+            </el-icon>
+          </div>
+          <div class="search-options">
+            <el-checkbox v-model="searchOptions.caseSensitive" size="small">区分大小写</el-checkbox>
+            <el-checkbox v-model="searchOptions.recursive" size="small">搜索子目录</el-checkbox>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -90,7 +110,7 @@
 import { ref, computed, onMounted } from 'vue'
 import {
   Folder, Document, Refresh, Upload, FolderAdd,
-  Download, Edit, Delete
+  Download, Edit, Delete, Search, Close
 } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -217,6 +237,45 @@ const navigateTo = (index) => {
   loadFileList()
 }
 
+// 搜索相关
+const searchKeyword = ref('')
+const searchOptions = ref({
+  caseSensitive: false,
+  recursive: true
+})
+const isSearching = ref(false)
+
+// 处理搜索
+const handleSearch = async () => {
+  if (!searchKeyword.value.trim()) {
+    loadFileList();
+    return;
+  }
+
+  loading.value = true;
+  isSearching.value = true;
+
+  try {
+    const results = await window.electron.ipcRenderer.invoke('ssh:search-files', {
+      connectionId: props.connectionId,
+      path: currentFullPath.value,
+      keyword: searchKeyword.value,
+      options: {
+        caseSensitive: searchOptions.value.caseSensitive,
+        recursive: searchOptions.value.recursive
+      }
+    });
+    
+    fileList.value = results;
+  } catch (error) {
+    console.error('搜索失败:', error);
+    window.$message?.error('搜索失败，请重试');
+  } finally {
+    loading.value = false;
+    isSearching.value = false;
+  }
+}
+
 onMounted(() => {
   loadFileList()
 })
@@ -237,22 +296,27 @@ onMounted(() => {
   padding: 4px 8px;
   border-bottom: 1px solid #eee;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
   min-width: 0;
   flex-shrink: 0;
 }
 
 .path-nav {
   flex: 1;
-  margin-right: 16px;
   min-width: 0;
   overflow: hidden;
 }
 
+.tools-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .tools {
   display: flex;
-  gap: 8px;
+  align-items: center;
 }
 
 :deep(.el-table) {
@@ -346,9 +410,98 @@ onMounted(() => {
   cursor: pointer;
 }
 
-:deep(.el-breadcrumb__inner) {
-  &:hover {
-    color: var(--el-color-primary);
-  }
+:deep(.el-breadcrumb__inner:hover) {
+  color: var(--el-color-primary);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.search-input {
+  position: relative;
+  width: 160px;
+  height: 24px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background-color: var(--el-input-bg-color);
+  transition: all 0.2s;
+  box-sizing: border-box;
+  padding: 0 28px;
+}
+
+.search-input:hover,
+.search-input:focus-within {
+  border-color: var(--el-color-primary);
+}
+
+.search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--el-text-color-placeholder);
+}
+
+.clear-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--el-text-color-placeholder);
+  cursor: pointer;
+}
+
+.input-field {
+  width: 100%;
+  height: 22px;
+  line-height: 22px;
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  border: none;
+  outline: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  display: block;
+}
+
+.input-field::placeholder {
+  color: var(--el-text-color-placeholder);
+}
+
+.search-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+:deep(.el-checkbox) {
+  margin: 0;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+:deep(.el-checkbox__input) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+}
+
+:deep(.el-checkbox__label) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding-left: 6px;
+  line-height: 1;
 }
 </style> 

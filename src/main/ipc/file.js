@@ -12,4 +12,14 @@ export function setupFileHandlers() {
       throw error;
     }
   });
+
+  // 文件搜索处理器
+  ipcMain.handle('ssh:search-files', async (event, { connectionId, path, keyword, options }) => {
+    try {
+      return await FileManager.searchFiles(connectionId, path, keyword, options);
+    } catch (error) {
+      console.error('文件搜索失败:', error);
+      throw error;
+    }
+  });
 } 
