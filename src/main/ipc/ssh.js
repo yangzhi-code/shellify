@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import sshService from '../services/ssh';
+import FileManager from '../services/ssh/FileManager';
 
 /**
  * 设置 SSH 相关的 IPC 处理器
@@ -74,4 +75,4 @@ export function setupSSHHandlers() {
       throw error;
     }
   });
-} 
+}

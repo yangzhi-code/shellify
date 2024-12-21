@@ -4,7 +4,12 @@
     <div class="toolbar">
       <div class="path-nav">
         <el-breadcrumb>
-          <el-breadcrumb-item v-for="(part, index) in currentPath" :key="index">
+          <el-breadcrumb-item @click="navigateToRoot">根目录</el-breadcrumb-item>
+          <el-breadcrumb-item 
+            v-for="(part, index) in currentPath" 
+            :key="index"
+            @click="navigateTo(index)"
+          >
             {{ part }}
           </el-breadcrumb-item>
         </el-breadcrumb>
@@ -68,11 +73,14 @@
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
-        :page-sizes="[10, 20, 50, 100]"
+        :page-sizes="[20, 50, 100, 200]"
         :total="fileList.length"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
+        layout="total, sizes, prev, pager, next"
+        :pager-count="5"
+        size="small"
+        background
+        :popper-class="'select-small'"
+        
       />
     </div>
   </div>
@@ -93,7 +101,8 @@ const props = defineProps({
 })
 
 // 状态变量
-const currentPath = ref(['/'])
+const currentPath = ref([])
+const currentFullPath = computed(() => currentPath.value.join('/') || '/')
 const fileList = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
@@ -108,21 +117,20 @@ const currentPageData = computed(() => {
 
 // 加载文件列表
 const loadFileList = async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    // TODO: 实现从服务器获取文件列表
-    // const response = await window.electron.ipcRenderer.invoke('list-files', {
-    //   connectionId: props.connectionId,
-    //   path: currentPath.value.join('/')
-    // })
-    // fileList.value = response
+    const response = await window.electron.ipcRenderer.invoke('ssh:list-files', {
+      connectionId: props.connectionId,
+      path: currentFullPath.value
+    });
+    fileList.value = response;
   } catch (error) {
-    console.error('加载文件列表失败:', error)
-    ElMessage.error('加载文件列表失败')
+    console.error('加载文件列表失败:', error);
+    window.$message.error('加载文件列表失败');
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // 处理文件点击
 const handleFileClick = (file) => {
@@ -182,6 +190,18 @@ const deleteFile = (file) => {
   // TODO: 实现文件删除
 }
 
+// 导航到根目录
+const navigateToRoot = () => {
+  currentPath.value = []
+  loadFileList()
+}
+
+// 导航到指定层级
+const navigateTo = (index) => {
+  currentPath.value = currentPath.value.slice(0, index + 1)
+  loadFileList()
+}
+
 onMounted(() => {
   loadFileList()
 })
@@ -199,7 +219,7 @@ onMounted(() => {
 }
 
 .toolbar {
-  padding: 8px;
+  padding: 4px 8px;
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
@@ -225,6 +245,8 @@ onMounted(() => {
   overflow: auto;
   width: 100% !important;
   min-width: 0;
+  --el-table-header-cell-height: 32px;
+  --el-table-row-height: 32px;
 }
 
 :deep(.el-table__inner-wrapper) {
@@ -232,19 +254,29 @@ onMounted(() => {
   width: 100% !important;
 }
 
-.pagination-container {
-  padding: 10px;
-  border-top: 1px solid #eee;
+:deep(.el-table td.el-table__cell) {
+  padding: 4px 0;
+}
+
+:deep(.el-table th.el-table__cell) {
+  padding: 4px 0;
+}
+
+:deep(.el-button--small) {
+  height: 24px;
+  padding: 0 8px;
+}
+
+:deep(.el-icon) {
   display: flex;
-  justify-content: flex-end;
-  flex-shrink: 0;
-  min-width: 0;
+  align-items: center;
+  font-size: 14px;
 }
 
 .file-name-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .file-name {
@@ -259,5 +291,49 @@ onMounted(() => {
 :deep(.el-icon) {
   display: flex;
   align-items: center;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  padding: 4px 8px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* 自定义分页样式 */
+:deep(.el-pagination) {
+  font-size: 12px;
+  --el-pagination-button-height: 24px;
+  --el-pagination-button-width: 24px;
+}
+
+:deep(.el-pagination .el-select .el-input) {
+  width: 90px;
+}
+
+/* 调整选择器弹出框样式 */
+:deep(.select-small) {
+  min-width: 90px !important;
+}
+
+:deep(.el-pagination__total) {
+  margin-right: 8px;
+}
+
+:deep(.el-pagination__sizes) {
+  margin-right: 8px;
+}
+
+/* 面包屑导航样式 */
+:deep(.el-breadcrumb__item) {
+  cursor: pointer;
+}
+
+:deep(.el-breadcrumb__inner) {
+  &:hover {
+    color: var(--el-color-primary);
+  }
 }
 </style> 

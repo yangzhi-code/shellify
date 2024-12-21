@@ -1,7 +1,8 @@
 import { setupSSHHandlers } from './ssh';
+import { setupMenuHandlers } from './menu';
 import { setupStoreHandlers } from './store';
 import { setupClipboardHandlers } from './clipboard';
-import { setupMenuHandlers } from './menu';
+import { setupFileHandlers } from './file';
 
 /**
  * 初始化所有 IPC 处理器
@@ -17,4 +18,6 @@ export function setupIpcHandlers() {
   setupClipboardHandlers();
   // 设置上下文菜单处理器
   setupMenuHandlers();
+  // 设置文件相关处理器
+  setupFileHandlers();
 } 
