@@ -1,4 +1,5 @@
 import SSHConnectionManager from './SSHConnectionManager';
+import DownloadStore from '../stores/downloadStore';
 
 class FileManager {
   /**
@@ -265,8 +266,15 @@ class FileManager {
           sftp.fastGet(remotePath, filePath, {
             step: (transferred, chunk, total) => {
               if (error) return; // 如果已经发生错误，不再继续处理
+              console.log('下载文件路径:', filePath);
+              console.log('远程文件路径:', remotePath);
+              console.log('连接ID:', connectionId);
+              console.log('文件名:', fileName);
+              console.log('host:', "127.0.0.1");
               const percent = Math.round((transferred / total) * 100);
               console.log(`下载进度: ${percent}%`);
+              // 保存下载进度
+              this.saveDownloadProgress(connectionId, remotePath, fileName, filePath, percent, '127.0.0.1');  
             },
             concurrency: 1,
             mode: 0o644
@@ -328,6 +336,38 @@ class FileManager {
       console.error('确保连接可用失败:', error);
       throw new Error(`连接检查失败: ${error.message}`);
     }
+  }
+// 持久化保存下载进度
+  async saveDownloadProgress(connectionId, remotePath, fileName, filePath, progress, host) {
+    const download = {
+      // 文件id
+      fileId: connectionId,
+      // 文件名
+      fileName:fileName, 
+      // 下载后文件路径
+      filePath:filePath,
+      // 远程文件路径
+      remotePath:remotePath,
+      // 连接id
+      connectionId:connectionId,
+      //主机
+      host:host,
+      // 下载进度
+      progress:progress
+    };
+    //先查询是否有相同文件
+    const downloads = await DownloadStore.getDownloadProgress(fileName, filePath,remotePath);
+    if(downloads){
+      //如果存在，则更新下载进度
+      downloads.progress = progress;
+      await DownloadStore.saveDownload(downloads);
+      console.log('下载进度更新成功',DownloadStore.getAllDownloads());
+    }else{
+      //如果不存在，则保存下载进度
+      await DownloadStore.saveDownload(download);
+      console.log('下载进度保存成功',DownloadStore.getAllDownloads());
+    }
+   
   }
 }
 

@@ -3,6 +3,7 @@ import { setupMenuHandlers } from './menu';
 import { setupStoreHandlers } from './store';
 import { setupClipboardHandlers } from './clipboard';
 import { setupFileHandlers } from './file';
+import { setupDownloadHandlers } from './download';
 
 /**
  * 初始化所有 IPC 处理器
@@ -20,4 +21,6 @@ export function setupIpcHandlers() {
   setupMenuHandlers();
   // 设置文件相关处理器
   setupFileHandlers();
+  // 设置下载处理程序
+  setupDownloadHandlers();
 } 

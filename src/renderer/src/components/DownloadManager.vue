@@ -138,6 +138,7 @@ const loadDownloadRecords = async () => {
   try {
     const records = await window.electron.ipcRenderer.invoke('store:get-downloads')
     downloadRecords.value = records
+    console.log('下载记录加载成功:', downloadRecords.value)
   } catch (error) {
     console.error('加载下载记录失败:', error)
   }
