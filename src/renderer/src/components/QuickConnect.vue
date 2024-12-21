@@ -8,41 +8,44 @@
     <div class="connection-section">
       <div class="section-header">
         <h2>保存的连接</h2>
-        <el-button type="primary" @click="createNewConnection">
+        <el-button type="primary" size="small" @click="createNewConnection">
           <el-icon><Plus /></el-icon>新建连接
         </el-button>
       </div>
 
-      <div class="connection-grid">
-        <el-card 
-          v-for="conn in connections" 
-          :key="conn.id" 
-          class="connection-card"
-          :class="{ 'favorite': conn.favorite }"
-          shadow="hover"
-        >
-          <div class="card-content">
-            <div class="connection-icon">
-              <el-icon><Monitor /></el-icon>
-            </div>
-            <div class="connection-info">
-              <h3>{{ conn.name || '未命名连接' }}</h3>
-              <p>{{ conn.username }}@{{ conn.host }}</p>
-              <p class="description">{{ conn.description || '无描述' }}</p>
-            </div>
+      <div class="connection-list">
+        <!-- 连接列表 -->
+        <div v-if="connections.length > 0" class="list-container">
+          <div class="list-header">
+            <span class="name-col">名称</span>
+            <span class="host-col">主机</span>
+            <span class="user-col">用户名</span>
+            <span class="action-col">操作</span>
           </div>
-          <div class="card-actions">
-            <el-button type="primary" @click="handleConnect(conn)">
-              连接
-            </el-button>
-            <el-button @click="handleEdit(conn)">
-              编辑
-            </el-button>
+          <div 
+            v-for="conn in connections" 
+            :key="conn.id" 
+            class="list-item"
+          >
+            <span class="name-col">{{ conn.info.name || '未命名连接' }}</span>
+            <span class="host-col">{{ conn.info.host }}</span>
+            <span class="user-col">{{ conn.info.username }}</span>
+            <span class="action-col">
+              <el-button 
+                type="primary" 
+                size="small" 
+                @click="handleConnect(conn)"
+              >连接</el-button>
+              <el-button 
+                size="small" 
+                @click="handleEdit(conn)"
+              >编辑</el-button>
+            </span>
           </div>
-        </el-card>
+        </div>
 
         <!-- 空状态展示 -->
-        <div v-if="connections.length === 0" class="empty-state">
+        <div v-else class="empty-state">
           <el-empty description="暂无保存的连接">
             <el-button type="primary" @click="createNewConnection">
               创建新连接
@@ -57,12 +60,18 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Monitor } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
+import { useTabsStore } from '../store/terminalStore'
 
+const tabsStore = useTabsStore()
 const connections = ref([])
 
 // Props
 const props = defineProps({
+  item: {
+    type: Object,
+    required: true
+  },
   onConnect: {
     type: Function,
     required: true
@@ -93,6 +102,7 @@ const loadConnections = async () => {
     const savedConnections = await window.electron.ipcRenderer.invoke('get-connections')
     // 递归获取所有文件类型的连接
     connections.value = getAllFileConnections(savedConnections)
+    console.log("调试1",connections.value)
   } catch (error) {
     ElMessage.error('加载连接列表失败')
     console.error('Failed to load connections:', error)
@@ -101,7 +111,19 @@ const loadConnections = async () => {
 
 // 处理连接
 const handleConnect = (connection) => {
-  props.onConnect(connection)
+  // 更新当前标签的连接信息
+  props.item.info = {
+    name: connection.info.name,
+    host: connection.info.host,
+    port: connection.info.port,
+    username: connection.info.username,
+    password: connection.info.password
+  }
+  // 发出连接事件，传递完整的连接信息
+  props.onConnect({
+    ...connection,
+    id: props.item.data?.id // 保留现有的连接ID（如果有）
+  })
 }
 
 // 创建新连接
@@ -137,93 +159,111 @@ onMounted(() => {
 }
 
 .welcome-section h1 {
-  font-size: 2em;
+  font-size: 1.8em;
   color: var(--el-text-color-primary);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .welcome-section p {
   color: var(--el-text-color-secondary);
-  font-size: 1em;
-}
-
-.connection-section {
-  flex: 1;
-  min-height: 0; /* 重要：防止flex子元素溢出 */
-}
-
-.section-header {
-  margin-bottom: 20px;
-}
-
-.connection-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-  padding-bottom: 20px;
-}
-
-.connection-card {
-  border: 1px solid var(--el-border-color-light);
-  transition: all 0.3s ease;
-}
-
-.connection-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.card-content {
-  display: flex;
-  align-items: flex-start;
-  padding: 16px;
-}
-
-.connection-icon {
-  font-size: 24px;
-  color: var(--el-color-primary);
-  margin-right: 16px;
-  padding: 12px;
-  background-color: var(--el-color-primary-light-9);
-  border-radius: 8px;
-}
-
-.connection-info {
-  flex: 1;
-}
-
-.connection-info h3 {
-  margin: 0 0 8px 0;
-  color: var(--el-text-color-primary);
-}
-
-.connection-info p {
-  margin: 4px 0;
-  color: var(--el-text-color-secondary);
   font-size: 0.9em;
 }
 
-.description {
-  font-size: 0.85em;
-  color: var(--el-text-color-secondary);
-  margin-top: 8px;
-}
-
-.card-actions {
-  padding: 12px 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+.section-header {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 10px;
 }
 
-.favorite {
-  border: 1px solid var(--el-color-primary-light-5);
+.section-header h2 {
+  font-size: 1.2em;
+  margin: 0;
+}
+
+.connection-list {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.list-container {
+  width: 100%;
+}
+
+.list-header {
+  display: flex;
+  padding: 12px 16px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+  font-weight: 500;
+  color: #000;
+  font-size: 0.9em;
+}
+
+.list-item {
+  display: flex;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+  transition: background-color 0.2s;
+  color: #000;
+}
+
+.list-item:hover {
+  background-color: #f5f7fa;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+/* 列宽设置 */
+.name-col {
+  flex: 2;
+  padding-right: 16px;
+  color: #000;
+}
+
+.host-col {
+  flex: 2;
+  padding-right: 16px;
+  color: #000;
+}
+
+.user-col {
+  flex: 1;
+  padding-right: 16px;
+  color: #000;
+}
+
+.action-col {
+  flex: 2;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .empty-state {
-  grid-column: 1 / -1;
   padding: 40px;
   text-align: center;
+}
+
+/* 按钮样式调整 */
+:deep(.el-button--small) {
+  padding: 6px 12px;
+  font-size: 0.85em;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .user-col {
+    display: none;
+  }
+  
+  .action-col {
+    flex: 1;
+  }
 }
 </style> 
