@@ -1,5 +1,7 @@
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
+import { WebLinksAddon } from 'xterm-addon-web-links'
+import { SearchAddon } from 'xterm-addon-search'
 
 /**
  * 终端管理器类
@@ -33,6 +35,8 @@ export class TerminalManager {
         foreground: '#ffffff'
       },
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      rightClickSelectsWord: true,    // 右键选中单词
+      allowProposedApi: true,         // 允许使用提议的API
     }
     this.writeQueue = [];
     this.isWriting = false;
@@ -53,9 +57,46 @@ export class TerminalManager {
     
     try {
       this.terminal.loadAddon(this.fitAddon)
+      this.terminal.loadAddon(new WebLinksAddon())
+      this.terminal.loadAddon(new SearchAddon())
       
       if (container) {
         this.terminal.open(container)
+        
+        // 使用 IPC 处理右键菜单
+        container.addEventListener('contextmenu', async (e) => {
+          e.preventDefault()
+          const selection = this.terminal.getSelection()
+          
+          // 通过 IPC 显示上下文菜单
+          const result = await window.electron.ipcRenderer.invoke('show-context-menu', {
+            hasSelection: !!selection
+          })
+
+          if (result === 'copy' && selection) {
+            await window.electron.ipcRenderer.invoke('clipboard-write', selection)
+          } else if (result === 'paste') {
+            const text = await window.electron.ipcRenderer.invoke('clipboard-read')
+            this.terminal.paste(text)
+          } else if (result === 'selectAll') {
+            this.terminal.selectAll()
+          }
+        })
+
+        // 处理键盘快捷键
+        container.addEventListener('keydown', async (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            const selection = this.terminal.getSelection()
+            if (selection) {
+              await window.electron.ipcRenderer.invoke('clipboard-write', selection)
+            }
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+            const text = await window.electron.ipcRenderer.invoke('clipboard-read')
+            this.terminal.paste(text)
+          }
+        })
+
         setTimeout(() => {
           this.resize()
         }, 0)

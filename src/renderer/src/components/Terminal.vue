@@ -83,7 +83,7 @@ const initTerminal = () => {
       }
     })
 
-    // 监听��口大小变化
+    // 监听口大小变化
     const handleResize = () => {
       terminalManager.value?.resize()
       if (props.item.data?.id) {
@@ -129,7 +129,7 @@ const connectToServer = async (serverInfo) => {
 
 // 生命周期钩子
 onMounted(() => {
-  // 只有当有完整的连接信息时才初始化终端
+  // 只有当有完��的连接信息时才初始化终端
   if (!showQuickConnect.value) {
     initTerminal()
     if (props.item.info.host && !props.item.data) {
@@ -188,5 +188,15 @@ onBeforeUnmount(() => {
 :deep(.xterm-viewport) {
   padding: 10px;
   box-sizing: border-box;
+}
+
+/* 添加选中文本的样式 */
+:deep(.xterm-selection) {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* 添加光标样式 */
+:deep(.xterm-cursor) {
+  background-color: #fff;
 }
 </style>

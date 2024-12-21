@@ -5,7 +5,7 @@
       <div class="status-header">系统信息</div>
       <div class="status-item">
         <span class="label">IP地址</span>
-        <span class="value highlight">{{ status.ip || '-' }}</span>
+        <span class="value highlight">{{ status.publicIp || '-' }}</span>
       </div>
       <div class="status-item">
         <span class="label">运行时间</span>
@@ -122,19 +122,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import NetworkChart from './NetworkChart.vue'
 
 const props = defineProps({
   connectionId: {
     type: String,
-    required: true
+    required: false,
+    default: null
   }
 })
 
 // 状态数据
 const status = ref({
-  ip: '',
+  publicIp: '',
   uptime: '',
   load: {
     '1min': '0.00',
@@ -159,6 +160,9 @@ const UPDATE_INTERVAL = 2000
 
 // 获取服务器状态
 const fetchServerStatus = async () => {
+  // 只有在有连接ID时才获取状态
+  if (!props.connectionId) return
+  
   try {
     const response = await window.electron.ipcRenderer.invoke('get-server-status', props.connectionId)
     status.value = response
@@ -208,9 +212,26 @@ const getDiskTextColor = (value) => {
 // 定时器
 let statusTimer = null
 
+// 监听 connectionId 的变化
+watch(() => props.connectionId, (newId) => {
+  // 清除现有定时器
+  if (statusTimer) {
+    clearInterval(statusTimer)
+    statusTimer = null
+  }
+  
+  // 如果有新的连接ID，则启动新的定时器
+  if (newId) {
+    fetchServerStatus()
+    statusTimer = setInterval(fetchServerStatus, UPDATE_INTERVAL)
+  }
+})
+
 onMounted(() => {
-  fetchServerStatus() // 初始获取
-  statusTimer = setInterval(fetchServerStatus, UPDATE_INTERVAL)
+  if (props.connectionId) {
+    fetchServerStatus()
+    statusTimer = setInterval(fetchServerStatus, UPDATE_INTERVAL)
+  }
 })
 
 onUnmounted(() => {

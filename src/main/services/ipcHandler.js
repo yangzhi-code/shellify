@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, Menu, clipboard } from 'electron';
 import sshService from './sshService';
 import connectionStore from './store';
 
@@ -76,4 +76,36 @@ ipcMain.handle('get-server-status', async (event, connectionId) => {
     console.error('Failed to get server status:', error)
     throw error
   }
+})
+
+// 处理上下文菜单
+ipcMain.handle('show-context-menu', (event, { hasSelection }) => {
+  return new Promise((resolve) => {
+    const menu = Menu.buildFromTemplate([
+      {
+        label: '复制',
+        enabled: hasSelection,
+        click: () => resolve('copy')
+      },
+      {
+        label: '粘贴',
+        click: () => resolve('paste')
+      },
+      { type: 'separator' },
+      {
+        label: '全选',
+        click: () => resolve('selectAll')
+      }
+    ])
+    menu.popup()
+  })
+})
+
+// 处理剪贴板操作
+ipcMain.handle('clipboard-write', (event, text) => {
+  clipboard.writeText(text)
+})
+
+ipcMain.handle('clipboard-read', () => {
+  return clipboard.readText()
 })

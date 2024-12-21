@@ -1,8 +1,7 @@
 <template>
   <div class="container">
     <div class="sidebar">
-      <ServerStatus v-if="currentConnectionId" :connectionId="currentConnectionId" />
-      <Sidebar v-else />
+      <ServerStatus :connectionId="currentConnectionId" />
     </div>
     <div class="resizer" @mousedown="startResize"></div>
     <div class="main">

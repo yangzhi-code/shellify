@@ -238,29 +238,50 @@ class SshService {
         throw new Error('SSH session not found')
       }
 
+      // 获取公网IP（使用多个服务以增加可靠性）
+      const { stdout: publicIp } = await this.execCommand(
+        connectionId, 
+        "curl -s https://api.ipify.org || wget -qO- https://api.ipify.org || curl -s https://ifconfig.me"
+      )
+
       // CPU 使用率
-      const { stdout: cpu } = await this.execCommand(connectionId, "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'")
+      const { stdout: cpu } = await this.execCommand(
+        connectionId, 
+        "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'"
+      )
 
       // 内存信息
-      const { stdout: memory } = await this.execCommand(connectionId, "free -m | awk 'NR==2{printf \"%s/%s\", $3,$2}'")
+      const { stdout: memory } = await this.execCommand(
+        connectionId, 
+        "free -m | awk 'NR==2{printf \"%s/%s\", $3,$2}'"
+      )
 
       // 运行时间 - 获取秒数后自己转换
-      const { stdout: uptimeSeconds } = await this.execCommand(connectionId, "cat /proc/uptime | awk '{print $1}'")
+      const { stdout: uptimeSeconds } = await this.execCommand(
+        connectionId, 
+        "cat /proc/uptime | awk '{print $1}'"
+      )
 
-      // 系统负载 - 获取1分钟、5分钟、15分钟负��
-      const { stdout: load } = await this.execCommand(connectionId, "cat /proc/loadavg | awk '{print $1,$2,$3}'")
+      // 系统负载 - 获取1分钟、5分钟、15分钟负载
+      const { stdout: load } = await this.execCommand(
+        connectionId, 
+        "cat /proc/loadavg | awk '{print $1,$2,$3}'"
+      )
 
       // 磁盘使用情况
-      const { stdout: disks } = await this.execCommand(connectionId, "df -h | grep '^/dev'")
+      const { stdout: disks } = await this.execCommand(
+        connectionId, 
+        "df -h | grep '^/dev'"
+      )
 
       // 网络流量
-      const { stdout: network } = await this.execCommand(connectionId, "cat /proc/net/dev | grep eth0")
-
-      // IP 地址
-      const { stdout: ip } = await this.execCommand(connectionId, "hostname -I | awk '{print $1}'")
+      const { stdout: network } = await this.execCommand(
+        connectionId, 
+        "cat /proc/net/dev | grep eth0"
+      )
 
       return {
-        ip: ip.trim(),
+        publicIp: publicIp.trim(),  // 返回公网IP
         cpu: parseFloat(cpu),
         memory: this.parseMemory(memory),
         load: this.parseLoad(load),

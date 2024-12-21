@@ -28,19 +28,23 @@ use([
 const props = defineProps({
   upload: {
     type: String,
-    required: true
+    required: false,
+    default: '0 MB/s'
   },
   download: {
     type: String,
-    required: true
+    required: false,
+    default: '0 MB/s'
   }
 })
 
-// 数据存储
-const uploadData = ref([])
-const downloadData = ref([])
-const timeData = ref([])
+// 先声明常量
 const MAX_DATA_POINTS = 30 // 显示最近30个数据点
+
+// 然后再使用常量初始化数据
+const uploadData = ref(new Array(MAX_DATA_POINTS).fill(0))
+const downloadData = ref(new Array(MAX_DATA_POINTS).fill(0))
+const timeData = ref([])
 
 // 将速度字符串转换为数值（MB/s）
 const parseSpeed = (speedStr) => {
@@ -49,6 +53,25 @@ const parseSpeed = (speedStr) => {
   if (speedStr.includes('B/s')) return value / 1024 / 1024
   return value // 经是 MB/s
 }
+
+// 初始化时间数据
+const initTimeData = () => {
+  const now = new Date()
+  const times = []
+  for (let i = 0; i < MAX_DATA_POINTS; i++) {
+    const time = new Date(now - (MAX_DATA_POINTS - i - 1) * 1000)
+    times.push(time.toLocaleTimeString('zh-CN', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }))
+  }
+  timeData.value = times
+}
+
+// 初始化时间数据
+initTimeData()
 
 // 图表配置
 const chartOption = ref({
@@ -163,8 +186,12 @@ const updateData = () => {
     second: '2-digit'
   })
 
-  uploadData.value.push(parseSpeed(props.upload))
-  downloadData.value.push(parseSpeed(props.download))
+  // 如果没有连接，使用 0 值
+  const uploadSpeed = props.upload ? parseSpeed(props.upload) : 0
+  const downloadSpeed = props.download ? parseSpeed(props.download) : 0
+
+  uploadData.value.push(uploadSpeed)
+  downloadData.value.push(downloadSpeed)
   timeData.value.push(timeStr)
 
   // 保持固定数量的数据点
@@ -196,6 +223,11 @@ const updateData = () => {
 
 // 监听数据变化
 watch([() => props.upload, () => props.download], () => {
+  updateData()
+})
+
+// 初始化图表数据
+onMounted(() => {
   updateData()
 })
 </script>
