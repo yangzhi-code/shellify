@@ -5,7 +5,16 @@
       <div class="status-header">系统信息</div>
       <div class="status-item">
         <span class="label">IP地址</span>
-        <span class="value highlight">{{ status.publicIp || '-' }}</span>
+        <div class="value-with-copy">
+          <span class="value highlight">{{ status.publicIp || '-' }}</span>
+          <button 
+            v-if="status.publicIp" 
+            class="copy-btn"
+            @click="copyToClipboard(status.publicIp)"
+          >
+            复制
+          </button>
+        </div>
       </div>
       <div class="status-item">
         <span class="label">运行时间</span>
@@ -226,6 +235,17 @@ const handleInterfaceChange = (interfaceName) => {
       status.value.network.upload = selectedIface.upload
       status.value.network.download = selectedIface.download
     }
+  }
+}
+
+// 添加复制到剪贴板的函数
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success('已复制到剪贴板')
+  } catch (err) {
+    ElMessage.error('复制失败')
+    console.error('复制失败:', err)
   }
 }
 </script>
@@ -674,5 +694,31 @@ const handleInterfaceChange = (interfaceName) => {
 
 .disk-size {
   white-space: nowrap;
+}
+
+.value-with-copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copy-btn {
+  font-size: 10px;
+  padding: 1px 4px;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #666;
+  line-height: 1;
+  height: 16px;
+}
+
+.copy-btn:hover {
+  background: #e0e0e0;
+}
+
+.copy-btn:active {
+  background: #d0d0d0;
 }
 </style> 
