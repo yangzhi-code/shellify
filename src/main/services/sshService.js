@@ -270,15 +270,40 @@ class SshService {
 
       // 磁盘使用情况
       const { stdout: disks } = await this.execCommand(
-        connectionId, 
+        connectionId,
+        // 只获取实际磁盘设备的使用情况，排除临时文件系统
         "df -h | grep '^/dev'"
       )
 
-      // 网络流量
-      const { stdout: network } = await this.execCommand(
-        connectionId, 
-        "cat /proc/net/dev | grep eth0"
+      // 获取所有网络接口信息
+      const { stdout: networkInterfaces } = await this.execCommand(
+        connectionId,
+        "ip -o link show | awk -F': ' '{print $2}' | grep -E '^(eth|ens|enp|wlan)'"
       )
+
+      // 获取每个接口的流量信息
+      const interfaces = []
+      for (const iface of networkInterfaces.split('\n').filter(Boolean)) {
+        const { stdout: stats } = await this.execCommand(
+          connectionId,
+          `old_rx=$(cat /proc/net/dev | grep "${iface}" | awk '{print $2}');
+           old_tx=$(cat /proc/net/dev | grep "${iface}" | awk '{print $10}');
+           sleep 1;
+           new_rx=$(cat /proc/net/dev | grep "${iface}" | awk '{print $2}');
+           new_tx=$(cat /proc/net/dev | grep "${iface}" | awk '{print $10}');
+           echo "$old_rx $old_tx $new_rx $new_tx"`
+        )
+
+        const [old_rx, old_tx, new_rx, new_tx] = stats.trim().split(/\s+/).map(Number)
+        interfaces.push({
+          name: iface,
+          download: this.formatSpeed(new_rx - old_rx),
+          upload: this.formatSpeed(new_tx - old_tx)
+        })
+      }
+
+      // 使用第一个接口的数据作为默认显示
+      const defaultIface = interfaces[0] || { upload: '0 B/s', download: '0 B/s' }
 
       return {
         publicIp: publicIp.trim(),  // 返回公网IP
@@ -287,7 +312,11 @@ class SshService {
         load: this.parseLoad(load),
         uptime: this.formatUptime(parseFloat(uptimeSeconds)),
         disks: this.parseDiskInfo(disks),
-        network: this.parseNetworkInfo(network)
+        network: {
+          interfaces,
+          upload: defaultIface.upload,
+          download: defaultIface.download
+        }
       }
     } catch (error) {
       console.error('Error getting server status:', error)
@@ -306,6 +335,13 @@ class SshService {
     }
   }
 
+  // 修改颜色计算函数
+  getDiskColor(value) {
+    if (value > 90) return '#ff4444'      // 红色
+    if (value > 70) return '#ffbb33'      // 橙色
+    return '#00C851'                      // 绿色
+  }
+
   // 解析磁盘信息
   parseDiskInfo(diskStr) {
     return diskStr.split('\n')
@@ -313,20 +349,38 @@ class SshService {
       .map(line => {
         const parts = line.split(/\s+/)
         return {
-          path: parts[5],
-          used: parts[2],
-          total: parts[1],
-          percentage: parseInt(parts[4])
+          mountPoint: parts[5],      // 挂载点
+          total: parts[1],          // 总容量
+          available: parts[3],      // 可用容量
+          percentage: parseInt(parts[4]) // 使用百分比
         }
+      })
+      .sort((a, b) => {
+        // 根目录排在最前面
+        if (a.mountPoint === '/') return -1
+        if (b.mountPoint === '/') return 1
+        return a.mountPoint.localeCompare(b.mountPoint)
       })
   }
 
   // 解析网络信息
   parseNetworkInfo(networkStr) {
-    const parts = networkStr.split(/\s+/)
-    return {
-      download: this.formatSpeed(parts[1]),
-      upload: this.formatSpeed(parts[9])
+    try {
+      const [old_rx, old_tx, new_rx, new_tx] = networkStr.trim().split(/\s+/).map(Number)
+      
+      const rx_speed = new_rx - old_rx
+      const tx_speed = new_tx - old_tx
+
+      return {
+        upload: this.formatSpeed(tx_speed),
+        download: this.formatSpeed(rx_speed)
+      }
+    } catch (error) {
+      console.error('Error parsing network info:', error)
+      return {
+        upload: '0 B/s',
+        download: '0 B/s'
+      }
     }
   }
 
@@ -352,7 +406,7 @@ class SshService {
     return parts.join('') || '刚刚启动'
   }
 
-  // 修改解析负载的方法
+  // 修改解析载的方法
   parseLoad(loadStr) {
     try {
       const [load1, load5, load15] = loadStr.trim().split(/\s+/).map(Number)

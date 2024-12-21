@@ -58,7 +58,7 @@ const startResize = (e) => {
 
   const doDrag = (e) => {
     const newWidth = startWidth + e.clientX - startX
-    if (newWidth > 120 && newWidth < 500) {
+    if (newWidth > 200 && newWidth < 500) {
       sidebar.style.width = newWidth + 'px'
     }
   }

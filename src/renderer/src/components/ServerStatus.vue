@@ -30,90 +30,60 @@
 
     <!-- 资源使用 -->
     <div class="status-section">
-      <!-- CPU和内存使用率 -->
-      <div class="resource-group">
-        <div class="resource-item">
-          <div class="resource-label">
-            <span class="resource-title">CPU</span>
-            <span class="percentage" :style="{ color: getCpuTextColor(status.cpu) }">
-              {{ status.cpu.toFixed(1) }}%
-            </span>
-          </div>
+      <!-- CPU -->
+      <div class="resource-item">
+        <div class="resource-bar">
+          <span class="resource-label">CPU</span>
           <div class="progress-bar">
-            <div 
-              class="progress" 
-              :style="{ 
-                width: `${status.cpu}%`, 
-                backgroundColor: getCpuColor(status.cpu),
-                boxShadow: `0 0 6px ${getCpuColor(status.cpu)}`
-              }"
-            ></div>
-          </div>
-        </div>
-        <div class="resource-item">
-          <div class="resource-label">
-            <span class="resource-title">内存</span>
-            <span class="percentage" :style="{ color: getMemoryTextColor(status.memory.percentage) }">
-              {{ status.memory.percentage }}%
-            </span>
-          </div>
-          <div class="progress-bar">
-            <div 
-              class="progress" 
-              :style="{ 
-                width: `${status.memory.percentage}%`, 
-                backgroundColor: getMemoryColor(status.memory.percentage),
-                boxShadow: `0 0 6px ${getMemoryColor(status.memory.percentage)}`
-              }"
-            ></div>
-          </div>
-          <div class="memory-detail">
-            已用: {{ status.memory.used }} / 总共: {{ status.memory.total }}
+            <div class="progress" :style="{ width: `${status.cpu}%`, backgroundColor: getCpuColor(status.cpu) }"></div>
+            <span class="progress-text">{{ status.cpu.toFixed(1) }}%</span>
           </div>
         </div>
       </div>
 
-      <!-- 网络流量 -->
-      <div class="resource-item network-section">
-        <div class="network-stats">
-          <div class="network-item">
-            <i class="iconfont icon-upload"></i>
-            <span class="network-label">上传:</span>
-            <span class="network-value">{{ status.network.upload }}</span>
-          </div>
-          <div class="network-item">
-            <i class="iconfont icon-download"></i>
-            <span class="network-label">下载:</span>
-            <span class="network-value">{{ status.network.download }}</span>
+      <!-- 内存 -->
+      <div class="resource-item">
+        <div class="resource-bar">
+          <span class="resource-label">内存</span>
+          <div class="progress-bar">
+            <div class="progress" :style="{ width: `${status.memory.percentage}%`, backgroundColor: getMemoryColor(status.memory.percentage) }"></div>
+            <span class="progress-text">
+              {{ status.memory.percentage }}% ({{ status.memory.used }}/{{ status.memory.total }})
+            </span>
           </div>
         </div>
-        <NetworkChart
-          :upload="status.network.upload"
-          :download="status.network.download"
-        />
       </div>
+    </div>
+
+    <!-- 网络流量 -->
+    <div class="status-section">
+      <NetworkChart
+        :upload="status.network.upload"
+        :download="status.network.download"
+        :interfaces="status.network.interfaces || []"
+        @interface-change="handleInterfaceChange"
+      />
     </div>
 
     <!-- 磁盘使用 -->
     <div class="status-section disk-section">
       <div class="status-header">磁盘使用</div>
       <div class="disk-list">
-        <div v-for="disk in status.disks" :key="disk.path" class="disk-item">
-          <div class="disk-info">
-            <span class="disk-path">{{ disk.path }}</span>
-            <span class="disk-size" :style="{ color: getDiskTextColor(disk.percentage) }">
-              {{ disk.percentage }}% ({{ disk.used }}/{{ disk.total }})
-            </span>
-          </div>
-          <div class="progress-bar">
-            <div 
-              class="progress" 
-              :style="{ 
-                width: `${disk.percentage}%`, 
-                backgroundColor: getDiskColor(disk.percentage),
-                boxShadow: `0 0 6px ${getDiskColor(disk.percentage)}`
-              }"
-            ></div>
+        <div v-for="disk in status.disks" :key="disk.mountPoint" class="resource-item">
+          <div class="resource-bar">
+            <span class="resource-label" :title="disk.mountPoint">{{ disk.mountPoint }}</span>
+            <div class="progress-bar">
+              <div 
+                class="progress"
+                :style="{ 
+                  width: `${disk.percentage}%`,
+                  backgroundColor: getDiskColor(disk.percentage)
+                }"
+              ></div>
+              <span class="progress-text">
+                {{ disk.percentage }}% ({{ disk.available }}/{{ disk.total }})
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -162,9 +132,12 @@ const UPDATE_INTERVAL = 2000
 const fetchServerStatus = async () => {
   // 只有在有连接ID时才获取状态
   if (!props.connectionId) return
-  
+
   try {
-    const response = await window.electron.ipcRenderer.invoke('get-server-status', props.connectionId)
+    const response = await window.electron.ipcRenderer.invoke(
+      'get-server-status',
+      props.connectionId
+    )
     status.value = response
   } catch (error) {
     console.error('Failed to fetch server status:', error)
@@ -213,19 +186,22 @@ const getDiskTextColor = (value) => {
 let statusTimer = null
 
 // 监听 connectionId 的变化
-watch(() => props.connectionId, (newId) => {
-  // 清除现有定时器
-  if (statusTimer) {
-    clearInterval(statusTimer)
-    statusTimer = null
+watch(
+  () => props.connectionId,
+  (newId) => {
+    // 清除现有定时器
+    if (statusTimer) {
+      clearInterval(statusTimer)
+      statusTimer = null
+    }
+
+    // 如果有新的连接ID，则启动新的定时器
+    if (newId) {
+      fetchServerStatus()
+      statusTimer = setInterval(fetchServerStatus, UPDATE_INTERVAL)
+    }
   }
-  
-  // 如果有新的连接ID，则启动新的定时器
-  if (newId) {
-    fetchServerStatus()
-    statusTimer = setInterval(fetchServerStatus, UPDATE_INTERVAL)
-  }
-})
+)
 
 onMounted(() => {
   if (props.connectionId) {
@@ -239,105 +215,132 @@ onUnmounted(() => {
     clearInterval(statusTimer)
   }
 })
+
+// 处理网卡切换
+const handleInterfaceChange = (interfaceName) => {
+  if (status.value.network.interfaces) {
+    const selectedIface = status.value.network.interfaces.find(
+      iface => iface.name === interfaceName
+    )
+    if (selectedIface) {
+      status.value.network.upload = selectedIface.upload
+      status.value.network.download = selectedIface.download
+    }
+  }
+}
 </script>
 
 <style scoped>
 .server-status {
-  padding: 8px;
-  font-size: 12px;
+  padding: 6px;
+  font-size: 11px;
   height: 100%;
   background-color: #f5f5f5;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* 移除滚动条 */
+  overflow: hidden;
 }
 
 .status-section {
-  margin-bottom: 8px;
-  padding: 10px;
+  margin-bottom: 6px;
+  padding: 8px;
   background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0; /* 防止压缩 */
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .status-header {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: #2c3e50;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 6px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
 }
 
 .status-item {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 12px;
+  margin-bottom: 6px;
+  font-size: 11px;
 }
 
 .label {
   color: #666;
-  font-weight: 500;
 }
 
 .value {
   color: #2c3e50;
-  font-weight: 500;
   min-width: 40px;
   text-align: right;
 }
 
 .value.highlight {
-  color: #409EFF;
-  font-weight: 600;
+  color: #409eff;
 }
 
 .resource-item {
-  margin-bottom: 15px;
-}
-
-.resource-label {
-  display: flex;
-  justify-content: space-between;
   margin-bottom: 8px;
 }
 
-.resource-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #2c3e50;
+.resource-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.percentage {
-  font-size: 12px;
-  font-weight: 600;
+.resource-label {
+  font-size: 11px;
+  color: #666;
+  width: 35px; /* 固定标签宽度 */
 }
 
 .progress-bar {
-  height: 6px;
-  background-color: #eee;
-  border-radius: 4px;
-  overflow: hidden;
+  flex: 1;
+  height: 20px;
+  background-color: #f0f0f0;
+  border-radius: 2px;
+  overflow: visible;
+  position: relative;
 }
 
 .progress {
   height: 100%;
-  transition: all 0.3s ease;
+  background-color: #4ecdc4;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+  min-width: 20px;
 }
 
-.memory-detail {
-  font-size: 11px;
+.progress-text {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #666;
-  margin-top: 6px;
-  text-align: right;
+  font-size: 11px;
+  font-family: monospace;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+/* 当进度超过特定值时，文字颜色改为白色 */
+.progress[style*="width: 2"] ~ .progress-text,
+.progress[style*="width: 3"] ~ .progress-text,
+.progress[style*="width: 4"] ~ .progress-text,
+.progress[style*="width: 5"] ~ .progress-text,
+.progress[style*="width: 6"] ~ .progress-text,
+.progress[style*="width: 7"] ~ .progress-text,
+.progress[style*="width: 8"] ~ .progress-text,
+.progress[style*="width: 9"] ~ .progress-text {
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
 
 .network-stats {
   display: flex;
   justify-content: space-between;
-  padding: 10px;
   background-color: #f8f9fa;
   border-radius: 6px;
 }
@@ -359,37 +362,81 @@ onUnmounted(() => {
 }
 
 .disk-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 4px;
 }
 
 .disk-item {
-  margin-bottom: 5px;
+  margin-bottom: 8px;
 }
 
-.disk-info {
+.disk-item .resource-bar {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
-.disk-path {
-  font-size: 12px;
-  font-weight: 500;
-  color: #2c3e50;
-  flex: 1;
-  min-width: 0;
+.disk-item .resource-label {
+  font-size: 11px;
+  color: #666;
+  width: 120px; /* 磁盘路径需要更宽一些 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.disk-size {
+.disk-item .progress-bar {
+  flex: 1;
+  height: 20px;
+  background-color: #f0f0f0;
+  border-radius: 2px;
+  overflow: visible;
+  position: relative;
+}
+
+.disk-item .progress {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+  min-width: 20px;
+}
+
+.disk-item .progress-text {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
   font-size: 11px;
-  font-weight: 500;
-  flex-shrink: 0;
+  font-family: monospace;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+/* 当进度超过特定值时，文字颜色改为白色 */
+.disk-item .progress[style*="width: 2"] ~ .progress-text,
+.disk-item .progress[style*="width: 3"] ~ .progress-text,
+.disk-item .progress[style*="width: 4"] ~ .progress-text,
+.disk-item .progress[style*="width: 5"] ~ .progress-text,
+.disk-item .progress[style*="width: 6"] ~ .progress-text,
+.disk-item .progress[style*="width: 7"] ~ .progress-text,
+.disk-item .progress[style*="width: 8"] ~ .progress-text,
+.disk-item .progress[style*="width: 9"] ~ .progress-text {
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 移除旧的磁盘样式 */
+.disk-mount,
+.disk-progress,
+.disk-progress-bar,
+.disk-usage-text,
+.disk-usage,
+.disk-info,
+.disk-size {
+  display: none;
 }
 
 /* 图标样式 */
@@ -424,26 +471,208 @@ onUnmounted(() => {
 
 /* 网络部分 */
 .network-section {
-  height: 160px; /* 固定高度 */
+  height: 140px;
 }
 
 /* 磁盘部分 */
+.disk-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.disk-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+}
+
+.disk-list .resource-item {
+  width: 100%;
+  margin: 0;
+}
+
+.disk-list .resource-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.disk-list .resource-label {
+  flex: 0 0 30px;
+  min-width: 0;
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.disk-list .progress-bar {
+  flex: 1;
+  min-width: 150px;
+  height: 20px;
+  background-color: #f0f0f0;
+  border-radius: 2px;
+  overflow: visible;
+  position: relative;
+}
+
+/* 移除所有旧的磁盘相关样式 */
+.disk-mount,
+.disk-progress,
+.disk-progress-bar,
+.disk-usage-text,
+.disk-usage,
+.disk-info,
+.disk-size,
+.disk-details,
+.disk-device {
+  display: none;
+}
+
+/* 调整网络图表大小 */
+:deep(.network-chart) {
+  height: 120px;
+}
+
+.network-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.interface-select {
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f5f5f5;
+}
+
+.network-stats {
+  background-color: #1e1e1e;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.network-speed {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.speed-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.speed-label {
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.speed-value {
+  color: #fff;
+  font-size: 12px;
+}
+
+.disk-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.disk-device {
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.disk-mount {
+  font-size: 11px;
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .disk-section {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .disk-list {
   flex: 1;
-  overflow-y: auto; /* 只有磁盘列表可以滚动 */
-  padding-right: 4px;
+  overflow-y: auto;
+  padding: 0 4px;
 }
 
-/* 调整网络图表大小 */
-:deep(.network-chart) {
-  height: 100px;
+.disk-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  gap: 12px;
+}
+
+.disk-mount {
+  flex: 0 0 120px;
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.disk-usage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.disk-progress {
+  flex: 1;
+  height: 4px;
+  background-color: #f0f0f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.disk-progress-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.disk-info {
+  flex: 0 0 120px;
+  text-align: right;
+  font-size: 11px;
+  color: #666;
+  font-family: monospace;
+}
+
+.disk-size {
+  white-space: nowrap;
 }
 </style> 
