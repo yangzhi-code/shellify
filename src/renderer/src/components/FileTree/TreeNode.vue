@@ -120,7 +120,7 @@ const addfolder = () => {
 }
 // 添加文件节点
 const addFile = () => {
-  // 在添加子节点后，展开子节点
+  // 在添加子节点后，展开��节点
   if (!isChildrenVisible.value) {
     isChildrenVisible.value = true
   }
@@ -128,7 +128,7 @@ const addFile = () => {
 }
 //更新节点
 const updateNode = (formData) => {
-  emit('updata-node',props.node.id,formData)
+  emit('updata-node', props.node.id, formData)
   visible.value = false
 }
 
