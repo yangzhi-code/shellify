@@ -1,7 +1,11 @@
 <template>
   <div class="terminal-wrapper">
-    <QuickConnect v-if="showQuickConnect" @connect="handleQuickConnect" />
-    <div v-else ref="terminalContainer" class="terminal-container"></div>
+    <QuickConnect 
+      v-show="showQuickConnect" 
+      :item="props.item"
+      :onConnect="handleQuickConnect" 
+    />
+    <div v-show="!showQuickConnect" ref="terminalContainer" class="terminal-container"></div>
   </div>
 </template>
 
@@ -39,12 +43,27 @@ const commandHandler = ref(null)
 const emit = defineEmits(['connected'])
 
 // 处理快速连接选择
-const handleQuickConnect = (connection) => {
-  // 更新当前标签的连接信息
-  props.item.info = { ...connection }
-  // 初始化终端并连接
-  initTerminal()
-  connectToServer(connection)
+const handleQuickConnect = async (connection) => {
+  try {
+    // 更新当前标签的连接信息
+    props.item.info = {
+      name: connection.info.name || '未命名连接',
+      host: connection.info.host,
+      port: connection.info.port,
+      username: connection.info.username,
+      password: connection.info.password
+    }
+    // 初始化终端
+    initTerminal()
+    
+    // 连接到服务器
+    if (props.item.info.host && !props.item.data) {
+      connectToServer(props.item.info)
+    }
+  } catch (error) {
+    console.error('连接失败:', error)
+    terminalManager.value?.writeln('连接失败：' + error.message)
+  }
 }
 
 // 初始化终端
@@ -110,7 +129,9 @@ const initTerminal = () => {
 
 // 连接到服务器
 const connectToServer = async (serverInfo) => {
+  
   terminalManager.value.writeln('正在连接到服务器...')
+  console.log("快速连接",serverInfo)
   try {
     const response = await window.electron.ipcRenderer.invoke('new-connection', {
       host: serverInfo.host,
@@ -129,7 +150,7 @@ const connectToServer = async (serverInfo) => {
 
 // 生命周期钩子
 onMounted(() => {
-  // 只有当有完��的连接信息时才初始化终端
+  // 只有当有完的连接信息时才初始化终端
   if (!showQuickConnect.value) {
     initTerminal()
     if (props.item.info.host && !props.item.data) {

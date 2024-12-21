@@ -2,15 +2,12 @@
   <div class="quick-connect">
     <div class="welcome-section">
       <h1>欢迎使用 Shellify</h1>
-      <p>选择一个保存的连接或创建新连接开始使用</p>
+      <p>选择一个保存的连接开始使用</p>
     </div>
 
     <div class="connection-section">
       <div class="section-header">
         <h2>保存的连接</h2>
-        <el-button type="primary" size="small" @click="createNewConnection">
-          <el-icon><Plus /></el-icon>新建连接
-        </el-button>
       </div>
 
       <div class="connection-list">
@@ -36,21 +33,13 @@
                 size="small" 
                 @click="handleConnect(conn)"
               >连接</el-button>
-              <el-button 
-                size="small" 
-                @click="handleEdit(conn)"
-              >编辑</el-button>
             </span>
           </div>
         </div>
 
         <!-- 空状态展示 -->
         <div v-else class="empty-state">
-          <el-empty description="暂无保存的连接">
-            <el-button type="primary" @click="createNewConnection">
-              创建新连接
-            </el-button>
-          </el-empty>
+          <el-empty description="暂无保存的连接" />
         </div>
       </div>
     </div>
@@ -113,29 +102,15 @@ const loadConnections = async () => {
 const handleConnect = (connection) => {
   // 更新当前标签的连接信息
   props.item.info = {
-    name: connection.info.name,
+    name: connection.info.name || '未命名连接',
     host: connection.info.host,
     port: connection.info.port,
     username: connection.info.username,
     password: connection.info.password
   }
-  // 发出连接事件，传递完整的连接信息
-  props.onConnect({
-    ...connection,
-    id: props.item.data?.id // 保留现有的连接ID（如果有）
-  })
-}
-
-// 创建新连接
-const createNewConnection = () => {
-  // TODO: 实现新建连接的逻辑
-  ElMessage.info('新建连接功能开发中')
-}
-
-// 编辑连接
-const handleEdit = (connection) => {
-  // TODO: 实现编辑连接的逻辑
-  ElMessage.info('编辑连接功能开发中')
+  
+  // 调用父组件传入的 onConnect 函数
+  props.onConnect(connection)
 }
 
 onMounted(() => {
@@ -239,9 +214,8 @@ onMounted(() => {
 }
 
 .action-col {
-  flex: 2;
+  flex: 1;
   display: flex;
-  gap: 8px;
   justify-content: flex-end;
 }
 
