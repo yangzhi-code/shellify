@@ -194,6 +194,8 @@ onMounted(() => {
   flex-direction: column;
   flex: 1;
   background: #fff;
+  min-width: 0;
+  width: 100%;
 }
 
 .toolbar {
@@ -202,11 +204,15 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .path-nav {
   flex: 1;
   margin-right: 16px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .tools {
@@ -217,6 +223,13 @@ onMounted(() => {
 :deep(.el-table) {
   flex: 1;
   overflow: auto;
+  width: 100% !important;
+  min-width: 0;
+}
+
+:deep(.el-table__inner-wrapper) {
+  min-width: 0;
+  width: 100% !important;
 }
 
 .pagination-container {
@@ -224,6 +237,8 @@ onMounted(() => {
   border-top: 1px solid #eee;
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .file-name-cell {

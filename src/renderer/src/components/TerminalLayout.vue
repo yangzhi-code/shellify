@@ -91,6 +91,17 @@
     }
     
     layoutMode.value = mode
+    
+    // 清除手动调整时设置的内联样式
+    const terminalDom = terminalArea.value
+    const fileDom = fileArea.value
+    if (terminalDom) {
+      terminalDom.removeAttribute('style')  // 完全清除内联样式
+    }
+    if (fileDom) {
+      fileDom.removeAttribute('style')  // 完全清除内联样式
+    }
+    
     await nextTick()
   
     // 强制重绘：触发 DOM 重新计算
@@ -213,7 +224,7 @@
     height: 100%;
   }
   
-  /* 分屏模式 */
+  /* 分屏模��� */
   .content-area.split {
     flex-direction: column;
     overflow: hidden;
@@ -229,6 +240,7 @@
     flex: 0 0 50%;
     min-height: 100px;
     border-top: 1px solid #333;
+    overflow: hidden;
   }
   
   /* 仅终端模式 */
@@ -280,8 +292,11 @@
   }
   
   .file-area {
+    position: relative;
     background-color: #fff;
     overflow: auto;
+    min-width: 0;
+    width: 100%;
   }
   
   /* 禁用状态的按钮样式 */
