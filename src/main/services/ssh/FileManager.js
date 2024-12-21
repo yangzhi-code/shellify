@@ -213,37 +213,120 @@ class FileManager {
    */
   async downloadFile(connectionId, remotePath, fileName) {
     try {
+      // 确保连接可用
+      await this._ensureConnection(connectionId);
+      
       const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
       const { dialog } = require('electron');
       
+      // 首先检查文件是否存在和可访问
+      try {
+        const stats = await new Promise((resolve, reject) => {
+          sftp.stat(remotePath, (err, stats) => {
+            if (err) reject(err);
+            else resolve(stats);
+          });
+        });
+
+        if (!stats.isFile()) {
+          throw new Error('不是一个文件');
+        }
+      } catch (error) {
+        console.error('文件状态检查失败:', error);
+        throw new Error(`无法访问文件: ${error.message}`);
+      }
+      
       // 让用户选择保存位置
-      const { filePath } = await dialog.showSaveDialog({
+      const { filePath, canceled } = await dialog.showSaveDialog({
         defaultPath: fileName,
         filters: [
           { name: 'All Files', extensions: ['*'] }
         ]
       });
 
-      if (!filePath) {
+      if (canceled || !filePath) {
         throw new Error('用户取消下载');
       }
 
       // 执行下载
       return new Promise((resolve, reject) => {
-        sftp.fastGet(remotePath, filePath, {
-          step: (transferred, chunk, total) => {
-            // 这里可以添加进度回调
-            const percent = Math.round((transferred / total) * 100);
-            console.log(`下载进度: ${percent}%`);
+        let completed = false;
+        let error = null;
+
+        const handleError = (err) => {
+          if (!completed) {
+            completed = true;
+            error = err;
+            reject(err);
           }
-        }, (err) => {
-          if (err) reject(err);
-          else resolve(filePath);
+        };
+
+        try {
+          sftp.fastGet(remotePath, filePath, {
+            step: (transferred, chunk, total) => {
+              if (error) return; // 如果已经发生错误，不再继续处理
+              const percent = Math.round((transferred / total) * 100);
+              console.log(`下载进度: ${percent}%`);
+            },
+            concurrency: 1,
+            mode: 0o644
+          }, (err) => {
+            if (completed) return; // 避免重复处理
+            completed = true;
+            
+            if (err) {
+              console.error('文件传输失败:', err);
+              reject(new Error(`文件传输失败: ${err.message}`));
+            } else {
+              console.log('文件下载完成');
+              resolve(filePath);
+            }
+          });
+        } catch (err) {
+          handleError(new Error(`启动下载失败: ${err.message}`));
+        }
+
+        // 监听 SFTP 会话错误
+        sftp.once('error', (err) => {
+          handleError(new Error(`SFTP错误: ${err.message}`));
+        });
+
+        // 监听 SFTP 会话关闭
+        sftp.once('close', () => {
+          if (!completed) {
+            handleError(new Error('SFTP会话意外关闭'));
+          }
         });
       });
     } catch (error) {
       console.error('文件下载失败:', error);
-      throw error;
+      // 确保错误消息更具体
+      if (error.code === 4) {
+        throw new Error('文件传输失败: 可能是权限问题或文件被占用');
+      } else if (error.code === 2) {
+        throw new Error('文件不存在或无法访问');
+      } else if (error.message.includes('找不到连接')) {
+        throw new Error('SSH连接已断开，请重新连接');
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * 确保连接可用
+   * @private
+   */
+  async _ensureConnection(connectionId) {
+    try {
+      // 检查连接是否存在并且可用
+      if (!SSHConnectionManager.isConnected(connectionId)) {
+        console.log('连接已断开，尝试重连...');
+        await SSHConnectionManager.reconnect(connectionId);
+      }
+    } catch (error) {
+      console.error('确保连接可用失败:', error);
+      throw new Error(`连接检查失败: ${error.message}`);
     }
   }
 }

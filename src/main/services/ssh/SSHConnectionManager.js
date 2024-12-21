@@ -16,6 +16,7 @@ class SSHConnectionManager {
     this.reconnectAttempts = {};
     this.MAX_RETRIES = 3;
     this.RETRY_DELAY = 2000;
+    this.connectionStatus = {}; // 新增：跟踪连接状态
   }
 
   /**
@@ -102,21 +103,52 @@ class SSHConnectionManager {
    */
   handleConnectionEnd(connectionId) {
     if (this.clients[connectionId]) {
+      this.connectionStatus[connectionId] = 'disconnected';
+      this._cleanupSFTPSession(connectionId);
       delete this.clients[connectionId];
-      // 尝试重连
-      const reconnectInfo = this.reconnectAttempts[connectionId];
-      if (reconnectInfo) {
-        this.handleConnectionError(connectionId);
+
+      // 如果有重连配置，尝试重连
+      if (this.reconnectAttempts[connectionId]) {
+        this.handleReconnect(connectionId).catch(err => {
+          console.error('自动重连失败:', err);
+        });
+      }
+    }
+  }
+
+  /**
+   * 清理 SFTP 会话
+   * @private
+   */
+  _cleanupSFTPSession(connectionId) {
+    if (this.sftpSessions[connectionId]) {
+      try {
+        const { sftp } = this.sftpSessions[connectionId];
+        if (sftp) {
+          sftp.removeAllListeners();
+          sftp.end();
+        }
+      } catch (error) {
+        console.error('清理 SFTP 会话失败:', error);
+      } finally {
+        delete this.sftpSessions[connectionId];
       }
     }
   }
 
   /**
    * 检查连接状态
+   * @param {string} connectionId - 连接ID
+   * @returns {boolean} 连接是否可用
    */
   isConnected(connectionId) {
     const client = this.clients[connectionId];
-    return client && client._sock && client._sock.writable;
+    const isValid = client && client._sock && client._sock.writable;
+    
+    // 更新连接状态
+    this.connectionStatus[connectionId] = isValid ? 'connected' : 'disconnected';
+    
+    return isValid;
   }
 
   /**
@@ -137,34 +169,64 @@ class SSHConnectionManager {
    * 获取或创建 SFTP 会话
    */
   async getSFTPSession(connectionId) {
-    // 检查是否已有可用的 SFTP 会话
-    if (this.sftpSessions[connectionId]?.sftp) {
-      return this.sftpSessions[connectionId].sftp;
-    }
+    try {
+      const client = this.clients[connectionId];
+      if (!client) {
+        throw new Error(`找不到连接: ${connectionId}`);
+      }
 
-    const client = this.getClient(connectionId);
-    
-    return new Promise((resolve, reject) => {
-      client.sftp((err, sftp) => {
-        if (err) {
-          reject(err);
-          return;
+      // 如果已有可用的 SFTP 会话，验证其可用性
+      if (this.sftpSessions[connectionId]?.sftp) {
+        try {
+          await new Promise((resolve, reject) => {
+            this.sftpSessions[connectionId].sftp.stat('.', (err) => {
+              if (err) reject(err);
+              else resolve();
+            });
+          });
+          return this.sftpSessions[connectionId].sftp;
+        } catch (error) {
+          console.log('SFTP会话已失效，需要重新创建');
+          this._cleanupSFTPSession(connectionId);
         }
+      }
 
-        // 保存 SFTP 会话
-        this.sftpSessions[connectionId] = {
-          sftp,
-          timestamp: Date.now()
-        };
+      // 创建新的 SFTP 会话
+      return await new Promise((resolve, reject) => {
+        client.sftp((err, sftp) => {
+          if (err) {
+            reject(err);
+            return;
+          }
 
-        // 监听 SFTP 会话关闭
-        sftp.on('close', () => {
-          delete this.sftpSessions[connectionId];
+          // 保存 SFTP 会话
+          this.sftpSessions[connectionId] = {
+            sftp,
+            timestamp: Date.now()
+          };
+
+          // 监听 SFTP 会话事件
+          sftp.on('close', () => {
+            console.log('SFTP会话关闭');
+            delete this.sftpSessions[connectionId];
+          });
+
+          sftp.on('error', (err) => {
+            console.error('SFTP会话错误:', err);
+            this._cleanupSFTPSession(connectionId);
+          });
+
+          resolve(sftp);
         });
-
-        resolve(sftp);
       });
-    });
+    } catch (error) {
+      if (error.message.includes('找不到连接') && this.reconnectAttempts[connectionId]) {
+        console.log('连接丢失，尝试重连...');
+        await this.handleReconnect(connectionId);
+        return this.getSFTPSession(connectionId);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -217,6 +279,84 @@ class SSHConnectionManager {
     }
 
     delete this.reconnectAttempts[connectionId];
+  }
+
+  /**
+   * 重新连接
+   */
+  async reconnect(connectionId) {
+    const reconnectInfo = this.reconnectAttempts[connectionId];
+    if (!reconnectInfo) {
+      throw new Error('找不到连接配置');
+    }
+
+    try {
+      // 清理旧连接和会话
+      this._cleanupSFTPSession(connectionId);
+      if (this.clients[connectionId]) {
+        this.clients[connectionId].end();
+        delete this.clients[connectionId];
+      }
+
+      // 创建新连接
+      return await new Promise((resolve, reject) => {
+        const client = new Client();
+        this.setupConnection(
+          client,
+          connectionId,
+          reconnectInfo.serverInfo,
+          () => {
+            console.log('重连成功');
+            resolve(this.clients[connectionId]);
+          },
+          (err) => {
+            console.error('重连失败:', err);
+            reject(err);
+          }
+        );
+      });
+    } catch (error) {
+      console.error('重连失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 处理重连
+   * @private
+   */
+  async handleReconnect(connectionId) {
+    const reconnectInfo = this.reconnectAttempts[connectionId];
+    if (!reconnectInfo || reconnectInfo.attempts >= this.MAX_RETRIES) {
+      throw new Error('重连次数超过限制或无法找到连接配置');
+    }
+
+    reconnectInfo.attempts++;
+    console.log(`尝试重连 (${reconnectInfo.attempts}/${this.MAX_RETRIES})...`);
+
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const client = new Client();
+        this.setupConnection(
+          client,
+          connectionId,
+          reconnectInfo.serverInfo,
+          () => {
+            console.log('重连成功');
+            reconnectInfo.attempts = 0; // 重置重试次数
+            resolve(this.clients[connectionId]);
+          },
+          (err) => {
+            console.error('重连失败:', err);
+            if (reconnectInfo.attempts < this.MAX_RETRIES) {
+              this.handleReconnect(connectionId).then(resolve).catch(reject);
+            } else {
+              reject(err);
+            }
+          }
+        );
+      }, this.RETRY_DELAY);
+    });
   }
 }
 
