@@ -1,45 +1,47 @@
 <template>
   <div class="download-manager">
     <!-- 下载按钮 -->
-    <div class="download-button" @click="showDownloadList = true">
-      <el-badge :value="activeDownloads" :max="99" class="download-badge">
-        <div class="download-icon-wrapper">
-          <el-icon style="font-size: 16px;color: #000;"><Download /></el-icon>
-          <div v-if="hasActiveDownload" class="progress-ring">
-            <svg viewBox="0 0 36 36">
-              <path
-                d="M18 2.0845
-                  a 15.9155 15.9155 0 0 1 0 31.831
-                  a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="#E6E6E6"
-                stroke-width="3"
-              />
-              <path
-                d="M18 2.0845
-                  a 15.9155 15.9155 0 0 1 0 31.831
-                  a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="var(--el-color-primary)"
-                stroke-width="3"
-                :stroke-dasharray="`${totalProgress}, 100`"
-              />
-            </svg>
-          </div>
-        </div>
-      </el-badge>
-    </div>
-
-    <!-- 下载记录弹出框 -->
     <el-popover
       v-model:visible="showDownloadList"
-      placement="bottom-start"
+      placement="bottom-end"
       :width="400"
       trigger="click"
       popper-class="download-popover"
     >
       <template #reference>
-        <div style="display: none"></div>
+        <div class="download-button">
+          <el-badge 
+            :value="activeDownloads" 
+            :max="99" 
+            class="download-badge"
+            :hidden="activeDownloads === 0"
+          >
+            <div class="download-icon-wrapper">
+              <el-icon style="font-size: 16px;color: #000;"><Download /></el-icon>
+              <div v-if="hasActiveDownload" class="progress-ring">
+                <svg viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845
+                      a 15.9155 15.9155 0 0 1 0 31.831
+                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="#E6E6E6"
+                    stroke-width="3"
+                  />
+                  <path
+                    d="M18 2.0845
+                      a 15.9155 15.9155 0 0 1 0 31.831
+                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="var(--el-color-primary)"
+                    stroke-width="3"
+                    :stroke-dasharray="`${totalProgress}, 100`"
+                  />
+                </svg>
+              </div>
+            </div>
+          </el-badge>
+        </div>
       </template>
       <div class="download-list">
         <div class="download-header">
@@ -160,6 +162,7 @@ onUnmounted(() => {
 .download-manager {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .download-button {
@@ -259,5 +262,6 @@ onUnmounted(() => {
   padding: 0;
   max-height: 400px;
   overflow: hidden;
+  margin-top: 5px !important;
 }
 </style> 
