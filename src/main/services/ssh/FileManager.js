@@ -8,24 +8,22 @@ class FileManager {
    */
   async listFiles(connectionId, path = '~') {
     try {
-      const client = SSHConnectionManager.getClient(connectionId);
+      // 获取 SFTP 会话
+      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+      
+      // 获取实际路径
+      const actualPath = await this._getActualPath(connectionId, path);
+      
       return new Promise((resolve, reject) => {
-        client.sftp((err, sftp) => {
+        sftp.readdir(actualPath, (err, list) => {
           if (err) reject(err);
           else {
-            // 获取实际路径
-            this._getActualPath(client, path).then(actualPath => {
-              sftp.readdir(actualPath, (err, list) => {
-                if (err) reject(err);
-                else {
-                  resolve(this._formatFileList(list, actualPath));
-                }
-              });
-            }).catch(reject);
+            resolve(this._formatFileList(list, actualPath));
           }
         });
       });
     } catch (error) {
+      console.error('文件列表获取失败:', error);
       throw error;
     }
   }
@@ -34,19 +32,13 @@ class FileManager {
    * 获取实际路径（解析 ~ 等）
    * @private
    */
-  async _getActualPath(client, path) {
+  async _getActualPath(connectionId, path) {
+    if (path === '/') return '/';
     if (path !== '~') return path;
     
-    return new Promise((resolve, reject) => {
-      client.exec('pwd', (err, channel) => {
-        if (err) reject(err);
-        else {
-          let pwd = '';
-          channel.on('data', data => pwd += data);
-          channel.on('close', () => resolve(pwd.trim()));
-        }
-      });
-    });
+    // 使用新的命令执行方法
+    const homeDir = await SSHConnectionManager.execCommand(connectionId, 'pwd');
+    return homeDir;
   }
 
   /**

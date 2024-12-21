@@ -102,7 +102,10 @@ const props = defineProps({
 
 // 状态变量
 const currentPath = ref([])
-const currentFullPath = computed(() => currentPath.value.join('/') || '/')
+const currentFullPath = computed(() => {
+  if (currentPath.value.length === 0) return '/';
+  return '/' + currentPath.value.join('/');
+})
 const fileList = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
@@ -117,6 +120,7 @@ const currentPageData = computed(() => {
 
 // 加载文件列表
 const loadFileList = async () => {
+  console.log('请求路径:', currentFullPath.value);
   loading.value = true;
   try {
     const response = await window.electron.ipcRenderer.invoke('ssh:list-files', {
@@ -126,7 +130,11 @@ const loadFileList = async () => {
     fileList.value = response;
   } catch (error) {
     console.error('加载文件列表失败:', error);
-    window.$message.error('加载文件列表失败');
+    if (error.message?.includes('Channel open failure')) {
+      window.$message?.error?.('连接已断开，请重新连接');
+      return;
+    }
+    window.$message?.error?.('加载文件列表失败: ' + (error.message || '未知错误'));
   } finally {
     loading.value = false;
   }
@@ -135,8 +143,15 @@ const loadFileList = async () => {
 // 处理文件点击
 const handleFileClick = (file) => {
   if (file.type === 'directory') {
-    currentPath.value.push(file.name)
-    loadFileList()
+    // 处理特殊目录
+    if (file.name === '..') {
+      // 返回上级目录
+      currentPath.value.pop();
+    } else {
+      // 进入子目录
+      currentPath.value.push(file.name);
+    }
+    loadFileList();
   }
 }
 
