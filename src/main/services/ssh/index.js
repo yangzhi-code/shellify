@@ -1,3 +1,8 @@
+/**
+ * SSH 服务模块的统一出口
+ * 整合所有 SSH 相关功能，提供统一的接口
+ */
+
 import SSHConnectionManager from './SSHConnectionManager';
 import ShellManager from './ShellManager';
 import FileTransferManager from './FileTransferManager';

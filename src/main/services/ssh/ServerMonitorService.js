@@ -1,7 +1,18 @@
 import SSHConnectionManager from './SSHConnectionManager';
 import MetricsFormatter from './MetricsFormatter';
 
+/**
+ * 服务器监控服务
+ * 负责获取和处理服务器状态信息
+ */
 class ServerMonitorService {
+  /**
+   * 在远程服务器上执行命令
+   * @private
+   * @param {string} connectionId - SSH 连接ID
+   * @param {string} command - 要执行的命令
+   * @returns {Promise<{stdout: string, stderr: string}>}
+   */
   async execCommand(connectionId, command) {
     return new Promise((resolve, reject) => {
       const client = SSHConnectionManager.getClient(connectionId);
@@ -30,6 +41,11 @@ class ServerMonitorService {
     });
   }
 
+  /**
+   * 获取服务器状态信息
+   * @param {string} connectionId - SSH 连接ID
+   * @returns {Promise<Object>} 服务器状态信息
+   */
   async getServerStatus(connectionId) {
     try {
       const { stdout: publicIp } = await this.execCommand(
@@ -79,6 +95,12 @@ class ServerMonitorService {
     }
   }
 
+  /**
+   * 获取网络接口信息
+   * @private
+   * @param {string} connectionId - SSH 连接ID
+   * @returns {Promise<Object>} 网络接口信息
+   */
   async getNetworkInfo(connectionId) {
     const { stdout: networkInterfaces } = await this.execCommand(
       connectionId,
