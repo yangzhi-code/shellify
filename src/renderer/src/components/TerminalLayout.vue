@@ -108,7 +108,6 @@
     forceRedraw()
   
     // 调整终端大小
-    await nextTick()
     if (terminal.value?.terminalManager?.value) {
       terminal.value.terminalManager.value.resize()
     }

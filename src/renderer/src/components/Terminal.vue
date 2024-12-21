@@ -124,10 +124,19 @@ const initTerminal = () => {
 
     window.addEventListener('resize', handleResize)
 
+    // 添加 ResizeObserver 监听容器大小变化
+    const resizeObserver = new ResizeObserver(() => {
+      if (terminalManager.value) {
+        terminalManager.value.resize()
+      }
+    })
+    resizeObserver.observe(terminalContainer.value)
+
     // 保存清理函数引用
     terminal._cleanup = () => {
       disposable.dispose()
       window.removeEventListener('resize', handleResize)
+      resizeObserver.disconnect()  // 清理 ResizeObserver
     }
   } catch (error) {
     console.error('Terminal initialization error:', error)
@@ -178,7 +187,7 @@ onBeforeUnmount(() => {
       window.electron.ipcRenderer.invoke('disconnect', props.item.data.id)
     }
 
-    // 最后销毁终端
+    // 最后销毁���端
     if (terminalManager.value) {
       terminalManager.value.dispose()
       terminalManager.value = null

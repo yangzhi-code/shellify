@@ -101,6 +101,7 @@ export class TerminalManager {
    * 调整终端大小以适应容器
    */
   resize() {
+    console.log('调整终端大小以适应容器')
     try {
       if (this.fitAddon && this.terminal) {
         this.fitAddon.fit()
