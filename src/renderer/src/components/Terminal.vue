@@ -5,7 +5,11 @@
       :item="props.item"
       :onConnect="handleQuickConnect" 
     />
-    <div v-show="!showQuickConnect" ref="terminalContainer" class="terminal-container"></div>
+    <div 
+      v-show="!showQuickConnect" 
+      ref="terminalContainer" 
+      class="terminal-container"
+    ></div>
   </div>
 </template>
 
@@ -42,6 +46,9 @@ const commandHandler = ref(null)
 
 const emit = defineEmits(['connected'])
 
+// 布局模式：terminal(仅终端)、split(终端和文件)、file(仅文件)
+const layoutMode = ref('terminal')
+
 // 处理快速连接选择
 const handleQuickConnect = async (connection) => {
   try {
@@ -62,7 +69,7 @@ const handleQuickConnect = async (connection) => {
     }
   } catch (error) {
     console.error('连接失败:', error)
-    terminalManager.value?.writeln('连接失败：' + error.message)
+    terminalManager.value?.writeln('连接失败��' + error.message)
   }
 }
 
@@ -193,13 +200,8 @@ onBeforeUnmount(() => {
 }
 
 .terminal-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #1e1e1e;
-  padding: 10px;
+  width: 100%;
+  height: 100%;
 }
 
 :deep(.xterm-viewport),
@@ -212,7 +214,7 @@ onBeforeUnmount(() => {
 :deep(.xterm-viewport) {
   padding: 10px;
   box-sizing: border-box;
-  overflow-y: hidden !important;
+  overflow-y: auto !important;
 }
 
 /* 添加选中文本的样式 */

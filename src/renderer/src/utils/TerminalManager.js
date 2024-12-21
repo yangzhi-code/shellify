@@ -13,33 +13,20 @@ export class TerminalManager {
    * @param {Object} options - 终端配置选项
    */
   constructor(options = {}) {
-    this.terminal = null        // xterm终端实例
-    this.fitAddon = null       // 终端自适应插件实例
     this.options = {
-      fontSize: options.fontSize || 14,      // 字体大小
-      rows: options.rows || 30,             // 终端行数
-      cols: options.cols || 80,             // 终端列数
-      cursorBlink: true,                    // 光标闪烁
-      mouseEvents: true,                    // 鼠标事件支持
-      enableClipboard: true,                // 剪贴板支持
-      copyOnSelection: true,                 // 选中自动复制
-      scrollback: 1000,                     // 限制历史记录行数
-      disableStdin: false,                 // 启用输入
-      rendererType: 'canvas',              // 使用 canvas 渲染
-      allowTransparency: false,            // 禁用透明度
-      fastScrollModifier: 'alt',           // 快速滚动修饰键
-      screenReaderMode: false,             // 禁用屏幕阅读模式
-      minimumContrastRatio: 1,             // 最小对比度
-      theme: options.theme || {
+      cursorBlink: true,
+      theme: {
         background: '#1e1e1e',
         foreground: '#ffffff'
       },
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      rightClickSelectsWord: true,    // 右键选中单词
-      allowProposedApi: true,         // 允许使用提议的API
+      scrollback: options.scrollback || 1000,
+      convertEol: options.convertEol !== false,
+      ...options
     }
-    this.writeQueue = [];
-    this.isWriting = false;
+    this.terminal = null
+    this.fitAddon = null
+    this.writeQueue = []
+    this.isWriting = false
   }
 
   /**
@@ -49,7 +36,7 @@ export class TerminalManager {
    */
   init(container) {
     if (this.terminal) {
-      return this.terminal;
+      return this.terminal
     }
 
     this.terminal = new Terminal(this.options)

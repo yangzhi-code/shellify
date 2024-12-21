@@ -20,11 +20,11 @@
         </div>
       </div>
       <div class="content">
-        <Terminal
-          v-for="(item) in tabsStore.editableTabs" :key="item.id" 
+        <TerminalLayout
+          v-for="item in tabsStore.editableTabs"
+          :key="item.id"
           v-show="item.id === tabsStore.editableTabsValue"
-          :connectionId = "item.id"
-          :item = item
+          :item="item"
           @connected="handleTerminalConnected"
         />
       </div>
@@ -41,6 +41,7 @@ import TabMenu from './components/TabMenu.vue'
 import TabFolder from './components/TabFolder.vue'
 import ServerStatus from './components/ServerStatus.vue'
 import { useTabsStore } from './store/terminalStore'
+import TerminalLayout from './components/TerminalLayout.vue'
 const tabsStore = useTabsStore()
 const currentConnectionId = ref(null)
 
