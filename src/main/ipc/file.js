@@ -26,4 +26,14 @@ export function setupFileHandlers() {
       throw error;
     }
   });
+
+  // 文件下载处理器
+  ipcMain.handle('ssh:download-file', async (event, { connectionId, remotePath, fileName }) => {
+    try {
+      return await FileManager.downloadFile(connectionId, remotePath, fileName);
+    } catch (error) {
+      console.error('文件下载失败:', error);
+      throw error;
+    }
+  });
 } 

@@ -78,7 +78,12 @@
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <el-button-group>
-            <el-button size="small" @click="downloadFile(row)">
+            <el-button 
+              size="small" 
+              @click="downloadFile(row)"
+              :disabled="!canDownload(row)"
+              :title="!canDownload(row) ? '目录不可直接下载' : '下载文件'"
+            >
               <el-icon><Download /></el-icon>
             </el-button>
             <el-button size="small" @click="renameFile(row)">
@@ -217,8 +222,34 @@ const createFolder = () => {
   // TODO: 实现创建文件夹
 }
 
-const downloadFile = (file) => {
-  // TODO: 实现文件下载
+// 检查文件是否可下载
+const canDownload = (file) => {
+  // 如果是文件，直接可下载
+  if (file.type === 'file') return true;
+  
+  // 如果是压缩包格式的目录也可以下载
+  const compressedFormats = ['.zip', '.tar', '.gz', '.tgz', '.rar', '.7z'];
+  return compressedFormats.some(format => file.name.toLowerCase().endsWith(format));
+}
+
+// 处理文件下载
+const downloadFile = async (file) => {
+  if (!canDownload(file)) return;
+  
+  try {
+    loading.value = true;
+    await window.electron.ipcRenderer.invoke('ssh:download-file', {
+      connectionId: props.connectionId,
+      remotePath: file.path,
+      fileName: file.name
+    });
+    window.$message.success('文件下载成功');
+  } catch (error) {
+    console.error('文件下载失败:', error);
+    window.$message.error('文件下载失败: ' + error.message);
+  } finally {
+    loading.value = false;
+  }
 }
 
 const renameFile = (file) => {
@@ -575,5 +606,10 @@ onMounted(() => {
   min-height: 24px;
   padding-left: 6px;
   line-height: 1;
+}
+
+:deep(.el-button.is-disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style> 

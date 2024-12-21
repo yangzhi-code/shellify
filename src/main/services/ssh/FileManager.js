@@ -204,6 +204,48 @@ class FileManager {
       throw error;
     }
   }
+
+  /**
+   * 下载文件
+   * @param {string} connectionId - SSH连接ID
+   * @param {string} remotePath - 远程文件路径
+   * @param {string} fileName - 文件名
+   */
+  async downloadFile(connectionId, remotePath, fileName) {
+    try {
+      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+      const { dialog } = require('electron');
+      
+      // 让用户选择保存位置
+      const { filePath } = await dialog.showSaveDialog({
+        defaultPath: fileName,
+        filters: [
+          { name: 'All Files', extensions: ['*'] }
+        ]
+      });
+
+      if (!filePath) {
+        throw new Error('用户取消下载');
+      }
+
+      // 执行下载
+      return new Promise((resolve, reject) => {
+        sftp.fastGet(remotePath, filePath, {
+          step: (transferred, chunk, total) => {
+            // 这里可以添加进度回调
+            const percent = Math.round((transferred / total) * 100);
+            console.log(`下载进度: ${percent}%`);
+          }
+        }, (err) => {
+          if (err) reject(err);
+          else resolve(filePath);
+        });
+      });
+    } catch (error) {
+      console.error('文件下载失败:', error);
+      throw error;
+    }
+  }
 }
 
 export default new FileManager(); 
