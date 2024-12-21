@@ -37,7 +37,11 @@
               placeholder="搜索文件..."
               @keyup.enter="handleSearch"
             />
-            <el-icon v-if="searchKeyword" class="clear-icon" @click="searchKeyword = ''">
+            <el-icon 
+              v-if="searchKeyword" 
+              class="clear-icon" 
+              @click="clearSearch"
+            >
               <Close />
             </el-icon>
           </div>
@@ -245,6 +249,14 @@ const searchOptions = ref({
 })
 const isSearching = ref(false)
 
+// 显示通知
+const showNotification = (title, message, type = 'info') => {
+  new window.Notification(title, {
+    body: message,
+    icon: type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'
+  });
+}
+
 // 处理搜索
 const handleSearch = async () => {
   if (!searchKeyword.value.trim()) {
@@ -252,26 +264,62 @@ const handleSearch = async () => {
     return;
   }
 
+  console.log('开始搜索，关键词:', searchKeyword.value);
+  console.log('搜索起始目录:', currentFullPath.value);
   loading.value = true;
   isSearching.value = true;
 
   try {
+    // 确保有有效的搜索路径
+    if (!currentFullPath.value) {
+      throw new Error('当前路径无效');
+    }
+
     const results = await window.electron.ipcRenderer.invoke('ssh:search-files', {
       connectionId: props.connectionId,
-      path: currentFullPath.value,
+      startPath: currentFullPath.value,
       keyword: searchKeyword.value,
       options: {
         caseSensitive: searchOptions.value.caseSensitive,
-        recursive: searchOptions.value.recursive
+        recursive: searchOptions.value.recursive,
+        maxResults: 1000,
+        maxDepth: 10
       }
     });
     
+    console.log('搜索完成，结果数:', results?.length);
     fileList.value = results;
+    
+    if (results.length === 0) {
+      window.$message.info('未找到匹配的文件或文件夹');
+    }
   } catch (error) {
-    console.error('搜索失败:', error);
-    window.$message?.error('搜索失败，请重试');
+    console.error('搜索失败，详细错误:', error);
+    if (error.message?.includes('搜索超时')) {
+      showNotification('搜索提示', '搜索超时，请缩小搜索范围或使用更具体的关键词', 'warning');
+    } else if (error.message?.includes('达到最大结果数')) {
+      showNotification('搜索提示', '搜索结果过多，仅显示前1000条结果', 'warning');
+    } else if (error.message?.includes('Permission denied')) {
+      showNotification('搜索提示', '部分目录无访问权限，结果可能不完整', 'warning');
+    } else if (error.message?.includes('达到最大深度')) {
+      showNotification('搜索提示', '已达到最大搜索深度，结果可能不完整', 'warning');
+    } else if (error.message?.includes('Channel open failure')) {
+      showNotification('连接错误', '连接已断开，请重新连接后再试', 'error');
+    } else {
+      showNotification('搜索错误', '搜索失败: ' + (error.message || '发生未知错误，请重试'), 'error');
+    }
   } finally {
     loading.value = false;
+    isSearching.value = false;
+  }
+}
+
+// 清除搜索并刷新列表
+const clearSearch = () => {
+  searchKeyword.value = '';
+  // 如果正在搜索中，恢复到当前目录的文件列表
+  if (isSearching.value) {
+    loadFileList();
     isSearching.value = false;
   }
 }
@@ -306,6 +354,39 @@ onMounted(() => {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  padding: 0 8px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  background-color: var(--el-input-bg-color);
+  transition: all 0.2s;
+}
+
+.path-nav:hover {
+  border-color: var(--el-border-color-hover);
+}
+
+/* 调整面包屑样式以适应新容器 */
+:deep(.el-breadcrumb) {
+  line-height: 1;
+  font-size: 12px;
+}
+
+:deep(.el-breadcrumb__item) {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+:deep(.el-breadcrumb__inner:hover) {
+  color: var(--el-color-primary);
+}
+
+/* 调整包屑分隔符样式 */
+:deep(.el-breadcrumb__separator) {
+  margin: 0 4px;
 }
 
 .tools-group {
@@ -403,15 +484,6 @@ onMounted(() => {
 
 :deep(.el-pagination__sizes) {
   margin-right: 8px;
-}
-
-/* 面包屑导航样式 */
-:deep(.el-breadcrumb__item) {
-  cursor: pointer;
-}
-
-:deep(.el-breadcrumb__inner:hover) {
-  color: var(--el-color-primary);
 }
 
 .search-bar {
