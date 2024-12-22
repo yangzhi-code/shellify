@@ -89,124 +89,77 @@ class FileManager {
    */
   async searchFiles(connectionId, startPath, keyword, options = {}) {
     try {
-      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
-      const results = [];
-      const searchStartTime = Date.now();
-
-      await this._searchInDirectory(sftp, startPath, keyword, {
-        caseSensitive: options.caseSensitive || false,
-        recursive: options.recursive !== false,
-        maxResults: options.maxResults || 1000,
-        maxDepth: options.maxDepth || 10,
-        currentDepth: 0,
-        results,
-        searchStartTime
-      });
-
-      return results;
-    } catch (error) {
-      // 如果是超时错误，直接返回已找到的结果
-      if (error.message?.includes('搜索超时')) {
-        console.warn('搜索已超时，返回部分结果');
-        return error.partialResults || [];
+      // 构建 find 命令，添加权限检查
+      let findCommand = `find "${startPath}" -readable`; // 只搜索可读文件
+      
+      // 添加搜索选项
+      if (!options.caseSensitive) {
+        findCommand += ` -iname "*${keyword}*"`;  // -iname 忽略大小写
+      } else {
+        findCommand += ` -name "*${keyword}*"`;
       }
-      throw error;
-    }
-  }
+      
+      // 限制搜索深度
+      if (options.maxDepth) {
+        findCommand += ` -maxdepth ${options.maxDepth}`;
+      }
 
-  /**
-   * 在指定目录中搜索
-   * @private
-   */
-  async _searchInDirectory(sftp, path, keyword, options) {
-    const {
-      caseSensitive,
-      recursive,
-      maxResults,
-      maxDepth,
-      currentDepth,
-      results,
-      searchStartTime
-    } = options;
+      // 排除一些系统目录
+      findCommand += ` -not -path "/sys/*" -not -path "/proc/*" -not -path "/dev/*"`;
 
-    // 检查是否超时
-    if (Date.now() - searchStartTime > 30000) {
-      const error = new Error('搜索超时（30秒），请缩小搜索范围或指定更具体的目录');
-      error.partialResults = results; // 保存已找到的结果
-      throw error;
-    }
-
-    // 检查是否达到最大深度
-    if (currentDepth > maxDepth) {
-      console.warn(`达到最大深度（${maxDepth}层），停止搜索当前目录: ${path}`);
-      return;
-    }
-    
-    // 检查是否达到最大结果数
-    if (results.length >= maxResults) {
-      console.warn(`达到最大结果数（${maxResults}条），停止搜索`);
-      return;
-    }
-
-    try {
-      const list = await new Promise((resolve, reject) => {
-        sftp.readdir(path, (err, files) => {
-          if (err) {
-            // 忽略权限错误，继续搜索其他目录
-            if (err.message.includes('Permission denied')) {
-              console.warn(`无权限访问目录: ${path}`);
-              resolve([]);
-              return;
-            }
-            reject(err);
-          } else {
-            resolve(files);
+      // 设置超时
+      findCommand = `timeout 30s ${findCommand} 2>/dev/null`; // 忽略错误输出
+      
+      // 执行命令
+      const result = await SSHConnectionManager.execCommand(connectionId, findCommand);
+      const files = result.split('\n').filter(Boolean);
+      
+      // 获取文件详细信息
+      const fileDetails = await Promise.all(files.slice(0, options.maxResults || 1000).map(async (filePath) => {
+        try {
+          // 使用 stat 命令获取文件信息，添加错误处理
+          const statCommand = `stat -c '%s %Y %a %F' "${filePath}" 2>/dev/null`;
+          const statResult = await SSHConnectionManager.execCommand(connectionId, statCommand);
+          
+          if (!statResult) {
+            console.warn(`无法获取文件信息: ${filePath}`);
+            return null;
           }
-        });
-      });
 
-      // 处理当前目录的文件
-      for (const item of list) {
-        if (results.length >= maxResults) break;
-
-        const itemPath = `${path}/${item.filename}`.replace(/\/+/g, '/');
-        const itemName = caseSensitive ? item.filename : item.filename.toLowerCase();
-        const searchPattern = caseSensitive ? keyword : keyword.toLowerCase();
-
-        if (itemName.includes(searchPattern)) {
-          results.push({
-            name: item.filename,
-            path: itemPath,
-            size: item.attrs.size,
-            modifiedTime: new Date(item.attrs.mtime * 1000).toLocaleString(),
-            permissions: this._formatPermissions(item.attrs.mode),
-            type: item.attrs.isDirectory() ? 'directory' : 'file'
-          });
+          const [size, mtime, permissions, type] = statResult.split(' ');
+          const name = filePath.split('/').pop();
+          
+          return {
+            name,
+            path: filePath,
+            parentPath: filePath.substring(0, filePath.lastIndexOf('/')),
+            size: parseInt(size),
+            modifiedTime: new Date(parseInt(mtime) * 1000).toLocaleString(),
+            permissions: this._formatPermissions(parseInt(permissions, 8)),
+            type: type.toLowerCase().includes('directory') ? 'directory' : 'file'
+          };
+        } catch (error) {
+          // 静默跳过无法访问的文件
+          return null;
         }
+      }));
 
-        // 递归搜索子目录
-        if (recursive && item.attrs.isDirectory()) {
-          try {
-            await this._searchInDirectory(sftp, itemPath, keyword, {
-              ...options,
-              currentDepth: currentDepth + 1
-            });
-          } catch (error) {
-            // 如果是超时错误，立即停止整个搜索
-            if (error.message?.includes('搜索超时')) {
-              throw error;
-            }
-            // 其他错误继续搜索
-            console.warn(`搜索目录 ${itemPath} 失败:`, error.message);
-          }
-        }
+      const validResults = fileDetails.filter(Boolean);
+      
+      if (validResults.length === 0) {
+        console.log('未找到匹配的文件或目录');
+      } else {
+        console.log(`找到 ${validResults.length} 个匹配项`);
       }
+
+      return validResults;
     } catch (error) {
-      // 如果是超时错误，向上传递
-      if (error.message?.includes('搜索超时')) {
-        throw error;
+      if (error.message?.includes('timeout')) {
+        console.warn('搜索超时，返回部分结果');
+        return [];
       }
-      console.warn(`搜索目录 ${path} 失败:`, error.message);
+      console.error('文件搜索失败:', error);
+      throw error;
     }
   }
 
@@ -230,7 +183,7 @@ class FileManager {
       });
 
       if (!stats.isFile()) {
-        throw new Error('不是一个文件');
+        throw new Error('不是一个文��');
       }
 
       const totalSize = stats.size;
