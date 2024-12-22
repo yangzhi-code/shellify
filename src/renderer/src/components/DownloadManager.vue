@@ -75,7 +75,7 @@
                     <div class="status">
                       <template v-if="record.status === 'downloading'">
                         <div class="download-progress">
-                          <div>{{ formatFileSize(record.chunk_size || 0) }} / {{ formatFileSize(record.total_size) }}</div>
+                          <div>{{ formatFileSize(getDownloadedSize(record)) }} / {{ formatFileSize(record.total_size) }}</div>
                           <div class="download-speed">{{ formatSpeed(calculateSpeed(record)) }}</div>
                         </div>
                       </template>
@@ -113,7 +113,7 @@
                     type="danger" 
                     link
                     size="small"
-                    @click="deleteRecord(record.id)"
+                    @click.stop="deleteRecord(record.id)"
                   >
                     <el-icon><Delete /></el-icon>
                   </el-button>
@@ -150,11 +150,6 @@ const downloadSpeeds = ref(new Map())
 const lastChunkSizes = ref(new Map())
 const lastUpdateTimes = ref(new Map())
 
-// 计算已下载大小
-const getDownloadedSize = (record) => {
-  if (!record.total_size) return 0
-  return Math.floor(record.total_size * (record.progress / 100))
-}
 
 // 计算下载速率
 const calculateSpeed = (record) => {
@@ -163,10 +158,10 @@ const calculateSpeed = (record) => {
   const now = Date.now()
   const lastTime = lastUpdateTimes.value.get(record.id) || now
   const lastDownloaded = lastChunkSizes.value.get(record.id) || 0
+  const currentDownloaded = getDownloadedSize(record)
   const timeDiff = now - lastTime
   
-  if (timeDiff > 0) {
-    const currentDownloaded = getDownloadedSize(record)
+  if (timeDiff > 0 && currentDownloaded > lastDownloaded) {
     const byteDiff = currentDownloaded - lastDownloaded
     const speed = (byteDiff * 1000) / timeDiff // bytes per second
 
@@ -194,6 +189,11 @@ const formatSpeed = (bytesPerSecond) => {
   }
 
   return `${speed.toFixed(1)} ${units[index]}`
+}
+//计算已经下载的文件大小
+const getDownloadedSize = (record) => {
+  if (!record.total_size) return 0
+  return Math.floor(record.total_size * (record.progress / 100))
 }
 
 // 计算活跃下载数量
@@ -240,18 +240,24 @@ const formatTime = (timestamp) => {
 // 打开文件
 const openFile = async (record) => {
   try {
-    await window.electron.ipcRenderer.invoke('file:open', record.filePath)
+    if (!record.file_path) {
+      throw new Error('文件路径不存在');
+    }
+    await window.electron.ipcRenderer.invoke('file:open', record.file_path);
   } catch (error) {
-    ElMessage.error('打开文件失败: ' + error.message)
+    ElMessage.error('打开文件失败: ' + error.message);
   }
 }
 
 // 打开所在文件夹
 const openFolder = async (record) => {
   try {
-    await window.electron.ipcRenderer.invoke('file:show-in-folder', record.filePath)
+    if (!record.file_path) {
+      throw new Error('文件路径不存在');
+    }
+    await window.electron.ipcRenderer.invoke('file:show-in-folder', record.file_path);
   } catch (error) {
-    ElMessage.error('打开文件夹失败: ' + error.message)
+    ElMessage.error('打开文件夹失败: ' + error.message);
   }
 }
 
@@ -261,12 +267,29 @@ const deleteRecord = async (downloadId) => {
     await ElMessageBox.confirm('确定要删除这条下载记录吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      beforeClose: (action, instance, done) => {
+        // 阻止弹窗关闭时触发的事件冒泡
+        if (action === 'confirm') {
+          instance.confirmButtonLoading = true
+          window.electron.ipcRenderer.invoke('store:delete-download', downloadId)
+            .then(() => {
+              instance.confirmButtonLoading = false
+              loadDownloadRecords()
+              ElMessage.success('删除成功')
+              done()
+            })
+            .catch(error => {
+              instance.confirmButtonLoading = false
+              console.error('删除下载记录失败:', error)
+              ElMessage.error('删除失败')
+              done()
+            })
+        } else {
+          done()
+        }
+      }
     })
-    
-    await window.electron.ipcRenderer.invoke('store:delete-download', downloadId)
-    await loadDownloadRecords()
-    ElMessage.success('删除成功')
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除下载记录失败:', error)
@@ -317,33 +340,39 @@ const loadDownloadRecords = async () => {
 const handleDownloadUpdate = (event, downloadInfo) => {
   // 更新单条记录而不是重新加载所有记录
   const index = downloadRecords.value.findIndex(r => r.id === downloadInfo.id);
+  
   if (index !== -1) {
-    console.log('更新现有记录', downloadInfo)
-    // 更新现有记录
-    downloadRecords.value[index] = {
-      ...downloadRecords.value[index],
+    const oldRecord = downloadRecords.value[index];
+    const newRecord = {
+      ...oldRecord,
       ...downloadInfo
     };
+    
+    // 只在进度有变化时更新速度计算相关的数据
+    if (oldRecord.progress !== newRecord.progress) {
+      const now = Date.now();
+      const lastTime = lastUpdateTimes.value.get(newRecord.id) || now;
+      const lastDownloaded = lastChunkSizes.value.get(newRecord.id) || 0;
+      const currentDownloaded = getDownloadedSize(newRecord);
+      const timeDiff = now - lastTime;
+      
+      if (timeDiff > 0 && currentDownloaded > lastDownloaded) {
+        const byteDiff = currentDownloaded - lastDownloaded;
+        const speed = (byteDiff * 1000) / timeDiff;
+        
+        lastUpdateTimes.value.set(newRecord.id, now);
+        lastChunkSizes.value.set(newRecord.id, currentDownloaded);
+        downloadSpeeds.value.set(newRecord.id, speed);
+      }
+    }
+    
+    downloadRecords.value[index] = newRecord;
   } else {
     // 添加新记录
     downloadRecords.value.unshift(downloadInfo);
-  }
-
-  // 更新下载速率计算相关的数据
-  if (downloadInfo.status === 'downloading') {
-    const now = Date.now();
-    const lastTime = lastUpdateTimes.value.get(downloadInfo.id) || now;
-    const lastChunk = lastChunkSizes.value.get(downloadInfo.id) || 0;
-    const timeDiff = now - lastTime;
-    
-    if (timeDiff > 0) {
-      const chunkDiff = (downloadInfo.chunk_size || 0) - lastChunk;
-      const speed = (chunkDiff * 1000) / timeDiff;
-      
-      lastUpdateTimes.value.set(downloadInfo.id, now);
-      lastChunkSizes.value.set(downloadInfo.id, downloadInfo.chunk_size || 0);
-      downloadSpeeds.value.set(downloadInfo.id, speed);
-    }
+    // 初始化速度计算相关的数据
+    lastUpdateTimes.value.set(downloadInfo.id, Date.now());
+    lastChunkSizes.value.set(downloadInfo.id, getDownloadedSize(downloadInfo));
   }
 };
 
