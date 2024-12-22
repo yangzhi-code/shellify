@@ -138,7 +138,7 @@ class FileManager {
       searchStartTime
     } = options;
 
-    console.log(`搜索目录: ${path}, 当前深度: ${currentDepth}`);
+    console.log(`搜索目录: ${path}, 当前深���: ${currentDepth}`);
 
     // 检查是否达到最大深度或结果数
     if (currentDepth > maxDepth) {
@@ -214,45 +214,39 @@ class FileManager {
    */
   async downloadFile(connectionId, remotePath, fileName) {
     try {
-      // 确保连接可用
       await this._ensureConnection(connectionId);
-      
       const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
       const { dialog } = require('electron');
       
-      // 首先检查文件是否存在和可访问
-      try {
-        const stats = await new Promise((resolve, reject) => {
-          sftp.stat(remotePath, (err, stats) => {
-            if (err) reject(err);
-            else resolve(stats);
-          });
+      // 获取文件信息
+      const stats = await new Promise((resolve, reject) => {
+        sftp.stat(remotePath, (err, stats) => {
+          if (err) reject(err);
+          else resolve(stats);
         });
+      });
 
-        if (!stats.isFile()) {
-          throw new Error('不是一个文件');
-        }
-      } catch (error) {
-        console.error('文件状态检查失败:', error);
-        throw new Error(`无法访问文件: ${error.message}`);
+      if (!stats.isFile()) {
+        throw new Error('不是一个文件');
       }
-      
-      // 让用户选择保存位置
+
+      const totalSize = stats.size; // 保存文件总大小
+
       const { filePath, canceled } = await dialog.showSaveDialog({
         defaultPath: fileName,
-        filters: [
-          { name: 'All Files', extensions: ['*'] }
-        ]
+        filters: [{ name: 'All Files', extensions: ['*'] }]
       });
 
       if (canceled || !filePath) {
         throw new Error('用户取消下载');
       }
 
-      // 执行下载
       return new Promise((resolve, reject) => {
         let completed = false;
         let error = null;
+        const downloadId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        let lastProgressUpdate = Date.now();
+        const progressUpdateInterval = 100; // 限制进度更新频率（毫秒）
 
         const handleError = (err) => {
           if (!completed) {
@@ -264,22 +258,38 @@ class FileManager {
 
         try {
           sftp.fastGet(remotePath, filePath, {
-            step: (transferred, chunk, total) => {
-              if (error) return; // 如果已经发生错误，不再继续处理
-              console.log('下载文件路径:', filePath);
-              console.log('远程文件路径:', remotePath);
-              console.log('连接ID:', connectionId);
-              console.log('文件名:', fileName);
-              console.log('host:', "127.0.0.1");
+            step: async (transferred, chunk, total) => {
+              if (error) return;
+              
+              const now = Date.now();
               const percent = Math.round((transferred / total) * 100);
-              console.log(`下载进度: ${percent}%`);
-              // 保存下载进度
-              this.saveDownloadProgress(connectionId, remotePath, fileName, filePath, percent, '127.0.0.1');  
+              
+              // 限制进度更新频率
+              if (now - lastProgressUpdate >= progressUpdateInterval || percent === 100) {
+                lastProgressUpdate = now;
+                console.log(`下载进度: ${percent}%`);
+                
+                try {
+                  await this.saveDownloadProgress(
+                    downloadId,
+                    connectionId, 
+                    remotePath, 
+                    fileName, 
+                    filePath, 
+                    percent, 
+                    '127.0.0.1',
+                    chunk,
+                    totalSize // 使用之前获取的文件大小
+                  );
+                } catch (err) {
+                  console.warn('保存下载进度失败，但继续下载:', err);
+                }
+              }
             },
             concurrency: 1,
             mode: 0o644
-          }, (err) => {
-            if (completed) return; // 避免重复处理
+          }, async (err) => {
+            if (completed) return;
             completed = true;
             
             if (err) {
@@ -287,37 +297,45 @@ class FileManager {
               reject(new Error(`文件传输失败: ${err.message}`));
             } else {
               console.log('文件下载完成');
-              resolve(filePath);
+              try {
+                // 最后一次进度更新
+                await this.saveDownloadProgress(
+                  downloadId,
+                  connectionId,
+                  remotePath,
+                  fileName,
+                  filePath,
+                  100,
+                  '127.0.0.1',
+                  0,
+                  totalSize
+                );
+                resolve(filePath);
+              } catch (err) {
+                console.warn('最终进度更新失败:', err);
+                resolve(filePath); // 仍然完成下载
+              }
             }
           });
+
+          // 监听错误和关闭事件
+          sftp.once('error', (err) => {
+            handleError(new Error(`SFTP错误: ${err.message}`));
+          });
+
+          sftp.once('close', () => {
+            if (!completed) {
+              handleError(new Error('SFTP会话意外关闭'));
+            }
+          });
+
         } catch (err) {
           handleError(new Error(`启动下载失败: ${err.message}`));
         }
-
-        // 监听 SFTP 会话错误
-        sftp.once('error', (err) => {
-          handleError(new Error(`SFTP错误: ${err.message}`));
-        });
-
-        // 监听 SFTP 会话关闭
-        sftp.once('close', () => {
-          if (!completed) {
-            handleError(new Error('SFTP会话意外关闭'));
-          }
-        });
       });
     } catch (error) {
       console.error('文件下载失败:', error);
-      // 确保错误消息更具体
-      if (error.code === 4) {
-        throw new Error('文件传输失败: 可能是权限问题或文件被占用');
-      } else if (error.code === 2) {
-        throw new Error('文件不存在或无法访问');
-      } else if (error.message.includes('找不到连接')) {
-        throw new Error('SSH连接已断开，请重新连接');
-      } else {
-        throw error;
-      }
+      throw error;
     }
   }
 
@@ -338,36 +356,40 @@ class FileManager {
     }
   }
 // 持久化保存下载进度
-  async saveDownloadProgress(connectionId, remotePath, fileName, filePath, progress, host) {
-    const download = {
-      // 文件id
-      fileId: connectionId,
-      // 文件名
-      fileName:fileName, 
-      // 下载后文件路径
-      filePath:filePath,
-      // 远程文件路径
-      remotePath:remotePath,
-      // 连接id
-      connectionId:connectionId,
-      //主机
-      host:host,
-      // 下载进度
-      progress:progress
-    };
-    //先查询是否有相同文件
-    const downloads = await DownloadStore.getDownloadProgress(fileName, filePath,remotePath);
-    if(downloads){
-      //如果存在，则更新下载进度
-      downloads.progress = progress;
-      await DownloadStore.saveDownload(downloads);
-      console.log('下载进度更新成功',DownloadStore.getAllDownloads());
-    }else{
-      //如果不存在，则保存下载进度
-      await DownloadStore.saveDownload(download);
-      console.log('下载进度保存成功',DownloadStore.getAllDownloads());
+  async saveDownloadProgress(downloadId, connectionId, remotePath, fileName, filePath, progress, host, chunk, total) {
+    try {
+      const downloadData = {
+        // 下载id
+        downloadId: downloadId,
+        // 连接id
+        connectionId: connectionId,
+        // 文件名
+        fileName: fileName, 
+        // 下载后文件路径
+        filePath: filePath,
+        // 远程文件路径
+        remotePath: remotePath,
+        //主机
+        host: host,
+        // 下载进度
+        progress: progress,
+        // 下载chunk
+        chunk: chunk,
+        // 下载总大小
+        total: total
+      };
+
+      console.log(`[Download] 开始保存下载进度: ${downloadId}, progress: ${progress}%`);
+      
+      // 等待更新完成
+      const result = await DownloadStore.updateOrCreate(downloadData);
+      
+      console.log(`[Download] 下载进度保存成功: ${downloadId}, progress: ${progress}%`);
+      return result;
+    } catch (error) {
+      console.error(`[Download] 保存下载进度失败: ${downloadId}`, error);
+      // 不抛出错误，避免中断下载过程
     }
-   
   }
 }
 

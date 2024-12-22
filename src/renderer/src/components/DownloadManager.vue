@@ -1,6 +1,5 @@
 <template>
   <div class="download-manager">
-    <!-- 下载按钮 -->
     <el-popover
       v-model:visible="showDownloadList"
       placement="bottom-end"
@@ -43,23 +42,29 @@
           </el-badge>
         </div>
       </template>
+
       <div class="download-list">
         <div class="download-header">
           <span>下载记录</span>
-          <el-button 
-            type="text" 
-            size="small"
-            @click="clearDownloadRecords"
-          >
-            清除记录
-          </el-button>
+          <div class="header-actions">
+            <el-button 
+              type="text" 
+              size="small"
+              @click="clearDownloadRecords"
+              :disabled="downloadRecords.length === 0"
+            >
+              清除记录
+            </el-button>
+          </div>
         </div>
+
         <div class="download-items">
           <template v-if="downloadRecords.length">
             <div 
               v-for="record in downloadRecords" 
               :key="record.id" 
               class="download-item"
+              :class="{ 'is-active': record.status === 'downloading' }"
             >
               <div class="item-info">
                 <el-icon><Document /></el-icon>
@@ -67,17 +72,39 @@
                   <div class="filename" :title="record.fileName">
                     {{ record.fileName }}
                   </div>
-                  <div class="status">
-                    <template v-if="record.status === 'downloading'">
-                      下载中 - {{ record.progress }}%
-                    </template>
-                    <template v-else-if="record.status === 'completed'">
-                      已完成
-                    </template>
-                    <template v-else>
-                      下载失败 - {{ record.error }}
-                    </template>
+                  <div class="status-info">
+                    <div class="status">
+                      <template v-if="record.status === 'downloading'">
+                        下载中 - {{ formatFileSize(record.downloadedSize) }} / {{ formatFileSize(record.totalSize) }}
+                      </template>
+                      <template v-else-if="record.status === 'completed'">
+                        已完成 - {{ formatFileSize(record.totalSize) }}
+                        <span class="completed-time">{{ formatTime(record.completedTime) }}</span>
+                      </template>
+                      <template v-else-if="record.status === 'error'">
+                        下载失败 - {{ record.error }}
+                      </template>
+                    </div>
                   </div>
+                </div>
+                <!-- 添加操作按钮 -->
+                <div class="item-actions" v-if="record.status === 'completed'">
+                  <el-button 
+                    type="primary" 
+                    link
+                    size="small"
+                    @click="openFile(record)"
+                  >
+                    <el-icon><FolderOpened /></el-icon>
+                  </el-button>
+                  <el-button 
+                    type="primary" 
+                    link
+                    size="small"
+                    @click="openFolder(record)"
+                  >
+                    <el-icon><Folder /></el-icon>
+                  </el-button>
                 </div>
               </div>
               <el-progress 
@@ -85,6 +112,7 @@
                 :percentage="record.progress"
                 :show-text="false"
                 :stroke-width="2"
+                status="success"
               />
             </div>
           </template>
@@ -99,7 +127,8 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Document, Download } from '@element-plus/icons-vue'
+import { Document, Download, FolderOpened, Folder } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const showDownloadList = ref(false)
 const downloadRecords = ref([])
@@ -123,13 +152,55 @@ const totalProgress = computed(() => {
   return Math.round(totalProgress / downloading.length)
 })
 
+// 格式化文件大小
+const formatFileSize = (size) => {
+  if (!size) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let index = 0
+  let fileSize = size
+
+  while (fileSize >= 1024 && index < units.length - 1) {
+    fileSize /= 1024
+    index++
+  }
+
+  return `${fileSize.toFixed(2)} ${units[index]}`
+}
+
+// 格式化时间
+const formatTime = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return date.toLocaleString()
+}
+
+// 打开文件
+const openFile = async (record) => {
+  try {
+    await window.electron.ipcRenderer.invoke('file:open', record.filePath)
+  } catch (error) {
+    ElMessage.error('打开文件失败: ' + error.message)
+  }
+}
+
+// 打开所在文件夹
+const openFolder = async (record) => {
+  try {
+    await window.electron.ipcRenderer.invoke('file:show-in-folder', record.filePath)
+  } catch (error) {
+    ElMessage.error('打开文件夹失败: ' + error.message)
+  }
+}
+
 // 清除下载记录
 const clearDownloadRecords = async () => {
   try {
     await window.electron.ipcRenderer.invoke('store:clear-downloads')
     await loadDownloadRecords()
+    ElMessage.success('清除记录成功')
   } catch (error) {
     console.error('清除下载记录失败:', error)
+    ElMessage.error('清除记录失败')
   }
 }
 
@@ -137,8 +208,8 @@ const clearDownloadRecords = async () => {
 const loadDownloadRecords = async () => {
   try {
     const records = await window.electron.ipcRenderer.invoke('store:get-downloads')
+    console.log('下载记录:', records)
     downloadRecords.value = records
-    console.log('下载记录加载成功:', downloadRecords.value)
   } catch (error) {
     console.error('加载下载记录失败:', error)
   }
@@ -264,5 +335,38 @@ onUnmounted(() => {
   max-height: 400px;
   overflow: hidden;
   margin-top: 5px !important;
+}
+
+.item-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.status-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.completed-time {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+
+.download-item.is-active {
+  background-color: var(--el-color-primary-light-9);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+:deep(.el-button--small) [class*=el-icon]+span {
+  margin-left: 4px;
 }
 </style> 
