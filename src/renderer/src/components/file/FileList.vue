@@ -9,13 +9,22 @@
         <div class="file-name-cell">
           <el-icon v-if="row.type === 'directory'"><Folder /></el-icon>
           <el-icon v-else><Document /></el-icon>
-          <span class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
+          <el-tooltip
+            v-if="row.path"
+            :content="row.path"
+            placement="top"
+            :show-after="500"
+          >
+            <span class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
+          </el-tooltip>
+          <span v-else class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
         </div>
       </template>
     </el-table-column>
     <el-table-column prop="size" label="大小" width="120">
       <template #default="{ row }">
-        {{ formatFileSize(row.size) }}
+        <span v-if="row.type === 'file'">{{ formatFileSize(row.size) }}</span>
+        <span v-else>-</span>
       </template>
     </el-table-column>
     <el-table-column prop="permissions" label="权限" width="100" />
@@ -47,9 +56,10 @@
 import { Document, Folder, Download, Edit, Delete } from '@element-plus/icons-vue';
 import { formatFileSize } from '../../utils/format';
 
-defineProps({
+const props = defineProps({
   files: Array,
-  loading: Boolean
+  loading: Boolean,
+  currentPath: String
 });
 
 defineEmits(['file-click', 'download', 'rename', 'delete']);
@@ -59,6 +69,8 @@ const canDownload = (file) => {
   const compressedFormats = ['.zip', '.tar', '.gz', '.tgz', '.rar', '.7z'];
   return compressedFormats.some(format => file.name.toLowerCase().endsWith(format));
 };
+
+
 </script>
 
 <style scoped>
