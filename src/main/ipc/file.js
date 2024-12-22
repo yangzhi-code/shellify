@@ -1,6 +1,7 @@
 import { ipcMain, shell } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
+import FileManager from '../services/ssh/FileManager';
 
 export function setupFileHandlers() {
   // 打开文件 - 使用系统默认程序或系统的"打开方式"对话框
@@ -44,4 +45,15 @@ export function setupFileHandlers() {
       return false;
     }
   });
-} 
+
+  // 创建文件夹
+  ipcMain.handle('file:create-folder', async (event, { connectionId, path, folderName }) => {
+    try {
+      await FileManager.createFolder(connectionId, path, folderName);
+      return { success: true };
+    } catch (error) {
+      console.error('创建文件夹失败:', error);
+      throw error;
+    }
+  });
+}

@@ -6,7 +6,7 @@
       @navigate="navigateTo"
       @refresh="refresh"
       @upload="uploadFile"
-      @new-folder="createFolder"
+      @new-folder="handleNewFolder"
       @search="handleSearch"
       @clear-search="clearSearch"
     />
@@ -18,6 +18,8 @@
       @download="downloadFile"
       @rename="renameFile"
       @delete="deleteFile"
+      @save-new-folder="saveNewFolder"
+      @cancel-new-folder="cancelNewFolder"
     />
 
     <div class="pagination-container">
@@ -58,6 +60,7 @@ const fileList = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
+const isCreatingNewFolder = ref(false)
 
 // 计算当前页的数据
 const currentPageData = computed(() => {
@@ -82,7 +85,7 @@ const loadFileList = async () => {
       window.$message?.error?.('连接已断开，请重新连接');
       return;
     }
-    window.$message?.error?.('加载文件列表失败: ' + (error.message || '未知错误'));
+    window.$message?.error?.('加载文件列表��败: ' + (error.message || '未知错误'));
   } finally {
     loading.value = false;
   }
@@ -246,7 +249,7 @@ const handleSearch = async (searchData) => {
   } catch (error) {
     console.error('搜索失败:', error);
     if (error.message?.includes('搜索超时')) {
-      showNotification('搜索提示', '搜索超时，请缩小搜索范围或使用更具体的关键词', 'warning');
+      showNotification('搜索提示', '搜索超时，请缩小搜索范围或用更具体的关键词', 'warning');
     } else if (error.message?.includes('达到最大结果数')) {
       showNotification('搜索提示', '搜索结果过多，仅显示前1000条结果', 'warning');
     } else if (error.message?.includes('Permission denied')) {
@@ -285,6 +288,71 @@ watch(() => props.connectionId, (newId) => {
 onMounted(() => {
   loadFileList(); // 加载根目录文件列表
 });
+
+// 处理新建文件夹
+const handleNewFolder = () => {
+  if (isCreatingNewFolder.value) return;
+  
+  isCreatingNewFolder.value = true;
+  const newFolder = {
+    name: '',
+    editingName: '新建文件夹',
+    type: 'directory',
+    isEditing: true,
+    isNew: true
+  };
+  
+  // 检查是否有重名，如果有就添加序号
+  let index = 1;
+  const baseName = '新建文件夹';
+  while (fileList.value.some(f => f.name === newFolder.editingName)) {
+    newFolder.editingName = `${baseName}(${index})`;
+    index++;
+  }
+  
+  fileList.value.unshift(newFolder);
+};
+
+// 保存新建文件夹
+const saveNewFolder = async (folderName) => {
+  try {
+    // 检查文件夹名称是否合法
+    if (!folderName.trim()) {
+      throw new Error('文件夹名称不能为空');
+    }
+    
+    // 检查是否存在重名
+    if (fileList.value.some(f => f.name === folderName && !f.isNew)) {
+      throw new Error('文件夹名称已存在');
+    }
+    
+    // 调用后端 API 创建文件夹
+    await window.electron.ipcRenderer.invoke('file:create-folder', {
+      connectionId: props.connectionId,
+      path: currentFullPath.value,
+      folderName
+    });
+    
+    // 刷新���件列表
+    await loadFileList();
+    
+    ElMessage.success('文件夹创建成功');
+  } catch (error) {
+    // 显示具体的错误原因
+    ElMessage.error({
+      message: error.message || '创建文件夹失败',
+      duration: 5000  // 显示时间更长一些
+    });
+  } finally {
+    cancelNewFolder();
+  }
+};
+
+// 取消新建文件夹
+const cancelNewFolder = () => {
+  isCreatingNewFolder.value = false;
+  fileList.value = fileList.value.filter(f => !f.isNew);
+};
 </script>
 
 <style scoped>

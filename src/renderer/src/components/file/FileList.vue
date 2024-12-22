@@ -9,15 +9,28 @@
         <div class="file-name-cell">
           <el-icon v-if="row.type === 'directory'"><Folder /></el-icon>
           <el-icon v-else><Document /></el-icon>
-          <el-tooltip
-            v-if="row.path"
-            :content="row.path"
-            placement="top"
-            :show-after="500"
-          >
-            <span class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
-          </el-tooltip>
-          <span v-else class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
+          
+          <el-input
+            v-if="row.isEditing"
+            v-model="row.editingName"
+            size="small"
+            @blur="handleNameBlur(row)"
+            @keyup.enter="handleNameBlur(row)"
+            @keyup.esc="cancelEdit(row)"
+            v-focus
+          />
+          
+          <template v-else>
+            <el-tooltip
+              v-if="row.path"
+              :content="row.path"
+              placement="top"
+              :show-after="500"
+            >
+              <span class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
+            </el-tooltip>
+            <span v-else class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
+          </template>
         </div>
       </template>
     </el-table-column>
@@ -62,7 +75,7 @@ const props = defineProps({
   currentPath: String
 });
 
-defineEmits(['file-click', 'download', 'rename', 'delete']);
+const emit = defineEmits(['file-click', 'download', 'rename', 'delete', 'save-new-folder', 'cancel-new-folder']);
 
 const canDownload = (file) => {
   if (file.type === 'file') return true;
@@ -70,6 +83,21 @@ const canDownload = (file) => {
   return compressedFormats.some(format => file.name.toLowerCase().endsWith(format));
 };
 
+const vFocus = {
+  mounted: (el) => el.querySelector('input').focus()
+};
+
+const handleNameBlur = (row) => {
+  if (row.isNew) {
+    emit('save-new-folder', row.editingName);
+  }
+};
+
+const cancelEdit = (row) => {
+  if (row.isNew) {
+    emit('cancel-new-folder');
+  }
+};
 
 </script>
 
@@ -119,5 +147,13 @@ const canDownload = (file) => {
   display: flex;
   align-items: center;
   font-size: 14px;
+}
+
+:deep(.el-input__wrapper) {
+  padding: 0 8px;
+}
+
+:deep(.el-input__inner) {
+  height: 24px;
 }
 </style> 

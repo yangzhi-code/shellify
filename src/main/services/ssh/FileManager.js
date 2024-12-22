@@ -2,6 +2,8 @@ import SSHConnectionManager from './SSHConnectionManager';
 import DownloadManager from '../SQLite/DownloadManager';
 import SettingsManager from '../SQLite/SettingsManager';
 import path from 'path';
+import { join } from 'path';
+import FileOperations from './FileOperations';
 
 class FileManager {
   /**
@@ -81,7 +83,7 @@ class FileManager {
   }
 
   /**
-   * 搜索文件和目录
+   * 搜索文件和目��
    * @param {string} connectionId - SSH连接ID
    * @param {string} startPath - 搜索起始路径
    * @param {string} keyword - 搜索关键词
@@ -183,7 +185,7 @@ class FileManager {
       });
 
       if (!stats.isFile()) {
-        throw new Error('不是一个文��');
+        throw new Error('不是一个文件');
       }
 
       const totalSize = stats.size;
@@ -273,7 +275,7 @@ class FileManager {
               status: 'error',
               error: err.message
             });
-            reject(new Error(`SFTP错误: ${err.message}`));
+            reject(new Error(`SFTP误: ${err.message}`));
           });
 
         } catch (err) {
@@ -300,6 +302,69 @@ class FileManager {
     } catch (error) {
       console.error('确保连接可用失败:', error);
       throw new Error(`连接检查失败: ${error.message}`);
+    }
+  }
+
+  async createFolder(connectionId, path, folderName) {
+    try {
+      //console.log('[FileManager] 开始创建文件夹:', { connectionId, path, folderName });
+      
+      await this._ensureConnection(connectionId);
+      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+      
+      if (!sftp) {
+        throw new Error('无法获取 SFTP 会话');
+      }
+      
+      // 先获取当前用户名
+      const whoami = await SSHConnectionManager.execCommand(connectionId, 'whoami');
+      const isRoot = whoami.trim() === 'root';
+      
+      // 如果不是 root 用户，检查权限
+      if (!isRoot) {
+        try {
+          await new Promise((resolve, reject) => {
+            sftp.stat(path, (err, stats) => {
+              if (err) {
+                reject(new Error(`无法访问目标路径: ${err.message}`));
+              } else if (!stats.isDirectory()) {
+                reject(new Error('目标路径不是一个目录'));
+              } else {
+                const writePermission = stats.mode & 0o200;
+                const groupWritePermission = stats.mode & 0o020;
+                const otherWritePermission = stats.mode & 0o002;
+                
+                if (!writePermission && !groupWritePermission && !otherWritePermission) {
+                  reject(new Error('当前用户没有此目录的写入权限'));
+                }
+                resolve();
+              }
+            });
+          });
+        } catch (error) {
+          throw new Error(`无法在此位置创建文件夹: ${error.message}`);
+        }
+      }
+      
+      const fileOps = new FileOperations(sftp);
+      await fileOps.createFolder(path, folderName);
+      
+      //console.log('[FileManager] 文件夹创建成功');
+    } catch (error) {
+      // 根据错误类型提供更友好的错误信息
+      let errorMessage = error.message;
+      if (error.message.includes('Permission denied')) {
+        errorMessage = '权限不足，无法在此目录创建文件夹';
+      } else if (error.message.includes('No such file')) {
+        errorMessage = '目标路径不存在';
+      }
+
+      console.error('[FileManager] 创建文件夹失败:', {
+        error: error,
+        message: errorMessage,
+        stack: error.stack
+      });
+      throw new Error(errorMessage);
     }
   }
 }
