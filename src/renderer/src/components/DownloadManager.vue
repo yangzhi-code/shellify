@@ -250,13 +250,22 @@ const formatTime = (timestamp) => {
 const openFile = async (record) => {
   try {
     if (!record.file_path) {
-      throw new Error('文件路径不存在')
+      throw new Error('文件路径不存在');
     }
-    await window.electron.ipcRenderer.invoke('file:open', record.file_path)
+    // 先检查文件是否存在
+    const exists = await window.electron.ipcRenderer.invoke('file:exists', record.file_path);
+    if (!exists) {
+      throw new Error('文件已被移动或删除');
+    }
+
+    const result = await window.electron.ipcRenderer.invoke('file:open', record.file_path);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
   } catch (error) {
-    ElMessage.error('打开文件失败: ' + error.message)
+    ElMessage.error('打开文件失败: ' + error.message);
   }
-}
+};
 
 // 打开所在文件夹
 const openFolder = async (record) => {
@@ -291,7 +300,7 @@ const deleteRecord = async (downloadId) => {
             })
             .catch((error) => {
               instance.confirmButtonLoading = false
-              console.error('删除下载记录失败:', error)
+              console.error('删除下载���录失败:', error)
               ElMessage.error('删除失败')
               done()
             })
@@ -346,7 +355,7 @@ const loadDownloadRecords = async () => {
   }
 }
 
-// 监听下载进度更新
+// ��听下载进度更新
 const handleDownloadUpdate = (event, downloadInfo) => {
   // 更新单条记录而不是重新加载所有记录
   const index = downloadRecords.value.findIndex((r) => r.id === downloadInfo.id)

@@ -244,8 +244,6 @@ class FileManager {
         filters: [{ name: 'All Files', extensions: ['*'] }]
       });
 
-      console.log('[FileManager] 保存对话框结果:', result);
-
       // 检查用户是否取消了保存对话框
       if (result.canceled) {
         console.log('[FileManager] 用户取消了保存对话框');
