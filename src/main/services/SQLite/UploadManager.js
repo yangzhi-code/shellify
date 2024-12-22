@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
 import path from 'path'
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 
 class UploadManager {
   constructor() {
@@ -37,7 +37,9 @@ class UploadManager {
     return db
   }
 
+  //保存上传记录
   async updateOrCreate(data) {
+    console.log('上传记录', data)
     try {
       const db = await this.dbPromise
       const now = Date.now()
@@ -81,6 +83,11 @@ class UploadManager {
           now
         ])
       }
+
+      // 使用 _notifyProgressUpdate 通知进度更新
+      await this._notifyProgressUpdate(data.uploadId, data.progress)
+
+      console.log("测试", global.mainWindow)
 
       // 发送更新事件
       if (global.mainWindow) {
@@ -188,6 +195,41 @@ class UploadManager {
       console.error('清理过期上传记录失败:', error)
       throw error
     }
+  }
+
+  // 获取单个上传记录
+  async getUpload(id) {
+    try {
+      const db = await this.dbPromise
+      return await db.get('SELECT * FROM uploads WHERE id = ?', id)
+    } catch (error) {
+      console.error('获取上传记录失败:', error)
+      return null
+    }
+  }
+
+  // 通知渲染进程上传进度更新
+  async _notifyProgressUpdate(uploadId, progress) {
+    const windows = BrowserWindow.getAllWindows()
+    windows.forEach(async (win) => {
+      if (!win.isDestroyed()) {
+        const upload = await this.getUpload(uploadId)
+        if (upload) {
+          win.webContents.send('upload-updated', {
+            id: upload.id,
+            connection_id: upload.connection_id,
+            file_name: upload.file_name,
+            file_path: upload.file_path,
+            remote_path: upload.remote_path,
+            total_size: upload.total_size,
+            progress: upload.progress,
+            status: upload.status,
+            error: upload.error,
+            updated_at: upload.updated_at
+          })
+        }
+      }
+    })
   }
 }
 

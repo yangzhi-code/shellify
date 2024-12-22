@@ -370,6 +370,7 @@ class FileManager {
     }
   }
 
+  //上传文件
   async uploadFile(connectionId, localPath, remotePath) {
     try {
       await this._ensureConnection(connectionId);
