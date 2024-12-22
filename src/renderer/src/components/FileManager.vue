@@ -238,13 +238,21 @@ const downloadFile = async (file) => {
   
   try {
     loading.value = true;
-      window.electron.ipcRenderer.invoke('ssh:download-file', {
+    const result = await window.electron.ipcRenderer.invoke('ssh:download-file', {
       connectionId: props.connectionId,
       remotePath: file.path,
       fileName: file.name
     });
+
+    // 如果返回 null，说明用户取消了下载，不显示错误提示
+    if (result === null) {
+      return;
+    }
+
+    window.$message.success('文件开始下载');
   } catch (error) {
     console.error('文件下载失败:', error);
+    window.$message.error('文件下载失败: ' + error.message);
   } finally {
     loading.value = false;
   }
@@ -397,7 +405,7 @@ onMounted(() => {
   border-color: var(--el-border-color-hover);
 }
 
-/* 调整面包屑样式以适应新容器 */
+/* 调整面包���样式以适应新容器 */
 :deep(.el-breadcrumb) {
   line-height: 1;
   font-size: 12px;

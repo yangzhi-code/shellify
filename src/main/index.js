@@ -3,6 +3,8 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setupIpcHandlers } from './ipc';
+import SettingsManager from './services/SQLite/SettingsManager';
+import './services/SystemEventHandler'; // 导入事件处理器
 require('@electron/remote/main').initialize()
 
 
@@ -46,7 +48,7 @@ function createWindow() {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -62,6 +64,9 @@ app.whenReady().then(() => {
 
   setupIpcHandlers();
 
+  // 确保设置管理器已初始化
+  await SettingsManager.init();
+
   createWindow()
 
   app.on('activate', function () {
@@ -71,12 +76,6 @@ app.whenReady().then(() => {
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
+// 导出 createWindow 函数供其他模块使用
+export { createWindow };
 

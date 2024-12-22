@@ -4,6 +4,7 @@ import { setupStoreHandlers } from './store';
 import { setupClipboardHandlers } from './clipboard';
 import { setupFileHandlers } from './file';
 import { setupDownloadHandlers } from './download';
+import { setupSettingsHandlers } from './settings';
 
 /**
  * 初始化所有 IPC 处理器
@@ -23,4 +24,6 @@ export function setupIpcHandlers() {
   setupFileHandlers();
   // 设置下载处理程序
   setupDownloadHandlers();
+  // 设置设置处理器
+  setupSettingsHandlers();
 } 

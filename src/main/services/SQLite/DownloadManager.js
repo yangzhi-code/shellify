@@ -42,6 +42,15 @@ class DownloadManager {
         CREATE INDEX IF NOT EXISTS idx_downloads_status ON downloads(status);
         CREATE INDEX IF NOT EXISTS idx_downloads_updated ON downloads(updated_at);
       `);
+
+      // 程序启动时，将所有 downloading 状态的下载标记为中断
+      await this.db.run(`
+        UPDATE downloads 
+        SET status = 'interrupted',
+            error = '下载意外中断'
+        WHERE status = 'downloading'
+      `);
+
     } catch (error) {
       console.error('初始化下载管理器失败:', error);
     }
@@ -301,6 +310,36 @@ class DownloadManager {
     } catch (error) {
       console.error('批量更新/创建下载记录失败:', error);
       throw error;
+    }
+  }
+
+  // 标记下载中断
+  async markInterrupted(downloadId) {
+    try {
+      await this.db.run(`
+        UPDATE downloads 
+        SET status = 'interrupted',
+            error = '下载意外中断',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, downloadId);
+    } catch (err) {
+      console.error('[DownloadManager] 标记下载中断失败:', err);
+    }
+  }
+
+  // 在应用退出时标记所有进行中的下载为中断
+  async markAllDownloadsInterrupted() {
+    try {
+      await this.db.run(`
+        UPDATE downloads 
+        SET status = 'interrupted',
+            error = '下载意外中断',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE status = 'downloading'
+      `);
+    } catch (error) {
+      console.error('[DownloadManager] 标记所有下载中断失败:', error);
     }
   }
 }

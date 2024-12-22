@@ -9,14 +9,14 @@
     >
       <template #reference>
         <div class="download-button">
-          <el-badge 
-            :value="activeDownloads" 
-            :max="99" 
+          <el-badge
+            :value="activeDownloads"
+            :max="99"
             class="download-badge"
             :hidden="activeDownloads === 0"
           >
             <div class="download-icon-wrapper">
-              <el-icon style="font-size: 16px;color: #000;"><Download /></el-icon>
+              <el-icon style="font-size: 16px; color: #000"><Download /></el-icon>
               <div v-if="hasActiveDownload" class="progress-ring">
                 <svg viewBox="0 0 36 36">
                   <path
@@ -43,24 +43,30 @@
         <div class="download-header">
           <span>下载记录</span>
           <div class="header-actions">
-            <el-button 
+            <el-tooltip :content="currentDownloadPath || '未设置'" placement="top">
+              <el-button link size="small" @click="openDownloadPathSettings">
+                <el-icon><Setting /></el-icon>
+                下载路径
+              </el-button>
+            </el-tooltip>
+            <el-button
               link
               size="small"
               @click="clearDownloadRecords"
               :disabled="downloadRecords.length === 0"
             >
-              清空记录
+              清空所有记录
             </el-button>
           </div>
         </div>
 
         <div class="download-items">
           <template v-if="downloadRecords.length">
-            <div 
-              v-for="record in downloadRecords" 
-              :key="record.id" 
+            <div
+              v-for="record in downloadRecords"
+              :key="record.id"
               class="download-item"
-              :class="{ 
+              :class="{
                 'is-active': record.status === 'downloading',
                 'is-error': record.status === 'error'
               }"
@@ -75,8 +81,13 @@
                     <div class="status">
                       <template v-if="record.status === 'downloading'">
                         <div class="download-progress">
-                          <div>{{ formatFileSize(getDownloadedSize(record)) }} / {{ formatFileSize(record.total_size) }}</div>
-                          <div class="download-speed">{{ formatSpeed(calculateSpeed(record)) }}</div>
+                          <div>
+                            {{ formatFileSize(getDownloadedSize(record)) }} /
+                            {{ formatFileSize(record.total_size) }}
+                          </div>
+                          <div class="download-speed">
+                            {{ formatSpeed(calculateSpeed(record)) }}
+                          </div>
                         </div>
                       </template>
                       <template v-else-if="record.status === 'completed'">
@@ -86,40 +97,38 @@
                       <template v-else-if="record.status === 'error'">
                         下载失败 - {{ record.error }}
                       </template>
+                      <template v-else-if="record.status === 'interrupted'">
+                        <div class="interrupted-status">
+                          下载中断 - {{ formatFileSize(getDownloadedSize(record)) }} / {{ formatFileSize(record.total_size) }}
+                          <el-button 
+                            type="primary" 
+                            link 
+                            size="small" 
+                            @click="retryDownload(record)"
+                          >
+                            重试
+                          </el-button>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </div>
                 <!-- 操作按钮 -->
                 <div class="item-actions">
                   <template v-if="record.status === 'completed'">
-                    <el-button 
-                      type="primary" 
-                      link
-                      size="small"
-                      @click="openFile(record)"
-                    >
+                    <el-button type="primary" link size="small" @click="openFile(record)">
                       <el-icon><FolderOpened /></el-icon>
                     </el-button>
-                    <el-button 
-                      type="primary" 
-                      link
-                      size="small"
-                      @click="openFolder(record)"
-                    >
+                    <el-button type="primary" link size="small" @click="openFolder(record)">
                       <el-icon><Folder /></el-icon>
                     </el-button>
                   </template>
-                  <el-button 
-                    type="danger" 
-                    link
-                    size="small"
-                    @click.stop="deleteRecord(record.id)"
-                  >
+                  <el-button type="danger" link size="small" @click.stop="deleteRecord(record.id)">
                     <el-icon><Delete /></el-icon>
                   </el-button>
                 </div>
               </div>
-              <el-progress 
+              <el-progress
                 v-if="record.status === 'downloading'"
                 :percentage="record.progress"
                 :show-text="false"
@@ -128,9 +137,7 @@
               />
             </div>
           </template>
-          <div v-else class="no-downloads">
-            暂无下载记录
-          </div>
+          <div v-else class="no-downloads">暂无下载记录</div>
         </div>
       </div>
     </el-popover>
@@ -139,7 +146,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Document, Download, FolderOpened, Folder, Delete } from '@element-plus/icons-vue'
+import { Document, Download, FolderOpened, Folder, Delete, Setting } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const showDownloadList = ref(false)
@@ -150,6 +157,8 @@ const downloadSpeeds = ref(new Map())
 const lastChunkSizes = ref(new Map())
 const lastUpdateTimes = ref(new Map())
 
+// 添加当前下载路径状态
+const currentDownloadPath = ref('')
 
 // 计算下载速率
 const calculateSpeed = (record) => {
@@ -160,7 +169,7 @@ const calculateSpeed = (record) => {
   const lastDownloaded = lastChunkSizes.value.get(record.id) || 0
   const currentDownloaded = getDownloadedSize(record)
   const timeDiff = now - lastTime
-  
+
   if (timeDiff > 0 && currentDownloaded > lastDownloaded) {
     const byteDiff = currentDownloaded - lastDownloaded
     const speed = (byteDiff * 1000) / timeDiff // bytes per second
@@ -198,19 +207,19 @@ const getDownloadedSize = (record) => {
 
 // 计算活跃下载数量
 const activeDownloads = computed(() => {
-  return downloadRecords.value.filter(r => r.status === 'downloading').length
+  return downloadRecords.value.filter((r) => r.status === 'downloading').length
 })
 
 // 是否有活跃下载
 const hasActiveDownload = computed(() => {
-  return downloadRecords.value.some(r => r.status === 'downloading')
+  return downloadRecords.value.some((r) => r.status === 'downloading')
 })
 
 // 计算总体下载进度
 const totalProgress = computed(() => {
-  const downloading = downloadRecords.value.filter(r => r.status === 'downloading')
+  const downloading = downloadRecords.value.filter((r) => r.status === 'downloading')
   if (downloading.length === 0) return 0
-  
+
   const totalProgress = downloading.reduce((sum, record) => sum + record.progress, 0)
   return Math.round(totalProgress / downloading.length)
 })
@@ -241,11 +250,11 @@ const formatTime = (timestamp) => {
 const openFile = async (record) => {
   try {
     if (!record.file_path) {
-      throw new Error('文件路径不存在');
+      throw new Error('文件路径不存在')
     }
-    await window.electron.ipcRenderer.invoke('file:open', record.file_path);
+    await window.electron.ipcRenderer.invoke('file:open', record.file_path)
   } catch (error) {
-    ElMessage.error('打开文件失败: ' + error.message);
+    ElMessage.error('打开文件失败: ' + error.message)
   }
 }
 
@@ -253,11 +262,11 @@ const openFile = async (record) => {
 const openFolder = async (record) => {
   try {
     if (!record.file_path) {
-      throw new Error('文件路径不存在');
+      throw new Error('文件路径不存在')
     }
-    await window.electron.ipcRenderer.invoke('file:show-in-folder', record.file_path);
+    await window.electron.ipcRenderer.invoke('file:show-in-folder', record.file_path)
   } catch (error) {
-    ElMessage.error('打开文件夹失败: ' + error.message);
+    ElMessage.error('打开文件夹失败: ' + error.message)
   }
 }
 
@@ -269,17 +278,18 @@ const deleteRecord = async (downloadId) => {
       cancelButtonText: '取消',
       type: 'warning',
       beforeClose: (action, instance, done) => {
-        // 阻止弹窗关闭时触发的事件冒泡
+        // 阻止弹窗闭时触发的事件冒泡
         if (action === 'confirm') {
           instance.confirmButtonLoading = true
-          window.electron.ipcRenderer.invoke('store:delete-download', downloadId)
+          window.electron.ipcRenderer
+            .invoke('store:delete-download', downloadId)
             .then(() => {
               instance.confirmButtonLoading = false
               loadDownloadRecords()
               ElMessage.success('删除成功')
               done()
             })
-            .catch(error => {
+            .catch((error) => {
               instance.confirmButtonLoading = false
               console.error('删除下载记录失败:', error)
               ElMessage.error('删除失败')
@@ -306,7 +316,7 @@ const clearDownloadRecords = async () => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    
+
     await window.electron.ipcRenderer.invoke('store:delete-all-downloads')
     await loadDownloadRecords()
     ElMessage.success('清空成功')
@@ -323,7 +333,7 @@ const loadDownloadRecords = async () => {
   try {
     const records = await window.electron.ipcRenderer.invoke('store:get-downloads')
     // 清理已完成下载的缓存
-    records.forEach(record => {
+    records.forEach((record) => {
       if (record.status !== 'downloading') {
         downloadSpeeds.value.delete(record.id)
         lastChunkSizes.value.delete(record.id)
@@ -339,51 +349,102 @@ const loadDownloadRecords = async () => {
 // 监听下载进度更新
 const handleDownloadUpdate = (event, downloadInfo) => {
   // 更新单条记录而不是重新加载所有记录
-  const index = downloadRecords.value.findIndex(r => r.id === downloadInfo.id);
-  
+  const index = downloadRecords.value.findIndex((r) => r.id === downloadInfo.id)
+
   if (index !== -1) {
-    const oldRecord = downloadRecords.value[index];
+    const oldRecord = downloadRecords.value[index]
     const newRecord = {
       ...oldRecord,
       ...downloadInfo
-    };
-    
+    }
+
     // 只在进度有变化时更新速度计算相关的数据
     if (oldRecord.progress !== newRecord.progress) {
-      const now = Date.now();
-      const lastTime = lastUpdateTimes.value.get(newRecord.id) || now;
-      const lastDownloaded = lastChunkSizes.value.get(newRecord.id) || 0;
-      const currentDownloaded = getDownloadedSize(newRecord);
-      const timeDiff = now - lastTime;
-      
+      const now = Date.now()
+      const lastTime = lastUpdateTimes.value.get(newRecord.id) || now
+      const lastDownloaded = lastChunkSizes.value.get(newRecord.id) || 0
+      const currentDownloaded = getDownloadedSize(newRecord)
+      const timeDiff = now - lastTime
+
       if (timeDiff > 0 && currentDownloaded > lastDownloaded) {
-        const byteDiff = currentDownloaded - lastDownloaded;
-        const speed = (byteDiff * 1000) / timeDiff;
-        
-        lastUpdateTimes.value.set(newRecord.id, now);
-        lastChunkSizes.value.set(newRecord.id, currentDownloaded);
-        downloadSpeeds.value.set(newRecord.id, speed);
+        const byteDiff = currentDownloaded - lastDownloaded
+        const speed = (byteDiff * 1000) / timeDiff
+
+        lastUpdateTimes.value.set(newRecord.id, now)
+        lastChunkSizes.value.set(newRecord.id, currentDownloaded)
+        downloadSpeeds.value.set(newRecord.id, speed)
       }
     }
-    
-    downloadRecords.value[index] = newRecord;
+
+    downloadRecords.value[index] = newRecord
   } else {
     // 添加新记录
-    downloadRecords.value.unshift(downloadInfo);
+    downloadRecords.value.unshift(downloadInfo)
     // 初始化速度计算相关的数据
-    lastUpdateTimes.value.set(downloadInfo.id, Date.now());
-    lastChunkSizes.value.set(downloadInfo.id, getDownloadedSize(downloadInfo));
+    lastUpdateTimes.value.set(downloadInfo.id, Date.now())
+    lastChunkSizes.value.set(downloadInfo.id, getDownloadedSize(downloadInfo))
+  }
+}
+
+// 加载下载路径
+const loadDownloadPath = async () => {
+  try {
+    const path = await window.electron.ipcRenderer.invoke('settings:get-download-path')
+    currentDownloadPath.value = path
+  } catch (error) {
+    console.error('加载下载路径失败:', error)
+  }
+}
+
+// 打开下载路径设置
+const openDownloadPathSettings = async () => {
+  try {
+    const result = await window.electron.ipcRenderer.invoke('dialog:select-folder');
+    if (result && result.filePaths && result.filePaths[0]) {
+      const selectedPath = result.filePaths[0];
+      await window.electron.ipcRenderer.invoke('settings:set-download-path', selectedPath);
+      currentDownloadPath.value = selectedPath;
+      ElMessage({
+        type: 'success',
+        message: '下载路径设置成功',
+        duration: 2000
+      });
+    }
+  } catch (error) {
+    console.error('设置下载路径失败:', error);
+    ElMessage({
+      type: 'error',
+      message: '设置下载路径失败: ' + error.message,
+      duration: 3000
+    });
+  }
+}
+
+// 重试下载
+const retryDownload = async (record) => {
+  try {
+    await window.electron.ipcRenderer.invoke('ssh:retry-download', {
+      downloadId: record.id,
+      connectionId: record.connection_id,
+      remotePath: record.remote_path,
+      fileName: record.file_name
+    });
+    ElMessage.success('开始重新下载');
+  } catch (error) {
+    console.error('重试下载失败:', error);
+    ElMessage.error('重试下载失败: ' + error.message);
   }
 };
 
-onMounted(() => {
-  loadDownloadRecords();
-  window.electron.ipcRenderer.on('download-updated', handleDownloadUpdate);
-});
+onMounted(async () => {
+  await loadDownloadPath() // 加载下载路径
+  loadDownloadRecords() // 加载下载记录
+  window.electron.ipcRenderer.on('download-updated', handleDownloadUpdate)
+})
 
 onUnmounted(() => {
-  window.electron.ipcRenderer.removeListener('download-updated', handleDownloadUpdate);
-});
+  window.electron.ipcRenderer.removeListener('download-updated', handleDownloadUpdate)
+})
 </script>
 
 <style scoped>
@@ -525,10 +586,25 @@ onUnmounted(() => {
 .header-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
-:deep(.el-button--small) [class*=el-icon]+span {
-  margin-left: 4px;
+/* 添加下载路径按钮样式 */
+.header-actions :deep(.el-button--small) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+}
+
+.header-actions :deep(.el-icon) {
+  margin-right: 4px;
+}
+
+/* 提示框样式 */
+:deep(.el-tooltip__trigger) {
+  display: inline-flex;
 }
 
 .is-error {
@@ -544,5 +620,12 @@ onUnmounted(() => {
 .download-speed {
   color: var(--el-color-primary);
   font-family: monospace;
+}
+
+.interrupted-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--el-color-warning);
 }
 </style> 

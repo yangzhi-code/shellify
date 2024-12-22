@@ -1,5 +1,7 @@
 import SSHConnectionManager from './SSHConnectionManager';
 import DownloadManager from '../SQLite/DownloadManager';
+import SettingsManager from '../SQLite/SettingsManager';
+import path from 'path';
 
 class FileManager {
   /**
@@ -231,13 +233,29 @@ class FileManager {
 
       const totalSize = stats.size;
 
-      const { filePath, canceled } = await dialog.showSaveDialog({
-        defaultPath: fileName,
+      // 获取默认下载路径
+      const defaultDownloadPath = await SettingsManager.getDownloadPath();
+      console.log('[FileManager] 获取到的默认下载路径:', defaultDownloadPath);
+      const defaultFilePath = defaultDownloadPath ? path.join(defaultDownloadPath, fileName) : fileName;
+      console.log('[FileManager] 组合后的文件路径:', defaultFilePath);
+
+      const result = await dialog.showSaveDialog({
+        defaultPath: defaultFilePath,
         filters: [{ name: 'All Files', extensions: ['*'] }]
       });
 
-      if (canceled || !filePath) {
-        throw new Error('用户取消下载');
+      console.log('[FileManager] 保存对话框结果:', result);
+
+      // 检查用户是否取消了保存对话框
+      if (result.canceled) {
+        console.log('[FileManager] 用户取消了保存对话框');
+        return null; // 返回 null 而不是抛出错误
+      }
+
+      const filePath = result.filePath;
+      if (!filePath) {
+        console.log('[FileManager] 未获取到有效的文件路径');
+        return null;
       }
 
       return new Promise((resolve, reject) => {
@@ -252,7 +270,7 @@ class FileManager {
               // 只在进度变化时更新
               if (percent !== lastProgress) {
                 lastProgress = percent;
-                console.log(`下载进度: ${percent}%`);
+                //console.log(`下载进度: ${percent}%`);
 
                 await DownloadManager.updateOrCreate({
                   downloadId,
@@ -310,7 +328,7 @@ class FileManager {
         }
       });
     } catch (error) {
-      console.error('文件下载失败:', error);
+      console.error('[FileManager] 文件下载失败:', error);
       throw error;
     }
   }
