@@ -88,39 +88,28 @@ class FileManager {
    * @param {Object} options - 搜索选项
    */
   async searchFiles(connectionId, startPath, keyword, options = {}) {
-    console.log('开始搜索:', { 
-      startPath,  // 记录搜索起始路径
-      keyword, 
-      options 
-    });
-
-    const {
-      caseSensitive = false,
-      recursive = true,
-      maxResults = 1000,
-      maxDepth = 10
-    } = options;
-
     try {
       const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
       const results = [];
       const searchStartTime = Date.now();
-      
-      console.log(`获取到SFTP会话，从 ${startPath} 开始递归搜索`);
 
       await this._searchInDirectory(sftp, startPath, keyword, {
-        ...options,
-        maxResults,
-        maxDepth,
+        caseSensitive: options.caseSensitive || false,
+        recursive: options.recursive !== false,
+        maxResults: options.maxResults || 1000,
+        maxDepth: options.maxDepth || 10,
         currentDepth: 0,
         results,
         searchStartTime
       });
-      
-      console.log('搜索完成，找到结果数:', results.length);
+
       return results;
     } catch (error) {
-      console.error('文件搜索失败:', error);
+      // 如果是超时错误，直接返回已找到的结果
+      if (error.message?.includes('搜索超时')) {
+        console.warn('搜索已超时，返回部分结果');
+        return error.partialResults || [];
+      }
       throw error;
     }
   }
@@ -140,48 +129,51 @@ class FileManager {
       searchStartTime
     } = options;
 
-    console.log(`搜索目录: ${path}, 当前深度: ${currentDepth}`);
+    // 检查是否超时
+    if (Date.now() - searchStartTime > 30000) {
+      const error = new Error('搜索超时（30秒），请缩小搜索范围或指定更具体的目录');
+      error.partialResults = results; // 保存已找到的结果
+      throw error;
+    }
 
-    // 检查是否达到最大深度或结果数
+    // 检查是否达到最大深度
     if (currentDepth > maxDepth) {
-      throw new Error(`达到最大深度（${maxDepth}层），停止搜索`);
+      console.warn(`达到最大深度（${maxDepth}层），停止搜索当前目录: ${path}`);
+      return;
     }
     
+    // 检查是否达到最大结果数
     if (results.length >= maxResults) {
-      throw new Error(`达到最大结果数（${maxResults}条），停止搜索`);
+      console.warn(`达到最大结果数（${maxResults}条），停止搜索`);
+      return;
     }
-
-    // 检查搜索是否超时（30秒）
-    if (Date.now() - searchStartTime > 30000) {
-      throw new Error('搜索超时（30秒），请缩小搜索范围');
-    }
-
-    const searchPattern = caseSensitive ? keyword : keyword.toLowerCase();
 
     try {
       const list = await new Promise((resolve, reject) => {
         sftp.readdir(path, (err, files) => {
           if (err) {
-            console.error(`读取目录失败: ${path}`, err);
+            // 忽略权限错误，继续搜索其他目录
+            if (err.message.includes('Permission denied')) {
+              console.warn(`无权限访问目录: ${path}`);
+              resolve([]);
+              return;
+            }
             reject(err);
           } else {
-            console.log(`成功读取目录: ${path}, 文件数: ${files.length}`);
             resolve(files);
           }
         });
       });
 
+      // 处理当前目录的文件
       for (const item of list) {
-        if (results.length >= maxResults) {
-          console.log('达到最大结果数，停止搜索');
-          break;
-        }
+        if (results.length >= maxResults) break;
 
         const itemPath = `${path}/${item.filename}`.replace(/\/+/g, '/');
         const itemName = caseSensitive ? item.filename : item.filename.toLowerCase();
+        const searchPattern = caseSensitive ? keyword : keyword.toLowerCase();
 
         if (itemName.includes(searchPattern)) {
-          console.log('找到匹配项:', itemPath);
           results.push({
             name: item.filename,
             path: itemPath,
@@ -192,19 +184,29 @@ class FileManager {
           });
         }
 
+        // 递归搜索子目录
         if (recursive && item.attrs.isDirectory()) {
-          await this._searchInDirectory(sftp, itemPath, keyword, {
-            ...options,
-            currentDepth: currentDepth + 1
-          });
+          try {
+            await this._searchInDirectory(sftp, itemPath, keyword, {
+              ...options,
+              currentDepth: currentDepth + 1
+            });
+          } catch (error) {
+            // 如果是超时错误，立即停止整个搜索
+            if (error.message?.includes('搜索超时')) {
+              throw error;
+            }
+            // 其他错误继续搜索
+            console.warn(`搜索目录 ${itemPath} 失败:`, error.message);
+          }
         }
       }
     } catch (error) {
-      console.error(`搜索目录 ${path} 失败:`, error);
-      if (error.message.includes('Permission denied')) {
-        throw new Error('部分目录无访问权限，搜索中断');
+      // 如果是超时错误，向上传递
+      if (error.message?.includes('搜索超时')) {
+        throw error;
       }
-      throw error;
+      console.warn(`搜索目录 ${path} 失败:`, error.message);
     }
   }
 
