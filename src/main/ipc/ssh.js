@@ -2,6 +2,15 @@ import { ipcMain } from 'electron';
 import sshService from '../services/ssh';
 import FileManager from '../services/ssh/FileManager';
 
+// 添加 getFileManager 函数
+const getFileManager = async (connectionId) => {
+  // 确保连接存在
+  if (!connectionId) {
+    throw new Error('未提供连接ID');
+  }
+  return FileManager;
+};
+
 /**
  * 设置 SSH 相关的 IPC 处理器
  * 包含：连接管理、终端操作、服务器状态监控等功能
@@ -107,6 +116,28 @@ export function setupSSHHandlers() {
       return await FileManager.downloadFile(connectionId, remotePath, fileName);
     } catch (error) {
       console.error('文件下载失败:', error);
+      throw error;
+    }
+  });
+
+  // 处理文件上传
+  ipcMain.handle('ssh:upload-file', async (event, { connectionId, localPath, remotePath }) => {
+    try {
+      const fileManager = await getFileManager(connectionId);
+      return await fileManager.uploadFile(connectionId, localPath, remotePath);
+    } catch (error) {
+      console.error('文件上传失败:', error);
+      throw error;
+    }
+  });
+
+  // 重试上传
+  ipcMain.handle('ssh:retry-upload', async (event, { uploadId, connectionId, localPath, remotePath }) => {
+    try {
+      const fileManager = await getFileManager(connectionId);
+      return await fileManager.uploadFile(connectionId, localPath, remotePath);
+    } catch (error) {
+      console.error('重试上传失败:', error);
       throw error;
     }
   });

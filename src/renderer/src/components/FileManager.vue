@@ -5,7 +5,7 @@
       @navigate-root="navigateToRoot"
       @navigate="navigateTo"
       @refresh="refresh"
-      @upload="uploadFile"
+      @upload="handleUpload"
       @new-folder="handleNewFolder"
       @search="handleSearch"
       @clear-search="clearSearch"
@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import FileToolbar from './file/FileToolbar.vue';
 import FileList from './file/FileList.vue';
 import { ElMessage } from 'element-plus';
@@ -85,7 +85,7 @@ const loadFileList = async () => {
       window.$message?.error?.('连接已断开，请重新连接');
       return;
     }
-    window.$message?.error?.('加载文件列表��败: ' + (error.message || '未知错误'));
+    window.$message?.error?.('加��文件列表失败: ' + (error.message || '未知错误'));
   } finally {
     loading.value = false;
   }
@@ -149,7 +149,7 @@ const canDownload = (file) => {
   // 如果是文件，直接可下载
   if (file.type === 'file') return true;
   
-  // 如果是压缩包格式的目录也可以下载
+  // 如是压缩包格式的目录也可以下载
   const compressedFormats = ['.zip', '.tar', '.gz', '.tgz', '.rar', '.7z'];
   return compressedFormats.some(format => file.name.toLowerCase().endsWith(format));
 }
@@ -249,7 +249,7 @@ const handleSearch = async (searchData) => {
   } catch (error) {
     console.error('搜索失败:', error);
     if (error.message?.includes('搜索超时')) {
-      showNotification('搜索提示', '搜索超时，请缩小搜索范围或用更具体的关键词', 'warning');
+      showNotification('搜索提示', '搜索超时，请缩小搜索范围或用更具体关键词', 'warning');
     } else if (error.message?.includes('达到最大结果数')) {
       showNotification('搜索提示', '搜索结果过多，仅显示前1000条结果', 'warning');
     } else if (error.message?.includes('Permission denied')) {
@@ -282,12 +282,23 @@ watch(() => props.connectionId, (newId) => {
   if (newId) {
     loadFileList();
   }
-}, { immediate: true }); // immediate: true 会在组件创建时立即执行一次
+}, { immediate: true }); // immediate: true 会在组件创��时立即执行一次
 
-// 在组件挂载时加载文件列表
+// 组件挂载时加载文件列表
 onMounted(() => {
   loadFileList(); // 加载根目录文件列表
+  
+  // 监听文件刷新事件
+  window.electron.ipcRenderer.on('file:refresh-needed', (event, path) => {
+    if (path === currentFullPath.value) {
+      loadFileList()
+    }
+  })
 });
+
+onUnmounted(() => {
+  window.electron.ipcRenderer.removeListener('file:refresh-needed')
+})
 
 // 处理新建文件夹
 const handleNewFolder = () => {
@@ -323,7 +334,7 @@ const saveNewFolder = async (folderName) => {
     
     // 检查是否存在重名
     if (fileList.value.some(f => f.name === folderName && !f.isNew)) {
-      throw new Error('文件夹名称已存在');
+      throw new Error('文件���名称已存在');
     }
     
     // 调用后端 API 创建文件夹
@@ -333,7 +344,7 @@ const saveNewFolder = async (folderName) => {
       folderName
     });
     
-    // 刷新���件列表
+    // 刷新文件列表
     await loadFileList();
     
     ElMessage.success('文件夹创建成功');
@@ -352,6 +363,30 @@ const saveNewFolder = async (folderName) => {
 const cancelNewFolder = () => {
   isCreatingNewFolder.value = false;
   fileList.value = fileList.value.filter(f => !f.isNew);
+};
+
+// 处理上传
+const handleUpload = async () => {
+  try {
+    const result = await window.electron.ipcRenderer.invoke('dialog:select-multiple-files', {
+      multiple: true
+    });
+    
+    if (result.filePaths && result.filePaths.length > 0) {
+      // 开始上传每个文件
+      for (const filePath of result.filePaths) {
+        await window.electron.ipcRenderer.invoke('ssh:upload-file', {
+          connectionId: props.connectionId,
+          localPath: filePath,
+          remotePath: currentFullPath.value
+        });
+      }
+      ElMessage.success('文件开始上传');
+    }
+  } catch (error) {
+    console.error('文件上传失败:', error);
+    ElMessage.error('文件上传失败: ' + error.message);
+  }
 };
 </script>
 

@@ -5,6 +5,8 @@ import { setupClipboardHandlers } from './clipboard';
 import { setupFileHandlers } from './file';
 import { setupDownloadHandlers } from './download';
 import { setupSettingsHandlers } from './settings';
+import { setupDialogHandlers } from './dialog';
+import { setupUploadHandlers } from './upload';
 
 /**
  * 初始化所有 IPC 处理器
@@ -24,6 +26,10 @@ export function setupIpcHandlers() {
   setupFileHandlers();
   // 设置下载处理程序
   setupDownloadHandlers();
+  // 设置上传处理程序
+  setupUploadHandlers();
   // 设置设置处理器
   setupSettingsHandlers();
+  // 设置对话框处理程序
+  setupDialogHandlers();
 } 

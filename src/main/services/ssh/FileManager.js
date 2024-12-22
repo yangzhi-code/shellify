@@ -4,6 +4,8 @@ import SettingsManager from '../SQLite/SettingsManager';
 import path from 'path';
 import { join } from 'path';
 import FileOperations from './FileOperations';
+import fs from 'fs';
+import UploadManager from '../SQLite/UploadManager';
 
 class FileManager {
   /**
@@ -83,7 +85,7 @@ class FileManager {
   }
 
   /**
-   * 搜索文件和目��
+   * 搜索文件和目录
    * @param {string} connectionId - SSH连接ID
    * @param {string} startPath - 搜索起始路径
    * @param {string} keyword - 搜索关键词
@@ -365,6 +367,98 @@ class FileManager {
         stack: error.stack
       });
       throw new Error(errorMessage);
+    }
+  }
+
+  async uploadFile(connectionId, localPath, remotePath) {
+    try {
+      await this._ensureConnection(connectionId);
+      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+      
+      const fileName = path.basename(localPath);
+      const remoteFilePath = path.join(remotePath, fileName).replace(/\\/g, '/');
+      
+      // 获取文件大小
+      const stats = await fs.promises.stat(localPath);
+      const fileSize = stats.size;
+      
+      // 创建上传记录
+      const uploadId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      let lastProgress = -1;
+      
+      return new Promise((resolve, reject) => {
+        try {
+          sftp.fastPut(localPath, remoteFilePath, {
+            step: async (transferred, chunk, total) => {
+              const percent = Math.round((transferred / total) * 100);
+              
+              if (percent !== lastProgress) {
+                lastProgress = percent;
+                
+                await UploadManager.updateOrCreate({
+                  uploadId,
+                  connectionId,
+                  fileName,
+                  filePath: localPath,
+                  remotePath: remoteFilePath,
+                  progress: percent,
+                  total: fileSize,
+                  chunk,
+                  status: percent === 100 ? 'completed' : 'uploading'
+                });
+              }
+            },
+            concurrency: 1,
+            mode: 0o644
+          }, async (err) => {
+            if (err) {
+              console.error('文件上传失败:', err);
+              await UploadManager.updateOrCreate({
+                uploadId,
+                connectionId,
+                fileName,
+                filePath: localPath,
+                remotePath: remoteFilePath,
+                progress: lastProgress,
+                total: fileSize,
+                status: 'error',
+                error: err.message
+              });
+              reject(new Error(`文件上传失败: ${err.message}`));
+            } else {
+              console.log('文件上传完成');
+              resolve(remoteFilePath);
+            }
+          });
+          
+          sftp.once('error', async (err) => {
+            await UploadManager.updateOrCreate({
+              uploadId,
+              connectionId,
+              fileName,
+              filePath: localPath,
+              remotePath: remoteFilePath,
+              progress: lastProgress,
+              total: fileSize,
+              status: 'error',
+              error: err.message
+            });
+            reject(new Error(`SFTP错误: ${err.message}`));
+          });
+        } catch (err) {
+          reject(new Error(`启动上传失败: ${err.message}`));
+        }
+      });
+
+      // 上传完成后发送刷新事件
+      if (global.mainWindow) {
+        global.mainWindow.webContents.send('file:refresh-needed', remotePath)
+      }
+
+      return remoteFilePath
+    } catch (error) {
+      console.error('[FileManager] 文件上传失败:', error)
+      throw error
     }
   }
 }
