@@ -1,16 +1,20 @@
 import { ipcMain } from 'electron';
-import DownloadStore from '../services/stores/downloadStore';
+import DownloadManager from '../services/SQLite/DownloadManager';
 /**
  * 设置下载记录相关的 IPC 处理器
  */
 export function setupDownloadHandlers() {
   // 获取下载记录
   ipcMain.handle('store:get-downloads', () => {
-    return DownloadStore.getAllDownloads();
+    return DownloadManager.getAllDownloads();
   });
 
-  // 清除下载记录
-  ipcMain.handle('store:clear-downloads', () => {
-    return DownloadStore.clearDownloads();
+  // 删除指定id的下载记录
+  ipcMain.handle('store:delete-download', (event, downloadId) => {
+    return DownloadManager.deleteDownload(downloadId);
+  });
+  // 删除所有下载记录
+  ipcMain.handle('store:delete-all-downloads', () => {
+    return DownloadManager.deleteAllDownloads();
   });
 } 

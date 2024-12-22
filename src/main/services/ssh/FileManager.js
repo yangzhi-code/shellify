@@ -1,5 +1,5 @@
 import SSHConnectionManager from './SSHConnectionManager';
-import DownloadStore from '../stores/downloadStore';
+import DownloadManager from '../SQLite/DownloadManager';
 
 class FileManager {
   /**
@@ -138,7 +138,7 @@ class FileManager {
       searchStartTime
     } = options;
 
-    console.log(`搜索目录: ${path}, 当前深���: ${currentDepth}`);
+    console.log(`搜索目录: ${path}, 当前深度: ${currentDepth}`);
 
     // 检查是否达到最大深度或结果数
     if (currentDepth > maxDepth) {
@@ -218,7 +218,6 @@ class FileManager {
       const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
       const { dialog } = require('electron');
       
-      // 获取文件信息
       const stats = await new Promise((resolve, reject) => {
         sftp.stat(remotePath, (err, stats) => {
           if (err) reject(err);
@@ -230,7 +229,7 @@ class FileManager {
         throw new Error('不是一个文件');
       }
 
-      const totalSize = stats.size; // 保存文件总大小
+      const totalSize = stats.size;
 
       const { filePath, canceled } = await dialog.showSaveDialog({
         defaultPath: fileName,
@@ -242,95 +241,72 @@ class FileManager {
       }
 
       return new Promise((resolve, reject) => {
-        let completed = false;
-        let error = null;
         const downloadId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        let lastProgressUpdate = Date.now();
-        const progressUpdateInterval = 100; // 限制进度更新频率（毫秒）
-
-        const handleError = (err) => {
-          if (!completed) {
-            completed = true;
-            error = err;
-            reject(err);
-          }
-        };
+        let lastProgress = -1;
 
         try {
           sftp.fastGet(remotePath, filePath, {
             step: async (transferred, chunk, total) => {
-              if (error) return;
-              
-              const now = Date.now();
               const percent = Math.round((transferred / total) * 100);
               
-              // 限制进度更新频率
-              if (now - lastProgressUpdate >= progressUpdateInterval || percent === 100) {
-                lastProgressUpdate = now;
+              // 只在进度变化时更新
+              if (percent !== lastProgress) {
+                lastProgress = percent;
                 console.log(`下载进度: ${percent}%`);
-                
-                try {
-                  await this.saveDownloadProgress(
-                    downloadId,
-                    connectionId, 
-                    remotePath, 
-                    fileName, 
-                    filePath, 
-                    percent, 
-                    '127.0.0.1',
-                    chunk,
-                    totalSize // 使用之前获取的文件大小
-                  );
-                } catch (err) {
-                  console.warn('保存下载进度失败，但继续下载:', err);
-                }
+
+                await DownloadManager.updateOrCreate({
+                  downloadId,
+                  connectionId,
+                  fileName,
+                  filePath,
+                  remotePath,
+                  progress: percent,
+                  total: totalSize,
+                  chunk,
+                  status: percent === 100 ? 'completed' : 'downloading'
+                });
               }
             },
             concurrency: 1,
             mode: 0o644
           }, async (err) => {
-            if (completed) return;
-            completed = true;
-            
             if (err) {
               console.error('文件传输失败:', err);
+              await DownloadManager.updateOrCreate({
+                downloadId,
+                connectionId,
+                fileName,
+                filePath,
+                remotePath,
+                progress: lastProgress,
+                total: totalSize,
+                status: 'error',
+                error: err.message
+              });
               reject(new Error(`文件传输失败: ${err.message}`));
             } else {
               console.log('文件下载完成');
-              try {
-                // 最后一次进度更新
-                await this.saveDownloadProgress(
-                  downloadId,
-                  connectionId,
-                  remotePath,
-                  fileName,
-                  filePath,
-                  100,
-                  '127.0.0.1',
-                  0,
-                  totalSize
-                );
-                resolve(filePath);
-              } catch (err) {
-                console.warn('最终进度更新失败:', err);
-                resolve(filePath); // 仍然完成下载
-              }
+              resolve(filePath);
             }
           });
 
-          // 监听错误和关闭事件
-          sftp.once('error', (err) => {
-            handleError(new Error(`SFTP错误: ${err.message}`));
-          });
-
-          sftp.once('close', () => {
-            if (!completed) {
-              handleError(new Error('SFTP会话意外关闭'));
-            }
+          sftp.once('error', async (err) => {
+            await DownloadManager.updateOrCreate({
+              downloadId,
+              connectionId,
+              fileName,
+              filePath,
+              remotePath,
+              progress: lastProgress,
+              total: totalSize,
+              status: 'error',
+              error: err.message
+            });
+            reject(new Error(`SFTP错误: ${err.message}`));
           });
 
         } catch (err) {
-          handleError(new Error(`启动下载失败: ${err.message}`));
+          reject(new Error(`启动下载失败: ${err.message}`));
         }
       });
     } catch (error) {
@@ -353,42 +329,6 @@ class FileManager {
     } catch (error) {
       console.error('确保连接可用失败:', error);
       throw new Error(`连接检查失败: ${error.message}`);
-    }
-  }
-// 持久化保存下载进度
-  async saveDownloadProgress(downloadId, connectionId, remotePath, fileName, filePath, progress, host, chunk, total) {
-    try {
-      const downloadData = {
-        // 下载id
-        downloadId: downloadId,
-        // 连接id
-        connectionId: connectionId,
-        // 文件名
-        fileName: fileName, 
-        // 下载后文件路径
-        filePath: filePath,
-        // 远程文件路径
-        remotePath: remotePath,
-        //主机
-        host: host,
-        // 下载进度
-        progress: progress,
-        // 下载chunk
-        chunk: chunk,
-        // 下载总大小
-        total: total
-      };
-
-      console.log(`[Download] 开始保存下载进度: ${downloadId}, progress: ${progress}%`);
-      
-      // 等待更新完成
-      const result = await DownloadStore.updateOrCreate(downloadData);
-      
-      console.log(`[Download] 下载进度保存成功: ${downloadId}, progress: ${progress}%`);
-      return result;
-    } catch (error) {
-      console.error(`[Download] 保存下载进度失败: ${downloadId}`, error);
-      // 不抛出错误，避免中断下载过程
     }
   }
 }

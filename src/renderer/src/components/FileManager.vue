@@ -238,15 +238,13 @@ const downloadFile = async (file) => {
   
   try {
     loading.value = true;
-    await window.electron.ipcRenderer.invoke('ssh:download-file', {
+      window.electron.ipcRenderer.invoke('ssh:download-file', {
       connectionId: props.connectionId,
       remotePath: file.path,
       fileName: file.name
     });
-    window.$message.success('文件下载成功');
   } catch (error) {
     console.error('文件下载失败:', error);
-    window.$message.error('文件下载失败: ' + error.message);
   } finally {
     loading.value = false;
   }
