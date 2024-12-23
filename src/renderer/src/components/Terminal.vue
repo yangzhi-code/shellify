@@ -104,7 +104,6 @@ const initTerminal = () => {
   try {
     terminalManager.value = new TerminalManager({
       fontSize: 14,
-      // 不设置固定的行列数
     })
 
     const terminal = terminalManager.value.init(terminalContainer.value)
@@ -115,14 +114,22 @@ const initTerminal = () => {
     commandHandler.value = new TerminalCommandHandler(terminalManager.value)
     inputHandler.value = new TerminalInputHandler(terminalManager.value, commandHandler.value)
 
-    // 监听用户输入
-    const disposable = terminal.onData((data) => {
-      inputHandler.value?.handleInput(data, {
-        connectionId: props.item.data?.id,
-        username: props.item.info.username,
-        host: props.item.info.host
-      })
-    })
+    // 使用单一的 onKey 监听处理所有键盘输入
+    const disposable = terminal.onKey(e => {
+      if (e.key === '\r' && isConnectionBroken.value && currentServerInfo.value) {
+        // 清除当前终端内容
+        terminalManager.value.clear();
+        // 重新连接
+        connectToServer(currentServerInfo.value);
+      } else if (!isConnectionBroken.value) {
+        // 正常的输入处理
+        inputHandler.value?.handleInput(e.key, {
+          connectionId: props.item.data?.id,
+          username: props.item.info.username,
+          host: props.item.info.host
+        });
+      }
+    });
 
     // 监听终端输出
     window.electron.ipcRenderer.on('terminal-output', (event, data) => {
@@ -168,23 +175,6 @@ const initTerminal = () => {
       resizeObserver.disconnect()
       window.removeEventListener('resize', handleResize)
     }
-
-    // 添加按键监听
-    terminal.onKey(e => {
-      if (e.key === '\r' && isConnectionBroken.value && currentServerInfo.value) {
-        // 清除当前终端内容
-        terminalManager.value.clear();
-        // 重新连接
-        connectToServer(currentServerInfo.value);
-      } else if (!isConnectionBroken.value) {
-        // 正常的输入处理
-        inputHandler.value?.handleInput(e.key, {
-          connectionId: props.item.data?.id,
-          username: props.item.info.username,
-          host: props.item.info.host
-        });
-      }
-    });
   } catch (error) {
     console.error('Terminal initialization error:', error)
   }
