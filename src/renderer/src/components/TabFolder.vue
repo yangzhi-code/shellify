@@ -9,7 +9,6 @@
       ></i>
     </div>
     <div>
-      <!-- 弹窗容器 -->
       <el-dialog
         v-model="visible"
         :draggable="true"
@@ -17,6 +16,9 @@
         title="连接管理器"
         width="550px"
         :align-center="true"
+        :modal-class="'no-padding-dialog'"
+        :lock-scroll="false"
+        :append-to-body="true"
       >
         <TreeList @close-dialog="closedialog" />
       </el-dialog>
@@ -58,6 +60,14 @@ const openNewTerminal = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 防止弹窗影响布局 */
+:deep(.no-padding-dialog) {
+  overflow: hidden;
+  .el-dialog {
+    margin: 0 !important;
+  }
 }
 </style>
 
