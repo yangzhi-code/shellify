@@ -3,9 +3,9 @@
     <div class="chart-header">
       <div class="speed-info">
         <div class="speed-item">
-          <span>↑</span>
+          <span class="arrow upload">↑</span>
           <span>{{ formatSpeed(upload) }}</span>
-          <span>↓</span>
+          <span class="arrow download">↓</span>
           <span>{{ formatSpeed(download) }}</span>
         </div>
       </div>
@@ -127,6 +127,18 @@
 .chart {
   width: 100%;
   height: 100%;
+}
+
+.arrow {
+  font-weight: bold;
+}
+
+.arrow.upload {
+  color: #ff6b6b;
+}
+
+.arrow.download {
+  color: #4ecdc4;
 }
 </style>
 
