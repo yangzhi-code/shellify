@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div class="sidebar">
-      <ServerStatus :connectionId="currentConnectionId" />
+      <ServerStatus />
     </div>
     <div class="resizer" @mousedown="startResize"></div>
     <div class="main">
@@ -43,11 +43,10 @@ import ServerStatus from './components/ServerStatus.vue'
 import { useTabsStore } from './stores/terminalStore'
 import TerminalLayout from './components/TerminalLayout.vue'
 const tabsStore = useTabsStore()
-const currentConnectionId = ref(null)
 
 // 处理终端连接成功
 const handleTerminalConnected = (connectionId) => {
-  currentConnectionId.value = connectionId
+  tabsStore.activeConnectionId = connectionId
 }
 
 // 处理侧边栏调整大小

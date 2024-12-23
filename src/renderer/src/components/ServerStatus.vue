@@ -2,23 +2,16 @@
   <div class="server-status">
     <!-- 基本信息 -->
     <div class="status-section">
-      <div class="status-header">系统信息</div>
+      <div class="status-header">基本信息</div>
       <div class="status-item">
-        <span class="label">IP地址</span>
-        <div class="value-with-copy">
-          <span class="value highlight">{{ status.publicIp || '-' }}</span>
-          <button 
-            v-if="status.publicIp" 
-            class="copy-btn"
-            @click="copyToClipboard(status.publicIp)"
-          >
-            复制
-          </button>
-        </div>
+        <span class="label">公网IP</span>
+        <span class="value highlight" @click="copyToClipboard(status.publicIp)">
+          {{ shouldShowStats ? status.publicIp : '-' }}
+        </span>
       </div>
       <div class="status-item">
         <span class="label">运行时间</span>
-        <span class="value">{{ status.uptime }}</span>
+        <span class="value">{{ shouldShowStats ? status.uptime : '-' }}</span>
       </div>
       <div class="status-item">
         <span class="label">系统负载</span>
@@ -101,15 +94,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import NetworkChart from './NetworkChart.vue'
+import { useTabsStore } from '../stores/terminalStore'
 
-const props = defineProps({
-  connectionId: {
-    type: String,
-    required: false,
-    default: null
+const tabsStore = useTabsStore()
+
+// 添加计算属性判断是否显示统计数据
+const shouldShowStats = computed(() => {
+  const currentTab = tabsStore.editableTabs.find(tab => tab.id === tabsStore.editableTabsValue)
+  return currentTab?.data?.id != null
+})
+
+// 添加计算属性获取当前标签
+const currentTab = computed(() => {
+  const tab = tabsStore.editableTabs.find(tab => tab.id === tabsStore.editableTabsValue)
+  // 如果有连接ID，立即获取一次数据
+  if (tab?.data?.id) {
+    console.time('首次加载统计数据')
+    shouldUpdate = true
+    fetchServerStatus()
   }
+  return tab
 })
 
 // 状态数据
@@ -137,19 +143,56 @@ const status = ref({
 // 更新间隔（毫秒）
 const UPDATE_INTERVAL = 2000
 
+// 添加一个标志来追踪组件是否应该更新
+let shouldUpdate = true
+
+// 重置状态数据的函数
+const resetStatus = () => {
+  console.log("重置状态数据")
+  shouldUpdate = false  // 设置标志为 false
+  status.value = {
+    publicIp: '',
+    uptime: '',
+    load: {
+      '1min': '0.00',
+      '5min': '0.00',
+      '15min': '0.00'
+    },
+    cpu: 0,
+    memory: {
+      percentage: 0,
+      used: '0GB',
+      total: '0GB'
+    },
+    network: {
+      upload: '0 KB/s',
+      download: '0 KB/s',
+      interfaces: []
+    },
+    disks: []
+  }
+}
+
 // 获取服务器状态
 const fetchServerStatus = async () => {
-  // 只有在有连接ID时才获取状态
-  if (!props.connectionId) return
+  // 只有在有连接ID且应该显示统计时才获取状态
+  if (!currentTab.value?.data?.id || !shouldShowStats.value) {
+    resetStatus()
+    return
+  }
 
   try {
     const response = await window.electron.ipcRenderer.invoke(
       'get-server-status',
-      props.connectionId
+      currentTab.value.data.id
     )
-    status.value = response
+    // 只有当 shouldUpdate 为 true 时才更新状态
+    if (shouldUpdate) {
+      status.value = response
+      console.timeEnd('首次加载统计数据')
+    }
   } catch (error) {
-    console.error('Failed to fetch server status:', error)
+    console.error('fetchServerStatus failed:', error)
   }
 }
 
@@ -194,35 +237,44 @@ const getDiskTextColor = (value) => {
 // 定时器
 let statusTimer = null
 
-// 监听 connectionId 的变化
-watch(
-  () => props.connectionId,
-  (newId) => {
-    // 清除现有定时器
-    if (statusTimer) {
-      clearInterval(statusTimer)
-      statusTimer = null
-    }
+// 清理定时器的函数
+const clearStatusTimer = () => {
+  if (statusTimer) {
+    clearInterval(statusTimer)
+    statusTimer = null
+  }
+}
 
-    // 如果有新的连接ID，则启动新的定时器
-    if (newId) {
-      fetchServerStatus()
-      statusTimer = setInterval(fetchServerStatus, UPDATE_INTERVAL)
+// 修改监听逻辑，同时监听标签切换和连接状态
+watch(
+  [currentTab, shouldShowStats],
+  () => {
+    // 先清理定时器和重置状态
+    clearStatusTimer()
+    resetStatus()
+    
+    // 如果是空标签或者没有连接，直接返回
+    if (!currentTab.value?.data?.id || !shouldShowStats.value) {
+      return
     }
+    
+    shouldUpdate = true  // 重新启用更新
+    // 如果有新的连接ID且应该显示统计，则启动新的定时器
+    fetchServerStatus()
+    statusTimer = setInterval(fetchServerStatus, UPDATE_INTERVAL)
+  },
+  {
+    immediate: true
   }
 )
 
 onMounted(() => {
-  if (props.connectionId) {
-    fetchServerStatus()
-    statusTimer = setInterval(fetchServerStatus, UPDATE_INTERVAL)
-  }
+  clearStatusTimer()
 })
 
 onUnmounted(() => {
-  if (statusTimer) {
-    clearInterval(statusTimer)
-  }
+  clearStatusTimer()
+  shouldUpdate = false  // 确保组件卸载时不会更新
 })
 
 // 处理网卡切换

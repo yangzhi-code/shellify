@@ -1,82 +1,72 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { nanoid } from 'nanoid'
 
-export const useTabsStore = defineStore('tabs', () => {
-  // 定义响应式数据
-  const editableTabsValue = ref(1)
-  const editableTabs = ref([
-    { id: 1,info:{name:"新建标签"}, data: null }
-  ])
-
-  // 选择标签
-  const selectTab = (id) => {
-    editableTabsValue.value = id
-  }
-
-  // 创建新连接标签
-  const openNewTerminal = () => {
-    const maxId = Math.max(...editableTabs.value.map((tab) => tab.id), 0)
-    const newTab = {
-      id: maxId + 1,
-      info:{name:"新建标签"},
+export const useTabsStore = defineStore('tabs', {
+  state: () => ({
+    editableTabsValue: 'initial-tab',
+    editableTabs: [{
+      id: 'initial-tab',
+      info: {
+        name: '新建终端',
+        host: '',
+        port: 22,
+        username: '',
+        password: ''
+      },
       data: null
-    }
-    editableTabs.value.push(newTab)
-    selectTab(newTab.id)
-  }
-  //从文件夹打开连接
-  const fileOpenNewTerminal = (data) => {
-    console.log("调试",data)
-    const maxId = Math.max(...editableTabs.value.map((tab) => tab.id), 0)
-    const newTab = {
-      id: maxId + 1,
-      info: data.info,
-      data: null
-    }
-    editableTabs.value.push(newTab)
-    selectTab(newTab.id)
-  }
+    }],
+    activeConnectionId: null
+  }),
+  actions: {
+    // 选择标签
+    selectTab(id) {
+      this.editableTabsValue = id
+      const currentTab = this.editableTabs.find(tab => tab.id === id)
+      this.activeConnectionId = currentTab?.data?.id || null
+    },
 
-  // 删除标签
-  const deleteTabById = (idToDelete) => {
-    // 找到要删除标签的索引
-    const deleteIndex = editableTabs.value.findIndex(tab => tab.id === idToDelete);
+    // 打开新终端
+    openNewTerminal() {
+      const newTabId = nanoid()
+      this.editableTabs.push({
+        id: newTabId,
+        info: {
+          name: '新建终端',
+          host: '',
+          port: 22,
+          username: '',
+          password: ''
+        },
+        data: null
+      })
+      this.editableTabsValue = newTabId
+      this.activeConnectionId = null
+    },
 
-    // 删除指定标签
-    editableTabs.value = editableTabs.value.filter(tab => tab.id !== idToDelete);
-
-    // 如果还有剩余标签
-    if (editableTabs.value.length > 0) {
-      // 找到比删除 id 大的标签
-      const nextTab = editableTabs.value.find(tab => tab.id > idToDelete);
-
-      if (nextTab) {
-        // 如果找到比删除 id 大的标签，就选中它
-        editableTabsValue.value = nextTab.id;
-      } else {
-        // 如果没有比删除 id 大的标签，选中比它小的最大标签
-        const previousTab = editableTabs.value.reduce((prev, current) => {
-          return current.id < idToDelete && current.id > (prev?.id || 0) ? current : prev;
-        }, null);
-
-        if (previousTab) {
-          editableTabsValue.value = previousTab.id;
+    // 删除标签
+    deleteTabById(targetId) {
+      const deleteIndex = this.editableTabs.findIndex(tab => tab.id === targetId)
+      this.editableTabs = this.editableTabs.filter(tab => tab.id !== targetId)
+      if (this.editableTabs.length > 0) {
+        const nextTab = this.editableTabs.find(tab => tab.id > targetId)
+        if (nextTab) {
+          this.editableTabsValue = nextTab.id
         } else {
-          // 如果没有找到合适的标签，选中剩余的第一个标签
-          editableTabsValue.value = editableTabs.value[0].id;
+          const previousTab = this.editableTabs.reduce((prev, current) => {
+            return current.id < targetId && current.id > (prev?.id || 0) ? current : prev
+          }, null)
+          if (previousTab) {
+            this.editableTabsValue = previousTab.id
+          } else {
+            this.editableTabsValue = this.editableTabs[0].id
+          }
         }
       }
+      if (this.editableTabsValue === targetId) {
+        const nextTab = this.editableTabs[0]
+        this.activeConnectionId = nextTab?.data?.id || null
+      }
     }
-  };
-
-
-  // 返回状态和操作函数
-  return {
-    editableTabsValue,
-    editableTabs,
-    selectTab,
-    openNewTerminal,
-    fileOpenNewTerminal,
-    deleteTabById
   }
 })
