@@ -42,24 +42,16 @@ class ShellManager {
     return new Promise((resolve, reject) => {
       const client = SSHConnectionManager.getClient(connectionId);
 
-      const env = {
-        TERM: 'xterm-256color',
-        LANG: 'en_US.UTF-8'
-      };
-
       client.shell({
         term: 'xterm-256color',
         cols: cols,
-        rows: rows,
-        env: env
+        rows: rows
       }, (err, stream) => {
         if (err) {
           reject(err);
           return;
         }
 
-        // 修改初始化序列
-        stream.write('export TERM=xterm-256color\n');
         
         this.shells[connectionId] = stream;
         this.setupShellEvents(connectionId, stream);
