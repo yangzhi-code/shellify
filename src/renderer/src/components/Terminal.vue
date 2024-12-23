@@ -21,6 +21,7 @@ import { TerminalManager } from '../utils/TerminalManager'
 import { TerminalInputHandler } from '../utils/TerminalInputHandler'
 import { TerminalCommandHandler } from '../utils/TerminalCommandHandler'
 import QuickConnect from './QuickConnect.vue'
+import { throttle } from 'lodash-es';  // 添加 throttle 导入
 
 const tabsStore = useTabsStore()
 
@@ -77,29 +78,27 @@ const handleQuickConnect = async (connection) => {
   }
 }
 
-// 添加一个方法来处理终端大小调整
-const adjustTerminalSize = () => {
+// 优化后的终端大小调整函数
+const handleTerminalResize = throttle(() => {
   if (terminalManager.value && terminalContainer.value) {
-    const containerRect = terminalContainer.value.getBoundingClientRect()
-    // 确保容器有实际的高度
-    if (containerRect.height > 0) {
-      requestAnimationFrame(() => {
-        terminalManager.value.resize()
-        // 如果已连接，同步发送新的尺寸到服务器
-        if (props.item.data?.id && terminalManager.value.terminal) {
-          const { cols, rows } = terminalManager.value.terminal
-          window.electron.ipcRenderer.send('resize-terminal', {
-            connectionId: props.item.data.id,
-            cols,
-            rows
-          })
-        }
-      })
+    const { height, width } = terminalContainer.value.getBoundingClientRect();
+    if (height > 0 && width > 0) {
+      terminalManager.value.resize();
+      
+      // 如果已连接，同步发送新的尺寸到服务器
+      if (props.item.data?.id && terminalManager.value.terminal) {
+        const { cols, rows } = terminalManager.value.terminal;
+        window.electron.ipcRenderer.send('resize-terminal', {
+          connectionId: props.item.data.id,
+          cols,
+          rows
+        });
+      }
     }
   }
-}
+}, 100);  // 100ms 的节流时间
 
-// 修改 initTerminal 函数
+// 修改 initTerminal 函数中的 resize 相关代码
 const initTerminal = () => {
   try {
     terminalManager.value = new TerminalManager({
@@ -141,44 +140,28 @@ const initTerminal = () => {
       }
     })
 
-    // 使用 MutationObserver 监听容器大小变化
-    const resizeObserver = new ResizeObserver(() => {
-      if (terminalContainer.value) {
-        const { height, width } = terminalContainer.value.getBoundingClientRect()
-        if (height > 0 && width > 0) {
-          requestAnimationFrame(() => {
-            terminalManager.value?.resize()
-          })
-        }
-      }
-    })
-
-    resizeObserver.observe(terminalContainer.value)
+    // 使用 ResizeObserver 监听容器大小变化
+    const resizeObserver = new ResizeObserver(handleTerminalResize);
+    resizeObserver.observe(terminalContainer.value);
 
     // 监听窗口大小变化
-    const handleResize = () => {
-      if (terminalContainer.value) {
-        const { height, width } = terminalContainer.value.getBoundingClientRect()
-        if (height > 0 && width > 0) {
-          requestAnimationFrame(() => {
-            terminalManager.value?.resize()
-          })
-        }
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
+    window.addEventListener('resize', handleTerminalResize);
 
     // 保存清理函数
     terminal._cleanup = () => {
-      disposable.dispose()
-      resizeObserver.disconnect()
-      window.removeEventListener('resize', handleResize)
-    }
+      disposable.dispose();
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleTerminalResize);
+    };
   } catch (error) {
-    console.error('Terminal initialization error:', error)
+    console.error('Terminal initialization error:', error);
   }
-}
+};
+
+// 优化 adjustTerminalSize 函数
+const adjustTerminalSize = () => {
+  handleTerminalResize();
+};
 
 // 连接到服务器
 const connectToServer = async (serverInfo) => {
@@ -252,26 +235,18 @@ const handleDisconnection = () => {
   terminalManager.value.writeln('\r\n按回车键重新连接...\r\n');
 }
 
-// 监听父组件的布局变化
+// 修改 watch 逻辑，使用防抖
 watch(() => props.item.info, () => {
-  nextTick(() => {
-    adjustTerminalSize()
-  })
-}, { deep: true })
+  nextTick(handleTerminalResize);
+}, { deep: true });
 
-// 监听分屏模式变化
-const lastLayoutMode = ref(null)
+// 优化分屏模式变化的监听
 watch(() => props.item.layoutMode, (newMode, oldMode) => {
   if (newMode !== oldMode) {
-    lastLayoutMode.value = oldMode
-    nextTick(() => {
-      // 给一个短暂的延时确保 DOM 已经更新
-      setTimeout(() => {
-        adjustTerminalSize()
-      }, 50)
-    })
+    lastLayoutMode.value = oldMode;
+    nextTick(handleTerminalResize);
   }
-}, { immediate: true })
+}, { immediate: true });
 
 // 生命周期钩子
 onMounted(() => {

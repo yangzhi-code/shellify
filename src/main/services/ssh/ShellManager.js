@@ -141,7 +141,14 @@ class ShellManager {
   resizeShell(connectionId, cols, rows) {
     const shell = this.shells[connectionId];
     if (shell && !shell.destroyed) {
-      shell.setWindow(rows, cols);
+      if (cols > 0 && rows > 0 && 
+          (cols !== shell.columns || rows !== shell.rows)) {
+        try {
+          shell.setWindow(rows, cols);
+        } catch (error) {
+          console.error('Resize shell error:', error);
+        }
+      }
     }
   }
 

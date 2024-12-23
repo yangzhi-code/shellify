@@ -13,21 +13,10 @@ export class TerminalManager {
    * @param {Object} options - 终端配置选项
    */
   constructor(options = {}) {
-    this.options = {
-      cursorBlink: true,
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#ffffff'
-      },
-      scrollback: options.scrollback || 1000,
-      convertEol: options.convertEol !== false,
-      scrollBottomOffset: 5,
-      scrollOnOutput: true,
-      termName: 'xterm-256color',
-      ...options
-    }
-    this.terminal = null
-    this.fitAddon = null
+    this._terminal = null;
+    this.options = options;
+    this._fitAddon = null;
+    this._lastDimensions = { cols: 0, rows: 0 };
     this.writeQueue = []
     this.isWriting = false
   }
@@ -38,28 +27,28 @@ export class TerminalManager {
    * @returns {Terminal} - 终端实例
    */
   init(container) {
-    if (this.terminal) {
-      return this.terminal
+    if (this._terminal) {
+      return this._terminal
     }
 
-    this.terminal = new Terminal(this.options)
-    this.fitAddon = new FitAddon()
+    this._terminal = new Terminal(this.options)
+    this._fitAddon = new FitAddon()
     
     try {
-      this.terminal.loadAddon(this.fitAddon)
-      this.terminal.loadAddon(new WebLinksAddon())
-      this.terminal.loadAddon(new SearchAddon())
+      this._terminal.loadAddon(this._fitAddon)
+      this._terminal.loadAddon(new WebLinksAddon())
+      this._terminal.loadAddon(new SearchAddon())
       
       if (container) {
-        this.terminal.open(container)
+        this._terminal.open(container)
         
         // 设置 TERM 环境变量
-        this.terminal.write('\x1b]77;TERM=xterm\x07')
+        this._terminal.write('\x1b]77;TERM=xterm\x07')
         
         // 使用 IPC 处理右键菜单
         container.addEventListener('contextmenu', async (e) => {
           e.preventDefault()
-          const selection = this.terminal.getSelection()
+          const selection = this._terminal.getSelection()
           
           // 通过 IPC 显示上下文菜单
           const result = await window.electron.ipcRenderer.invoke('show-context-menu', {
@@ -70,23 +59,23 @@ export class TerminalManager {
             await window.electron.ipcRenderer.invoke('clipboard-write', selection)
           } else if (result === 'paste') {
             const text = await window.electron.ipcRenderer.invoke('clipboard-read')
-            this.terminal.paste(text)
+            this._terminal.paste(text)
           } else if (result === 'selectAll') {
-            this.terminal.selectAll()
+            this._terminal.selectAll()
           }
         })
 
         // 处理键盘快捷键
         container.addEventListener('keydown', async (e) => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-            const selection = this.terminal.getSelection()
+            const selection = this._terminal.getSelection()
             if (selection) {
               await window.electron.ipcRenderer.invoke('clipboard-write', selection)
             }
           }
           if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
             const text = await window.electron.ipcRenderer.invoke('clipboard-read')
-            this.terminal.paste(text)
+            this._terminal.paste(text)
           }
         })
 
@@ -98,22 +87,47 @@ export class TerminalManager {
       console.error('Terminal initialization error:', error)
     }
     
-    return this.terminal
+    return this._terminal
   }
 
   /**
-   * 调整终端大小以适应容器
+   * 调整终端大小
    */
   resize() {
-    console.log('调整终端大小以适应容器')
     try {
-      if (this.fitAddon && this.terminal) {
-        this.fitAddon.fit()
-        this.terminal.refresh(0, this.terminal.rows - 1)
+      if (!this._terminal || !this._fitAddon) return;
+
+      // 获取调整前的尺寸
+      const oldDimensions = {
+        cols: this._terminal.cols,
+        rows: this._terminal.rows
+      };
+
+      // 调整终端大小
+      this._fitAddon.fit();
+
+      // 获取新的尺寸
+      const newDimensions = {
+        cols: this._terminal.cols,
+        rows: this._terminal.rows
+      };
+
+      // 只有当尺寸真正发生变化时才触发更新
+      if (oldDimensions.cols !== newDimensions.cols || 
+          oldDimensions.rows !== newDimensions.rows) {
+        this._lastDimensions = newDimensions;
+        this._terminal.refresh(0, this._terminal.rows - 1);
       }
     } catch (error) {
-      console.error('Resize error:', error)
+      console.error('Resize error:', error);
     }
+  }
+
+  /**
+   * 获取当前终端尺寸
+   */
+  getDimensions() {
+    return this._lastDimensions;
   }
 
   /**
@@ -122,7 +136,7 @@ export class TerminalManager {
    */
   write(data) {
     try {
-      if (!this.terminal) return;
+      if (!this._terminal) return;
 
       this.writeQueue.push(data);
       if (!this.isWriting) {
@@ -145,11 +159,11 @@ export class TerminalManager {
 
     requestAnimationFrame(() => {
       try {
-        this.terminal.write(chunk);
-        const currentLine = this.terminal.buffer.active.baseY + this.terminal.buffer.active.cursorY;
-        const maxLines = this.terminal.rows;
+        this._terminal.write(chunk);
+        const currentLine = this._terminal.buffer.active.baseY + this._terminal.buffer.active.cursorY;
+        const maxLines = this._terminal.rows;
         if (currentLine > maxLines - this.options.scrollBottomOffset) {
-          this.terminal.scrollLines(currentLine - (maxLines - this.options.scrollBottomOffset));
+          this._terminal.scrollLines(currentLine - (maxLines - this.options.scrollBottomOffset));
         }
       } catch (error) {
         console.error('Write error:', error);
@@ -164,8 +178,8 @@ export class TerminalManager {
    */
   writeln(data) {
     try {
-      if (this.terminal) {
-        this.terminal.writeln(data)
+      if (this._terminal) {
+        this._terminal.writeln(data)
       }
     } catch (error) {
       console.error('Writeln error:', error)
@@ -177,8 +191,8 @@ export class TerminalManager {
    */
   clear() {
     try {
-      if (this.terminal) {
-        this.terminal.clear()
+      if (this._terminal) {
+        this._terminal.clear()
       }
     } catch (error) {
       console.error('Clear error:', error)
@@ -191,8 +205,8 @@ export class TerminalManager {
    */
   onData(callback) {
     try {
-      if (this.terminal) {
-        return this.terminal.onData(callback)
+      if (this._terminal) {
+        return this._terminal.onData(callback)
       }
     } catch (error) {
       console.error('OnData error:', error)
@@ -204,13 +218,13 @@ export class TerminalManager {
    */
   dispose() {
     try {
-      if (this.fitAddon) {
-        this.fitAddon.dispose()
-        this.fitAddon = null
+      if (this._fitAddon) {
+        this._fitAddon.dispose()
+        this._fitAddon = null
       }
-      if (this.terminal) {
-        this.terminal.dispose()
-        this.terminal = null
+      if (this._terminal) {
+        this._terminal.dispose()
+        this._terminal = null
       }
     } catch (error) {
       console.error('Dispose error:', error)
