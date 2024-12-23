@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed, watch, nextTick } from 'vue'
 import 'xterm/css/xterm.css'
 import { useTabsStore } from '../stores/terminalStore'
 import { TerminalManager } from '../utils/TerminalManager'
@@ -73,13 +73,34 @@ const handleQuickConnect = async (connection) => {
   }
 }
 
-// 初始化终端
+// 添加一个方法来处理终端大小调整
+const adjustTerminalSize = () => {
+  if (terminalManager.value && terminalContainer.value) {
+    const containerRect = terminalContainer.value.getBoundingClientRect()
+    // 确保容器有实际的高度
+    if (containerRect.height > 0) {
+      requestAnimationFrame(() => {
+        terminalManager.value.resize()
+        // 如果已连接，同步发送新的尺寸到服务器
+        if (props.item.data?.id && terminalManager.value.terminal) {
+          const { cols, rows } = terminalManager.value.terminal
+          window.electron.ipcRenderer.send('resize-terminal', {
+            connectionId: props.item.data.id,
+            cols,
+            rows
+          })
+        }
+      })
+    }
+  }
+}
+
+// 修改 initTerminal 函数
 const initTerminal = () => {
   try {
     terminalManager.value = new TerminalManager({
       fontSize: 14,
-      rows: 30,
-      cols: 80
+      // 不设置固定的行列数
     })
 
     const terminal = terminalManager.value.init(terminalContainer.value)
@@ -109,34 +130,39 @@ const initTerminal = () => {
       }
     })
 
-    // 监听口大小变化
+    // 使用 MutationObserver 监听容器大小变化
+    const resizeObserver = new ResizeObserver(() => {
+      if (terminalContainer.value) {
+        const { height, width } = terminalContainer.value.getBoundingClientRect()
+        if (height > 0 && width > 0) {
+          requestAnimationFrame(() => {
+            terminalManager.value?.resize()
+          })
+        }
+      }
+    })
+
+    resizeObserver.observe(terminalContainer.value)
+
+    // 监听窗口大小变化
     const handleResize = () => {
-      terminalManager.value?.resize()
-      if (props.item.data?.id) {
-        const { cols, rows } = terminal
-        window.electron.ipcRenderer.send('resize-terminal', {
-          connectionId: props.item.data.id,
-          cols,
-          rows
-        })
+      if (terminalContainer.value) {
+        const { height, width } = terminalContainer.value.getBoundingClientRect()
+        if (height > 0 && width > 0) {
+          requestAnimationFrame(() => {
+            terminalManager.value?.resize()
+          })
+        }
       }
     }
 
     window.addEventListener('resize', handleResize)
 
-    // 添加 ResizeObserver 监听容器大小变化
-    const resizeObserver = new ResizeObserver(() => {
-      if (terminalManager.value) {
-        terminalManager.value.resize()
-      }
-    })
-    resizeObserver.observe(terminalContainer.value)
-
-    // 保存清理函数引用
+    // 保存清理函数
     terminal._cleanup = () => {
       disposable.dispose()
+      resizeObserver.disconnect()
       window.removeEventListener('resize', handleResize)
-      resizeObserver.disconnect()  // 清理 ResizeObserver
     }
   } catch (error) {
     console.error('Terminal initialization error:', error)
@@ -164,6 +190,27 @@ const connectToServer = async (serverInfo) => {
   }
 }
 
+// 监听父组件的布局变化
+watch(() => props.item.info, () => {
+  nextTick(() => {
+    adjustTerminalSize()
+  })
+}, { deep: true })
+
+// 监听分屏模式变化
+const lastLayoutMode = ref(null)
+watch(() => props.item.layoutMode, (newMode, oldMode) => {
+  if (newMode !== oldMode) {
+    lastLayoutMode.value = oldMode
+    nextTick(() => {
+      // 给一个短暂的延时确保 DOM 已经更新
+      setTimeout(() => {
+        adjustTerminalSize()
+      }, 50)
+    })
+  }
+}, { immediate: true })
+
 // 生命周期钩子
 onMounted(() => {
   // 只有当有完的连接信息时才初始化终端
@@ -172,6 +219,10 @@ onMounted(() => {
     if (props.item.info.host && !props.item.data) {
       connectToServer(props.item.info)
     }
+    // 给一个短暂的延时确保终端完全初始化
+    setTimeout(() => {
+      adjustTerminalSize()
+    }, 100)
   }
 })
 
@@ -187,7 +238,7 @@ onBeforeUnmount(() => {
       window.electron.ipcRenderer.invoke('disconnect', props.item.data.id)
     }
 
-    // 最后销毁���端
+    // 最后销毁端
     if (terminalManager.value) {
       terminalManager.value.dispose()
       terminalManager.value = null

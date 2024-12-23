@@ -73,7 +73,7 @@
   const terminalArea = ref(null)
   const fileArea = ref(null)
   
-  // 计算是���已连接
+  // 计算是否已连接
   const isConnected = computed(() => {
     return !!props.item.data?.id
   })
@@ -221,30 +221,38 @@
     position: relative;
     min-height: 0;
     height: 100%;
+    overflow: hidden;
   }
   
-  /* 分屏模��� */
+  /* 分屏模式 */
   .content-area.split {
     flex-direction: column;
     overflow: hidden;
+    height: 100%;
   }
   
   /* 终端布局 */
   .content-area.split .terminal-area {
-    flex: 0 0 50%;
+    height: 50%;  /* 改用固定百分比高度 */
     min-height: 100px;
+    max-height: calc(100% - 100px); /* 确保留出空间给文件区域 */
+    position: relative;
+    display: flex;
+    overflow: hidden;
   }
   
   .content-area.split .file-area {
-    flex: 0 0 50%;
+    height: 50%;  /* 改用固定百分比高度 */
     min-height: 100px;
     border-top: 1px solid #333;
     overflow: hidden;
+    position: relative;
   }
   
   /* 仅终端模式 */
   .content-area.terminal .terminal-area {
     flex: 1;
+    overflow: hidden;
   }
   
   .content-area.terminal .file-area {
@@ -268,30 +276,26 @@
     position: relative;
     margin: -3px 0;
     z-index: 10;
-  }
-  
-  .resize-handle:hover {
-    background-color: #666;
-  }
-  
-  .resize-handle:active {
-    background-color: #999;
+    flex-shrink: 0;
   }
   
   .terminal-area,
   .file-area {
     position: relative;
-    transition: flex 0.1s ease;
     min-height: 0;
     display: flex;
+    flex-direction: column;
   }
   
   .terminal-area {
     background-color: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
   }
   
   .file-area {
-    position: relative;
     background-color: #fff;
     overflow: auto;
     min-width: 0;
@@ -302,6 +306,58 @@
   .el-button.is-disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+  
+  .terminal-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .terminal-container {
+    width: 100%;
+    height: 100%;
+    padding: 12px;
+    box-sizing: border-box;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  :deep(.xterm-viewport),
+  :deep(.xterm),
+  :deep(.xterm-screen) {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  :deep(.xterm-viewport) {
+    box-sizing: border-box;
+    overflow-y: auto !important;
+  }
+  
+  /* 确保终端容器样式正确 */
+  :deep(.terminal-container) {
+    flex: 1;
+    height: 100% !important;
+    overflow: hidden;
+    padding: 0;  /* 移除内边距 */
+  }
+  
+  :deep(.xterm) {
+    height: 100% !important;
+    padding: 12px;  /* 将内边距移到这里 */
+  }
+  
+  :deep(.xterm-viewport) {
+    overflow-y: auto !important;
+  }
+  
+  :deep(.xterm-screen) {
+    position: relative !important;
   }
   </style>
   
