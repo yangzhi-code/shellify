@@ -330,7 +330,7 @@ const copyToClipboard = async (text) => {
   background-color: #4ecdc4;
   transition: width 0.3s ease;
   border-radius: 2px;
-  min-width: 20px;
+
 }
 
 .progress-text {
