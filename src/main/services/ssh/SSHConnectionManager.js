@@ -14,9 +14,10 @@ class SSHConnectionManager {
     this.clients = {};
     this.sftpSessions = {};  // 存储 SFTP 会话
     this.reconnectAttempts = {};
-    this.MAX_RETRIES = 3;
-    this.RETRY_DELAY = 2000;
+    this.MAX_RETRIES = 1;
+    this.RETRY_DELAY = 1000;
     this.connectionStatus = {}; // 新增：跟踪连接状态
+    this.connectionCheckers = {};  // 存储连接检查器
   }
 
   /**
@@ -52,13 +53,19 @@ class SSHConnectionManager {
         console.log('SSH连接就绪:', connectionId);
         this.clients[connectionId] = client;
         this.reconnectAttempts[connectionId].attempts = 0;
+        
+        // 设置连接检查
+        this.setupConnectionChecker(connectionId, client);
+        
         resolve({ connectionId });
       })
       .on('error', (err) => {
+        this.emitConnectionStatus(connectionId, 'disconnected');
         console.error('SSH连接错误:', err);
         this.handleConnectionError(connectionId, err, reject);
       })
       .on('end', () => {
+        this.emitConnectionStatus(connectionId, 'disconnected');
         console.log('SSH连接结束:', connectionId);
         this.handleConnectionEnd(connectionId);
       })
@@ -76,15 +83,49 @@ class SSHConnectionManager {
   }
 
   /**
+   * 设置连接检查器
+   */
+  setupConnectionChecker(connectionId, client) {
+    // 清理现有的检查器
+    if (this.connectionCheckers[connectionId]) {
+      clearInterval(this.connectionCheckers[connectionId]);
+    }
+
+    // 每30秒检查一次连接状态
+    this.connectionCheckers[connectionId] = setInterval(() => {
+      if (!client._sock?.writable) {
+        this.emitConnectionStatus(connectionId, 'disconnected');
+        this.handleConnectionEnd(connectionId);
+      }
+    }, 30000);
+  }
+
+  /**
+   * 发送连接状态
+   */
+  emitConnectionStatus(connectionId, status) {
+    if (global.mainWindow) {
+      global.mainWindow.webContents.send(`connection:status:${connectionId}`, status);
+    }
+  }
+
+  /**
    * 处理连接错误
    */
   handleConnectionError(connectionId, error, reject) {
+    if (error.level === 'client-authentication') {
+      console.error('认证失败，不进行重试');
+      delete this.reconnectAttempts[connectionId];
+      reject(new Error('认证失败：用户名或密码错误'));
+      return;
+    }
+
     const reconnectInfo = this.reconnectAttempts[connectionId];
     if (!reconnectInfo) return;
 
     if (reconnectInfo.attempts < this.MAX_RETRIES) {
       reconnectInfo.attempts++;
-      console.log(`尝试重连 (${reconnectInfo.attempts}/${this.MAX_RETRIES})...`);
+      console.log(`尝试重新连接 (${reconnectInfo.attempts}/${this.MAX_RETRIES})...`);
       
       setTimeout(() => {
         const client = new Client();
@@ -92,14 +133,17 @@ class SSHConnectionManager {
           client,
           connectionId,
           reconnectInfo.serverInfo,
-          () => console.log('重连成功'),
-          (err) => console.error('重连失败:', err)
+          () => console.log('重新连接成功'),
+          (err) => {
+            console.error('重新连接失败:', err);
+            reject(new Error(err.message || '连接失败'));
+          }
         );
       }, this.RETRY_DELAY);
     } else {
-      console.error('重连次数超过限制，放弃重连');
+      console.error('重试次数已达上限');
       delete this.reconnectAttempts[connectionId];
-      if (reject) reject(error);
+      reject(new Error(error.message || '连接失败，已达重试上限'));
     }
   }
 
@@ -112,8 +156,8 @@ class SSHConnectionManager {
       this._cleanupSFTPSession(connectionId);
       delete this.clients[connectionId];
 
-      // 如果有重连配置，尝试重连
-      if (this.reconnectAttempts[connectionId]) {
+      const reconnectInfo = this.reconnectAttempts[connectionId];
+      if (reconnectInfo && !reconnectInfo.authError) {
         this.handleReconnect(connectionId).catch(err => {
           console.error('自动重连失败:', err);
         });
@@ -362,6 +406,17 @@ class SSHConnectionManager {
         );
       }, this.RETRY_DELAY);
     });
+  }
+
+  /**
+   * 清理资源时也要清理检查器
+   */
+  cleanup(connectionId) {
+    if (this.connectionCheckers[connectionId]) {
+      clearInterval(this.connectionCheckers[connectionId]);
+      delete this.connectionCheckers[connectionId];
+    }
+    // ... 其他清理代码
   }
 }
 

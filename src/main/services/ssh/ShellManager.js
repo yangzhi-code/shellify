@@ -29,6 +29,12 @@ class ShellManager {
      * @type {number}
      */
     this.flushInterval = 16; // 60fps
+
+    /**
+     * 存储错误回调函数
+     * @type {Object.<string, Function>}
+     */
+    this.errorCallbacks = {};
   }
 
   /**
@@ -42,12 +48,20 @@ class ShellManager {
     return new Promise((resolve, reject) => {
       const client = SSHConnectionManager.getClient(connectionId);
 
+      if (!client) {
+        const error = new Error('SSH连接未建立或已断开');
+        this.handleError(connectionId, error);
+        reject(error);
+        return;
+      }
+
       client.shell({
         term: 'xterm-256color',
         cols: cols,
         rows: rows
       }, (err, stream) => {
         if (err) {
+          this.handleError(connectionId, err);
           reject(err);
           return;
         }
@@ -89,6 +103,7 @@ class ShellManager {
 
     stream.on('error', (err) => {
       console.error('Shell error:', err);
+      this.handleError(connectionId, err);
     });
 
     stream.on('close', () => {
@@ -142,6 +157,7 @@ class ShellManager {
     delete this.buffers[connectionId];
     delete this.shells[connectionId];
     delete this.callbacks[connectionId];
+    delete this.errorCallbacks[connectionId];
   }
 
   /**
@@ -153,6 +169,47 @@ class ShellManager {
       this.shells[connectionId].end();
       this.cleanup(connectionId);
     }
+  }
+
+  /**
+   * 设置错误回调函数
+   * @param {string} connectionId - 连接ID
+   * @param {Function} callback - 错误回调函数
+   */
+  onError(connectionId, callback) {
+    this.errorCallbacks[connectionId] = callback;
+  }
+
+  /**
+   * 处理错误
+   * @private
+   * @param {string} connectionId - 连接ID
+   * @param {Error} error - 错误对象
+   */
+  handleError(connectionId, error) {
+    if (this.errorCallbacks[connectionId]) {
+      const errorMessage = this.formatErrorMessage(error);
+      this.errorCallbacks[connectionId](errorMessage);
+    }
+  }
+
+  /**
+   * 格式化错误消息
+   * @private
+   * @param {Error} error - 错误对象
+   * @returns {string} 格式化后的错误消息
+   */
+  formatErrorMessage(error) {
+    if (error.message.includes('All configured authentication methods failed')) {
+      return '认证失败：用户名或密码错误';
+    }
+    if (error.message.includes('connect ETIMEDOUT')) {
+      return '连接超时：请检查网络或服务器地址';
+    }
+    if (error.message.includes('connect ECONNREFUSED')) {
+      return '连接被拒绝：请检查服务器地址和端口';
+    }
+    return `连接错误：${error.message}`;
   }
 }
 

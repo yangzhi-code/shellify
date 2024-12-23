@@ -49,6 +49,10 @@ const emit = defineEmits(['connected'])
 // 布局模式：terminal(仅终端)、split(终端和文件)、file(仅文件)
 const layoutMode = ref('terminal')
 
+// 在 setup 中添加状态
+const isConnectionBroken = ref(false);  // 跟踪连接状态
+const currentServerInfo = ref(null);    // 保存当前连接信息
+
 // 处理快速连接选择
 const handleQuickConnect = async (connection) => {
   try {
@@ -164,6 +168,23 @@ const initTerminal = () => {
       resizeObserver.disconnect()
       window.removeEventListener('resize', handleResize)
     }
+
+    // 添加按键监听
+    terminal.onKey(e => {
+      if (e.key === '\r' && isConnectionBroken.value && currentServerInfo.value) {
+        // 清除当前终端内容
+        terminalManager.value.clear();
+        // 重新连接
+        connectToServer(currentServerInfo.value);
+      } else if (!isConnectionBroken.value) {
+        // 正常的输入处理
+        inputHandler.value?.handleInput(e.key, {
+          connectionId: props.item.data?.id,
+          username: props.item.info.username,
+          host: props.item.info.host
+        });
+      }
+    });
   } catch (error) {
     console.error('Terminal initialization error:', error)
   }
@@ -171,9 +192,10 @@ const initTerminal = () => {
 
 // 连接到服务器
 const connectToServer = async (serverInfo) => {
+  currentServerInfo.value = serverInfo;  // 保存连接信息
+  isConnectionBroken.value = false;      // 重置连接状态
   
-  terminalManager.value.writeln('正在连接到服务器...')
-  console.log("快速连接",serverInfo)
+  terminalManager.value.writeln('正在连接到服务器...');
   try {
     const response = await window.electron.ipcRenderer.invoke('new-connection', {
       host: serverInfo.host,
@@ -183,11 +205,61 @@ const connectToServer = async (serverInfo) => {
     });
     
     props.item.data = response;
-    terminalManager.value.writeln('连接成功！')
-    emit('connected', response.id)
+    terminalManager.value.writeln('连接成功！');
+    emit('connected', response.id);
+
+    // 设置连接状态检查
+    setupConnectionCheck(response.id);
   } catch (error) {
-    terminalManager.value.writeln('连接失败：' + error.message)
+    handleConnectionError(error);
   }
+}
+
+// 处理连接错误
+const handleConnectionError = (error) => {
+  console.error('连接错误:', error);
+  isConnectionBroken.value = true;
+  
+  // 格式化错误消息
+  let errorMessage = '连接失败：';
+  if (error.message.includes('认证失败')) {
+    errorMessage += '用户名或密码错误';
+  } else if (error.message.includes('ETIMEDOUT')) {
+    errorMessage += '连接超时，请检查网络或服务器地址';
+  } else if (error.message.includes('ECONNREFUSED')) {
+    errorMessage += '连接被拒绝，请检查服务器地址和端口';
+  } else if (error.message.includes('ENOTFOUND')) {
+    errorMessage += '找不到服务器，请检查服务器地址';
+  } else {
+    errorMessage += error.message;
+  }
+
+  // 显示错误消息和重试提示
+  terminalManager.value.writeln(`\r\n\x1b[31m${errorMessage}\x1b[0m`);
+  terminalManager.value.writeln('\r\n按回车键重试连接...\r\n');
+
+  // 清理连接相关的资源
+  if (props.item.data?.id) {
+    window.electron.ipcRenderer.invoke('disconnect', props.item.data.id);
+    props.item.data = null;
+  }
+}
+
+// 设置连接状态检查
+const setupConnectionCheck = (connectionId) => {
+  // 监听连接状态
+  window.electron.ipcRenderer.on(`connection:status:${connectionId}`, (_, status) => {
+    if (status === 'disconnected') {
+      handleDisconnection();
+    }
+  });
+}
+
+// 处理连接断开
+const handleDisconnection = () => {
+  isConnectionBroken.value = true;
+  terminalManager.value.writeln('\r\n\x1b[31m连接已断开\x1b[0m');
+  terminalManager.value.writeln('\r\n按回车键重新连接...\r\n');
 }
 
 // 监听父组件的布局变化
