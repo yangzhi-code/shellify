@@ -58,6 +58,9 @@ class ShellManager {
           return;
         }
 
+        // 修改初始化序列
+        stream.write('export TERM=xterm-256color\n');
+        
         this.shells[connectionId] = stream;
         this.setupShellEvents(connectionId, stream);
         resolve(stream);

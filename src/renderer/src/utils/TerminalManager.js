@@ -23,6 +23,7 @@ export class TerminalManager {
       convertEol: options.convertEol !== false,
       scrollBottomOffset: 5,
       scrollOnOutput: true,
+      termName: 'xterm-256color',
       ...options
     }
     this.terminal = null
@@ -51,6 +52,9 @@ export class TerminalManager {
       
       if (container) {
         this.terminal.open(container)
+        
+        // 设置 TERM 环境变量
+        this.terminal.write('\x1b]77;TERM=xterm\x07')
         
         // 使用 IPC 处理右键菜单
         container.addEventListener('contextmenu', async (e) => {

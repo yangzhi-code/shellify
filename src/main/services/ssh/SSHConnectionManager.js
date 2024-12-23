@@ -51,7 +51,7 @@ class SSHConnectionManager {
       .on('ready', () => {
         console.log('SSH连接就绪:', connectionId);
         this.clients[connectionId] = client;
-        this.reconnectAttempts[connectionId].attempts = 0;  // 重置重试次数
+        this.reconnectAttempts[connectionId].attempts = 0;
         resolve({ connectionId });
       })
       .on('error', (err) => {
@@ -64,9 +64,14 @@ class SSHConnectionManager {
       })
       .connect({
         ...serverInfo,
-        keepaliveInterval: 10000,    // 每10秒发送一次心跳
-        keepaliveCountMax: 3,        // 最多允许丢失3次心跳
-        readyTimeout: 20000,         // 连接超时时间
+        keepaliveInterval: 10000,
+        keepaliveCountMax: 3,
+        readyTimeout: 20000,
+        env: {
+          TERM: 'xterm-256color',
+          LANG: 'en_US.UTF-8'
+        },
+        term: 'xterm-256color'
       });
   }
 
