@@ -19,6 +19,39 @@ export const useTabsStore = defineStore('tabs', {
     activeConnectionId: null
   }),
   actions: {
+    // 添加更新标签信息的方法
+    updateTabInfo(id, info) {
+      const tab = this.editableTabs.find(tab => tab.id === id)
+      if (tab) {
+        tab.info = {
+          ...tab.info,
+          ...info
+        }
+        // 如果有连接信息，自动连接
+        if (info.host && info.username) {
+          this.connectToServer(tab)
+        }
+      }
+    },
+
+    // 添加连接服务器的方法
+    async connectToServer(tab) {
+      try {
+        const { host, port, username, password } = tab.info
+        const connectionId = await window.electron.ipcRenderer.invoke('connect-ssh', {
+          host,
+          port,
+          username,
+          password
+        })
+        tab.data = { id: connectionId }
+        this.activeConnectionId = connectionId
+      } catch (error) {
+        console.error('Failed to connect:', error)
+        ElMessage.error('连接失败：' + error.message)
+      }
+    },
+
     // 选择标签
     selectTab(id) {
       this.editableTabsValue = id

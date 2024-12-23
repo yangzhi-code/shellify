@@ -107,10 +107,13 @@ const handleDoubleClick = () => {
   if (props.node.type === 'folder') {
     return
   }
-  // 保存一个终端窗口
-  tabsStore.fileOpenNewTerminal(props.node)
+  // 创建新标签
+  tabsStore.openNewTerminal()
+  // 获取最新创建的标签
+  const newTab = tabsStore.editableTabs[tabsStore.editableTabs.length - 1]
+  // 更新标签信息
+  tabsStore.updateTabInfo(newTab.id, props.node.info)
   emit('close-dialog')
-
 }
 
 // 添加文件夹子节点
@@ -122,7 +125,7 @@ const addfolder = () => {
   emit('add-folder-node', props.node.id)
 }
 
-// 添加一个响应式��量来存储当前编辑的节点
+// 添加一个响应式量来存储当前编辑的节点
 const currentEditNode = ref(null)
 
 // 添加一个标记来区分是新增还是编辑
