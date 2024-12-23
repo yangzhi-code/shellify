@@ -36,20 +36,8 @@ export const useTabsStore = defineStore('tabs', {
 
     // 添加连接服务器的方法
     async connectToServer(tab) {
-      try {
-        const { host, port, username, password } = tab.info
-        const connectionId = await window.electron.ipcRenderer.invoke('connect-ssh', {
-          host,
-          port,
-          username,
-          password
-        })
-        tab.data = { id: connectionId }
-        this.activeConnectionId = connectionId
-      } catch (error) {
-        console.error('Failed to connect:', error)
-        ElMessage.error('连接失败：' + error.message)
-      }
+      console.log('咳咳咳', tab)
+      
     },
 
     // 选择标签
