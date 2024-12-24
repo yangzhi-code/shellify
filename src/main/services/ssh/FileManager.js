@@ -344,6 +344,12 @@ class FileManager {
       await this._ensureConnection(connectionId);
       const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
       
+      // 获取原有的下载记录
+      const existingRecord = await DownloadManager.getDownload(downloadId);
+      if (!existingRecord) {
+        throw new Error('找不到下载记录');
+      }
+      
       // 设置超时标志
       let isTimeout = false;
       const timeout = setTimeout(() => {
@@ -351,7 +357,7 @@ class FileManager {
         sftp.end();
       }, 30000); // 30秒超时
 
-      // 先更新下��状态为 downloading
+      // 先更新下载状态为 downloading
       await DownloadManager.updateOrCreate({
         downloadId,
         status: 'downloading',
@@ -360,7 +366,8 @@ class FileManager {
         filePath: targetPath,
         remotePath,
         total: 0,  // 先设置为0，后面会更新
-        chunk: 0
+        chunk: 0,
+        serverInfo: existingRecord.server_info  // 保留原有的服务器信息
       });
 
       // 检查目标路径是否存在同名文件
@@ -377,10 +384,10 @@ class FileManager {
       if (finalPath !== targetPath) {
         console.log('[FileManager] 检测到同名文件，新路径:', finalPath);
         targetPath = finalPath;
-        // 更新文件路径
         await DownloadManager.updateOrCreate({
           downloadId,
-          filePath: targetPath
+          filePath: targetPath,
+          serverInfo: existingRecord.server_info  // 保留原有的服务器信息
         });
       }
       
@@ -429,13 +436,9 @@ class FileManager {
                   fileName,
                   filePath: targetPath,
                   remotePath,
-                  total: totalSize
+                  total: totalSize,
+                  serverInfo: existingRecord.server_info  // 保留原有的服务器信息
                 });
-              }
-
-              // 检查是否超时或者进度停滞
-              if (isTimeout || Date.now() - lastProgressTime > 15000) {
-                throw new Error('下载超时或进度停滞');
               }
             },
             concurrency: 1,
@@ -443,12 +446,12 @@ class FileManager {
           }, async (err) => {
             clearTimeout(timeout);
             if (err) {
-              console.error('文件传输失败:', err);
               await DownloadManager.updateOrCreate({
                 downloadId,
                 progress: lastProgress,
                 status: 'error',
-                error: err.message || '下载超时'
+                error: err.message || '下载超时',
+                serverInfo: existingRecord.server_info  // 保留原有的服务器信息
               });
               reject(new Error(`文件传输失败: ${err.message || '下载超时'}`));
             } else {
@@ -463,7 +466,8 @@ class FileManager {
               downloadId,
               progress: lastProgress,
               status: 'error',
-              error: err.message
+              error: err.message,
+              serverInfo: existingRecord.server_info  // 保留原有的服务器信息
             });
             reject(new Error(`SFTP错误: ${err.message}`));
           });
@@ -476,7 +480,8 @@ class FileManager {
                 downloadId,
                 progress: lastProgress,
                 status: 'error',
-                error: '连接已关闭'
+                error: '连接已关闭',
+                serverInfo: existingRecord.server_info  // 保留原有的服务器信息
               });
               reject(new Error('连接已关闭'));
             }
@@ -588,7 +593,7 @@ class FileManager {
       const fileName = path.basename(localPath);
       const remoteFilePath = path.join(remotePath, fileName).replace(/\\/g, '/');
       
-      // 获取��件大小
+      // 获取文件大小
       const stats = await fs.promises.stat(localPath);
       const fileSize = stats.size;
       
