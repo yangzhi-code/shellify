@@ -300,7 +300,7 @@ const deleteRecord = async (downloadId) => {
             })
             .catch((error) => {
               instance.confirmButtonLoading = false
-              console.error('删除下载���录失败:', error)
+              console.error('删除下载记录失败:', error)
               ElMessage.error('删除失败')
               done()
             })
@@ -355,7 +355,7 @@ const loadDownloadRecords = async () => {
   }
 }
 
-// ��听下载进度更新
+// 监听下载进度更新
 const handleDownloadUpdate = (event, downloadInfo) => {
   // 更新单条记录而不是重新加载所有记录
   const index = downloadRecords.value.findIndex((r) => r.id === downloadInfo.id)
@@ -458,15 +458,21 @@ onUnmounted(() => {
 
 <style scoped>
 .download-manager {
+  background-color: #f0f0f0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
 }
 
 .download-button {
   position: relative;
   cursor: pointer;
   padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .download-icon-wrapper {

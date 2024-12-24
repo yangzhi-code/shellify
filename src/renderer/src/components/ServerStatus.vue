@@ -111,7 +111,6 @@ const currentTab = computed(() => {
   const tab = tabsStore.editableTabs.find(tab => tab.id === tabsStore.editableTabsValue)
   // 如果有连接ID，立即获取一次数据
   if (tab?.data?.id) {
-    console.time('首次加载统计数据')
     shouldUpdate = true
     fetchServerStatus()
   }
@@ -189,7 +188,6 @@ const fetchServerStatus = async () => {
     // 只有当 shouldUpdate 为 true 时才更新状态
     if (shouldUpdate) {
       status.value = response
-      console.timeEnd('首次加载统计数据')
     }
   } catch (error) {
     console.warn('获取服务器状态失败:', error)

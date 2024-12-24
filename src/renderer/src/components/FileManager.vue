@@ -146,7 +146,7 @@ const createFolder = () => {
 
 // 检查文件是否可下载
 const canDownload = (file) => {
-  // 如果是文件，��接可下载
+  // 如果是文件，直接可下载
   if (file.type === 'file') return true;
   
   // 如果是压缩包格式的目录也可以下载
@@ -159,8 +159,8 @@ const downloadFile = async (file) => {
   if (!canDownload(file)) return;
   
   try {
-    loading.value = true;
-    const result = await window.electron.ipcRenderer.invoke('ssh:download-file', {
+    file.loading = true;
+    await window.electron.ipcRenderer.invoke('ssh:download-file', {
       connectionId: props.connectionId,
       remotePath: file.path,
       fileName: file.name
@@ -170,13 +170,12 @@ const downloadFile = async (file) => {
     if (result === null) {
       return;
     }
-
-    window.$message.success('文件开始下载');
+    ElMessage.success('文件开始下载');
   } catch (error) {
     console.error('文件下载失败:', error);
-    window.$message.error('文件下载失败: ' + error.message);
+    ElMessage.error('文件下载失败: ' + error.message);
   } finally {
-    loading.value = false;
+    file.loading = false;
   }
 }
 
@@ -200,7 +199,7 @@ const navigateTo = (index) => {
   loadFileList()
 }
 
-// 搜索��关
+// 搜索相关
 const searchKeyword = ref('')
 const searchOptions = ref({
   caseSensitive: false,
@@ -249,7 +248,7 @@ const handleSearch = async (searchData) => {
   } catch (error) {
     console.error('搜索失败:', error);
     if (error.message?.includes('搜索超时')) {
-      showNotification('搜索��示', '搜索超时，请缩小搜索范围或用更具体关键词', 'warning');
+      showNotification('搜索提示', '搜索超时，请缩小搜索范围或用更具体关键词', 'warning');
     } else if (error.message?.includes('达到最大结果数')) {
       showNotification('搜索提示', '搜索结果过多，仅显示前1000条结果', 'warning');
     } else if (error.message?.includes('Permission denied')) {
@@ -282,7 +281,7 @@ watch(() => props.connectionId, (newId) => {
   if (newId) {
     loadFileList();
   }
-}, { immediate: true }); // immediate: true 会在组件���建时立即执行一次
+}, { immediate: true }); // immediate: true 会在组件创建时立即执行一次
 
 // 组件挂载时加载文件列表
 onMounted(() => {

@@ -352,13 +352,18 @@ onUnmounted(() => {
   background-color: #f0f0f0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
 }
 
 .upload-button {
   position: relative;
   cursor: pointer;
   padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .upload-icon-wrapper {
