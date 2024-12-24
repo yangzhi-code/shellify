@@ -191,6 +191,11 @@ class FileManager {
       }
 
       const totalSize = stats.size;
+      //根据连接id获取连接信息
+      const connectionInfo_json = await SSHConnectionManager.getConnectionInfo(connectionId);
+      const connectionInfo = JSON.stringify(connectionInfo_json);
+      
+      console.log('[FileManager] 获取到的连接信息:', connectionInfo);
 
       // 获取默认下载路径
       const defaultDownloadPath = await SettingsManager.getDownloadPath();
@@ -232,6 +237,7 @@ class FileManager {
                 await DownloadManager.updateOrCreate({
                   downloadId,
                   connectionId,
+                  serverInfo: connectionInfo,
                   fileName,
                   filePath,
                   remotePath,
@@ -250,6 +256,7 @@ class FileManager {
               await DownloadManager.updateOrCreate({
                 downloadId,
                 connectionId,
+                serverInfo: connectionInfo,
                 fileName,
                 filePath,
                 remotePath,
@@ -269,6 +276,7 @@ class FileManager {
             await DownloadManager.updateOrCreate({
               downloadId,
               connectionId,
+              serverInfo: connectionInfo,
               fileName,
               filePath,
               remotePath,
@@ -286,6 +294,207 @@ class FileManager {
       });
     } catch (error) {
       console.error('[FileManager] 文件下载失败:', error);
+      throw error;
+    }
+  }
+  //重试下载
+  async retryDownload(record) {
+    console.log('[FileManager] 重试下载:', record);
+    try {
+      // 从数据库获取完整的下载记录
+      const fullRecord = await DownloadManager.getDownload(record.id);
+      if (!fullRecord) {
+        throw new Error('找不到下载记录');
+      }
+      
+      if (!fullRecord.server_info) {
+        throw new Error('下载记录缺少服务器信息');
+      }
+
+      // 首先判断连接id是否还连接着，如果没有连接着，则先重连
+      //根据连接信息重新连接
+      const connectionInfo = await SSHConnectionManager.reconnect_info(JSON.parse(fullRecord.server_info).serverInfo);
+      console.log('[FileManager] 文件下载重新连接服务器, connectionId:', connectionInfo.connectionId);
+      
+      // 重试下载,下载到原来的文件夹
+      await this.downloadFileToPath(
+        connectionInfo.connectionId, 
+        fullRecord.remote_path, 
+        fullRecord.file_name,
+        fullRecord.file_path,
+        fullRecord.id
+      );
+      
+      return { success: true };
+    } catch (error) {
+      console.error('[FileManager] 重试下载失败:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 直接下载文件到指定路径（不弹出保存对话框）
+   * @param {string} connectionId - SSH连接ID
+   * @param {string} remotePath - 远程文件路径
+   * @param {string} fileName - 文件名
+   * @param {string} targetPath - 目标保存路径
+   */
+  async downloadFileToPath(connectionId, remotePath, fileName, targetPath, downloadId) {
+    try {
+      await this._ensureConnection(connectionId);
+      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+      
+      // 设置超时标志
+      let isTimeout = false;
+      const timeout = setTimeout(() => {
+        isTimeout = true;
+        sftp.end();
+      }, 30000); // 30秒超时
+
+      // 先更新下��状态为 downloading
+      await DownloadManager.updateOrCreate({
+        downloadId,
+        status: 'downloading',
+        progress: 0,
+        fileName,
+        filePath: targetPath,
+        remotePath,
+        total: 0,  // 先设置为0，后面会更新
+        chunk: 0
+      });
+
+      // 检查目标路径是否存在同名文件
+      const { dir: targetDir, name: baseName, ext } = path.parse(targetPath);
+      let finalPath = targetPath;
+      let counter = 1;
+      
+      while (fs.existsSync(finalPath)) {
+        finalPath = path.join(targetDir, `${baseName} (${counter})${ext}`);
+        counter++;
+      }
+      
+      // 如果路径发生了变化，更新文件路径
+      if (finalPath !== targetPath) {
+        console.log('[FileManager] 检测到同名文件，新路径:', finalPath);
+        targetPath = finalPath;
+        // 更新文件路径
+        await DownloadManager.updateOrCreate({
+          downloadId,
+          filePath: targetPath
+        });
+      }
+      
+      const stats = await new Promise((resolve, reject) => {
+        sftp.stat(remotePath, (err, stats) => {
+          if (err) reject(err);
+          else resolve(stats);
+        });
+      });
+
+      if (!stats.isFile()) {
+        throw new Error('不是一个文件');
+      }
+
+      const totalSize = stats.size;
+      // 更新文件大小
+      await DownloadManager.updateOrCreate({
+        downloadId,
+        total: totalSize
+      });
+
+      const connectionInfo_json = await SSHConnectionManager.getConnectionInfo(connectionId);
+      const connectionInfo = JSON.stringify(connectionInfo_json);
+      
+      console.log('[FileManager] 获取到的连接信息:', connectionInfo);
+      console.log('[FileManager] 下载到路径:', targetPath);
+
+      return new Promise((resolve, reject) => {
+        let lastProgress = -1;
+        let lastProgressTime = Date.now();
+
+        try {
+          sftp.fastGet(remotePath, targetPath, {
+            step: async (transferred, chunk, total) => {
+              const percent = Math.round((transferred / total) * 100);
+              
+              if (percent !== lastProgress) {
+                lastProgress = percent;
+                lastProgressTime = Date.now();
+                
+                await DownloadManager.updateOrCreate({
+                  downloadId,
+                  progress: percent,
+                  chunk: chunk,
+                  status: percent === 100 ? 'completed' : 'downloading',
+                  fileName,
+                  filePath: targetPath,
+                  remotePath,
+                  total: totalSize
+                });
+              }
+
+              // 检查是否超时或者进度停滞
+              if (isTimeout || Date.now() - lastProgressTime > 15000) {
+                throw new Error('下载超时或进度停滞');
+              }
+            },
+            concurrency: 1,
+            mode: 0o644
+          }, async (err) => {
+            clearTimeout(timeout);
+            if (err) {
+              console.error('文件传输失败:', err);
+              await DownloadManager.updateOrCreate({
+                downloadId,
+                progress: lastProgress,
+                status: 'error',
+                error: err.message || '下载超时'
+              });
+              reject(new Error(`文件传输失败: ${err.message || '下载超时'}`));
+            } else {
+              console.log('文件下载完成');
+              resolve(targetPath);
+            }
+          });
+
+          sftp.once('error', async (err) => {
+            clearTimeout(timeout);
+            await DownloadManager.updateOrCreate({
+              downloadId,
+              progress: lastProgress,
+              status: 'error',
+              error: err.message
+            });
+            reject(new Error(`SFTP错误: ${err.message}`));
+          });
+
+          // 添加中断处理
+          sftp.once('close', async () => {
+            clearTimeout(timeout);
+            if (!isTimeout) {
+              await DownloadManager.updateOrCreate({
+                downloadId,
+                progress: lastProgress,
+                status: 'error',
+                error: '连接已关闭'
+              });
+              reject(new Error('连接已关闭'));
+            }
+          });
+
+        } catch (err) {
+          clearTimeout(timeout);
+          reject(new Error(`启动下载失败: ${err.message}`));
+        }
+      });
+    } catch (error) {
+      console.error('[FileManager] 文件下载失败:', error);
+      // 确保更新错误状态
+      await DownloadManager.updateOrCreate({
+        downloadId,
+        status: 'error',
+        error: error.message
+      });
       throw error;
     }
   }
@@ -379,7 +588,7 @@ class FileManager {
       const fileName = path.basename(localPath);
       const remoteFilePath = path.join(remotePath, fileName).replace(/\\/g, '/');
       
-      // 获取文件大小
+      // 获取��件大小
       const stats = await fs.promises.stat(localPath);
       const fileSize = stats.size;
       

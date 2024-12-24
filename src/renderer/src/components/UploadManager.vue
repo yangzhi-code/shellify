@@ -82,6 +82,14 @@
                           <div class="upload-speed">
                             {{ formatSpeed(calculateSpeed(record)) }}
                           </div>
+                          <el-button 
+                            type="danger" 
+                            link 
+                            size="small" 
+                            @click.stop="cancelUpload(record)"
+                          >
+                            取消
+                          </el-button>
                         </div>
                       </template>
                       <template v-else-if="record.status === 'completed'">
@@ -197,7 +205,7 @@ const hasActiveUpload = computed(() => {
   return uploadRecords.value.some((r) => r.status === 'uploading')
 })
 
-// 计算总体上传进度
+// 计算总���上传进度
 const totalProgress = computed(() => {
   const uploading = uploadRecords.value.filter((r) => r.status === 'uploading')
   if (uploading.length === 0) return 0

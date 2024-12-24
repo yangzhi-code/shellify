@@ -34,7 +34,7 @@ class SSHConnectionManager {
       const connectionId = uuidv4();
       const client = new Client();
 
-      // 保存连接信息用于重连
+      // 保存连���信息用于重连
       this.reconnectAttempts[connectionId] = {
         attempts: 0,
         serverInfo
@@ -372,6 +372,20 @@ class SSHConnectionManager {
   }
 
   /**
+   * 根据连接信息重新连接
+   * @param {Object} reconnectInfo - 连接信息
+   * @returns {Promise<{connectionId: string}>} 返回连接信息
+   */
+  async reconnect_info(serverInfo) {
+    try {
+      const connectionInfo = await this.connect(serverInfo);
+      return connectionInfo;
+    } catch (error) {
+      console.error('重连失败:', error);
+      throw error;
+    }
+  }
+  /**
    * 处理重连
    * @private
    */
@@ -418,6 +432,12 @@ class SSHConnectionManager {
       delete this.connectionCheckers[connectionId];
     }
     // ... 其他清理代码
+  }
+  /**
+   * 根据连接id获取连接信息
+   */
+  async getConnectionInfo(connectionId) {
+    return this.reconnectAttempts[connectionId];
   }
 }
 

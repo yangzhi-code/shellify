@@ -88,16 +88,24 @@
                           <div class="download-speed">
                             {{ formatSpeed(calculateSpeed(record)) }}
                           </div>
+                          <el-button 
+                            type="danger" 
+                            link 
+                            size="small" 
+                            @click.stop="cancelDownload(record)"
+                          >
+                            取消
+                          </el-button>
                         </div>
                       </template>
                       <template v-else-if="record.status === 'completed'">
                         已完成 - {{ formatFileSize(record.total_size) }}
                         <span class="completed-time">{{ formatTime(record.updated_at) }}</span>
                       </template>
-                      <template v-else-if="record.status === 'error'">
+                      <template v-else-if="record.status === 'error1'">
                         下载失败 - {{ record.error }}
                       </template>
-                      <template v-else-if="record.status === 'interrupted'">
+                      <template v-else-if="record.status === 'interrupted'||record.status === 'error'">
                         <div class="interrupted-status">
                           下载中断 - {{ formatFileSize(getDownloadedSize(record)) }} / {{ formatFileSize(record.total_size) }}
                           <el-button 
@@ -145,7 +153,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted,toRaw  } from 'vue'
 import { Document, Download, FolderOpened, Folder, Delete, Setting } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -278,6 +286,12 @@ const openFolder = async (record) => {
     ElMessage.error('打开文件夹失败: ' + error.message)
   }
 }
+
+// 取消下载
+const cancelDownload = async (record) => {
+  await window.electron.ipcRenderer.invoke('download-cancel', record);
+  ElMessage.success('下载已取消');
+};
 
 // 删除单条记录
 const deleteRecord = async (downloadId) => {
@@ -431,13 +445,9 @@ const openDownloadPathSettings = async () => {
 
 // 重试下载
 const retryDownload = async (record) => {
+  const rawRecord = toRaw(record);
   try {
-    await window.electron.ipcRenderer.invoke('ssh:retry-download', {
-      downloadId: record.id,
-      connectionId: record.connection_id,
-      remotePath: record.remote_path,
-      fileName: record.file_name
-    });
+    await window.electron.ipcRenderer.invoke('download-retry', rawRecord);
     ElMessage.success('开始重新下载');
   } catch (error) {
     console.error('重试下载失败:', error);

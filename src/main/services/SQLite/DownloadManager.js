@@ -16,7 +16,7 @@ class DownloadManager {
 
   async init() {
     try {
-      const dbPath = path.join(app.getPath('userData'), 'downloads.db');
+      const dbPath = path.join(app.getPath('userData'), 'downloads1.db');
       
       this.db = await open({
         filename: dbPath,
@@ -27,6 +27,7 @@ class DownloadManager {
         CREATE TABLE IF NOT EXISTS downloads (
           id TEXT PRIMARY KEY,
           connection_id TEXT,
+          server_info TEXT,
           file_name TEXT,
           file_path TEXT,
           remote_path TEXT,
@@ -61,17 +62,20 @@ class DownloadManager {
     try {
       const result = await this.db.run(`
         INSERT INTO downloads (
-          id, connection_id, file_name, file_path, 
-          remote_path, total_size, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          id, connection_id, server_info, file_name, file_path, 
+          remote_path, total_size, status, error, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `, [
         data.downloadId,
         data.connectionId,
+        data.serverInfo,
         data.fileName,
         data.filePath,
         data.remotePath,
         data.total,
-        'downloading'
+        'downloading',
+        null,  // error
+        0      // chunk_size
       ]);
       
       return result;
@@ -127,7 +131,7 @@ class DownloadManager {
       return await this.db.get('SELECT * FROM downloads WHERE id = ?', downloadId);
     } catch (error) {
       console.error('获取下载记录失败:', error);
-      return null;
+      throw error;
     }
   }
 
@@ -204,6 +208,7 @@ class DownloadManager {
           UPDATE downloads 
           SET 
             connection_id = ?,
+            server_info = ?,
             file_name = ?,
             file_path = ?,
             remote_path = ?,
@@ -216,6 +221,7 @@ class DownloadManager {
           WHERE id = ?
         `, [
           data.connectionId,
+          data.serverInfo,
           data.fileName,
           data.filePath,
           data.remotePath,
@@ -233,6 +239,7 @@ class DownloadManager {
             INSERT INTO downloads (
               id,
               connection_id,
+              server_info,
               file_name,
               file_path,
               remote_path,
@@ -243,17 +250,18 @@ class DownloadManager {
               error,
               created_at,
               updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           `, [
             data.downloadId,
             data.connectionId,
+            data.serverInfo,
             data.fileName,
             data.filePath,
             data.remotePath,
-            data.progress,
+            data.progress || 0,
             data.total,
             data.chunk || 0,
-            data.status || (data.progress >= 100 ? 'completed' : 'downloading'),
+            data.status || 'downloading',
             data.error || null
           ]);
         }
