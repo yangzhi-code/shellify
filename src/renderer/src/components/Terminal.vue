@@ -265,23 +265,24 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   try {
-    // 先清理事件监听
-    window.removeEventListener('resize', () => {
-      terminalManager.value?.resize()
-    })
+    // 先移除所有事件监听器
+    if (terminalManager.value?.terminal) {
+      terminalManager.value.terminal._cleanup?.()
+    }
 
     // 断开 SSH 连接
     if (props.item.data?.id) {
       window.electron.ipcRenderer.invoke('disconnect', props.item.data.id)
+        .catch(error => console.warn('断开连接时出错:', error))
     }
 
-    // 最后销毁端
+    // 最后销毁终端
     if (terminalManager.value) {
       terminalManager.value.dispose()
       terminalManager.value = null
     }
   } catch (error) {
-    console.error('Terminal cleanup error:', error)
+    console.warn('Terminal cleanup error:', error)
   }
 })
 </script>

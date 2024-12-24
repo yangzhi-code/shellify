@@ -192,7 +192,11 @@ const fetchServerStatus = async () => {
       console.timeEnd('首次加载统计数据')
     }
   } catch (error) {
-    console.error('fetchServerStatus failed:', error)
+    console.warn('获取服务器状态失败:', error)
+    // 如果是连接不存在的错误，重置状态
+    if (error.message?.includes('找不到连接')) {
+      resetStatus()
+    }
   }
 }
 
@@ -253,7 +257,7 @@ watch(
     clearStatusTimer()
     resetStatus()
     
-    // 如果是空标签或者没有连接，直接返回
+    // 如果是空标签或者没有连接，直接返��
     if (!currentTab.value?.data?.id || !shouldShowStats.value) {
       return
     }

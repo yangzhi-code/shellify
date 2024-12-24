@@ -66,27 +66,34 @@ export const useTabsStore = defineStore('tabs', {
     },
 
     // 删除标签
-    deleteTabById(targetId) {
-      const deleteIndex = this.editableTabs.findIndex(tab => tab.id === targetId)
-      this.editableTabs = this.editableTabs.filter(tab => tab.id !== targetId)
-      if (this.editableTabs.length > 0) {
-        const nextTab = this.editableTabs.find(tab => tab.id > targetId)
-        if (nextTab) {
-          this.editableTabsValue = nextTab.id
-        } else {
-          const previousTab = this.editableTabs.reduce((prev, current) => {
-            return current.id < targetId && current.id > (prev?.id || 0) ? current : prev
-          }, null)
-          if (previousTab) {
-            this.editableTabsValue = previousTab.id
-          } else {
-            this.editableTabsValue = this.editableTabs[0].id
-          }
+    async deleteTabById(targetId) {
+      const tab = this.editableTabs.find(tab => tab.id === targetId)
+      
+      // 如果标签有连接数据，先断开连接
+      if (tab?.data?.id) {
+        try {
+          // 触发一个事件通知需要清理的组件
+          window.electron.ipcRenderer.send('cleanup-connection', tab.data.id)
+          // 等待清理完成
+          await new Promise(resolve => setTimeout(resolve, 100))
+        } catch (error) {
+          console.warn('清理连接资源时出错:', error)
         }
       }
-      if (this.editableTabsValue === targetId) {
-        const nextTab = this.editableTabs[0]
-        this.activeConnectionId = nextTab?.data?.id || null
+
+      const deleteIndex = this.editableTabs.findIndex(tab => tab.id === targetId)
+      this.editableTabs = this.editableTabs.filter(tab => tab.id !== targetId)
+      
+      // 更新选中的标签
+      if (this.editableTabs.length > 0) {
+        if (this.editableTabsValue === targetId) {
+          const nextTab = this.editableTabs[deleteIndex] || this.editableTabs[deleteIndex - 1]
+          this.editableTabsValue = nextTab.id
+          this.activeConnectionId = nextTab?.data?.id || null
+        }
+      } else {
+        this.editableTabsValue = ''
+        this.activeConnectionId = null
       }
     }
   }

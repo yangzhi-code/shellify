@@ -282,6 +282,7 @@ class SSHConnectionManager {
    * 执行命令
    */
   async execCommand(connectionId, command) {
+    console.log("执行命令",connectionId+command)
     const client = this.getClient(connectionId);
     
     return new Promise((resolve, reject) => {

@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted, onBeforeUnmount, getCurrentInstance } from 'vue';
 import FileToolbar from './file/FileToolbar.vue';
 import FileList from './file/FileList.vue';
 import { ElMessage } from 'element-plus';
@@ -85,7 +85,7 @@ const loadFileList = async () => {
       window.$message?.error?.('连接已断开，请重新连接');
       return;
     }
-    window.$message?.error?.('加��文件列表失败: ' + (error.message || '未知错误'));
+    window.$message?.error?.('加载文件列表失败: ' + (error.message || '未知错误'));
   } finally {
     loading.value = false;
   }
@@ -146,10 +146,10 @@ const createFolder = () => {
 
 // 检查文件是否可下载
 const canDownload = (file) => {
-  // 如果是文件，直接可下载
+  // 如果是文件，��接可下载
   if (file.type === 'file') return true;
   
-  // 如是压缩包格式的目录也可以下载
+  // 如果是压缩包格式的目录也可以下载
   const compressedFormats = ['.zip', '.tar', '.gz', '.tgz', '.rar', '.7z'];
   return compressedFormats.some(format => file.name.toLowerCase().endsWith(format));
 }
@@ -200,7 +200,7 @@ const navigateTo = (index) => {
   loadFileList()
 }
 
-// 搜索相关
+// 搜索��关
 const searchKeyword = ref('')
 const searchOptions = ref({
   caseSensitive: false,
@@ -249,7 +249,7 @@ const handleSearch = async (searchData) => {
   } catch (error) {
     console.error('搜索失败:', error);
     if (error.message?.includes('搜索超时')) {
-      showNotification('搜索提示', '搜索超时，请缩小搜索范围或用更具体关键词', 'warning');
+      showNotification('搜索��示', '搜索超时，请缩小搜索范围或用更具体关键词', 'warning');
     } else if (error.message?.includes('达到最大结果数')) {
       showNotification('搜索提示', '搜索结果过多，仅显示前1000条结果', 'warning');
     } else if (error.message?.includes('Permission denied')) {
@@ -282,22 +282,31 @@ watch(() => props.connectionId, (newId) => {
   if (newId) {
     loadFileList();
   }
-}, { immediate: true }); // immediate: true 会在组件创��时立即执行一次
+}, { immediate: true }); // immediate: true 会在组件���建时立即执行一次
 
 // 组件挂载时加载文件列表
 onMounted(() => {
   loadFileList(); // 加载根目录文件列表
   
-  // 监听文件刷新事件
-  window.electron.ipcRenderer.on('file:refresh-needed', (event, path) => {
+  // 保存事件监听器的引用
+  const refreshHandler = (event, path) => {
     if (path === currentFullPath.value) {
       loadFileList()
     }
-  })
-});
+  }
+  
+  // 添加事件监听器并保存引用
+  window.electron.ipcRenderer.on('file:refresh-needed', refreshHandler)
+  
+  // 在组件实例上保存引用，以便后续清理
+  currentInstance.refreshHandler = refreshHandler
+})
 
 onUnmounted(() => {
-  window.electron.ipcRenderer.removeListener('file:refresh-needed')
+  // 使用保存的引用来移除事件监听器
+  if (currentInstance.refreshHandler) {
+    window.electron.ipcRenderer.removeListener('file:refresh-needed', currentInstance.refreshHandler)
+  }
 })
 
 // 处理新建文件夹
@@ -334,7 +343,7 @@ const saveNewFolder = async (folderName) => {
     
     // 检查是否存在重名
     if (fileList.value.some(f => f.name === folderName && !f.isNew)) {
-      throw new Error('文件���名称已存在');
+      throw new Error('文件夹名称已存在');
     }
     
     // 调用后端 API 创建文件夹
@@ -388,6 +397,39 @@ const handleUpload = async () => {
     ElMessage.error('文件上传失败: ' + error.message);
   }
 };
+
+// 确保在组件卸载前清理事件监听器
+onBeforeUnmount(() => {
+  try {
+    // 清理文件刷新事件监听器
+    if (currentInstance.refreshHandler) {
+      window.electron.ipcRenderer.removeListener('file:refresh-needed', currentInstance.refreshHandler)
+    }
+    
+    // 清理其他可能的事件监听器
+    const events = [
+      'file-list-response',
+      'file-operation-error',
+      'file-operation-success'
+    ]
+    
+    events.forEach(eventName => {
+      const handler = currentInstance[`${eventName}Handler`]
+      if (handler) {
+        try {
+          window.electron.ipcRenderer.removeListener(eventName, handler)
+        } catch (error) {
+          console.warn(`清理事件 ${eventName} 时出错:`, error)
+        }
+      }
+    })
+  } catch (error) {
+    console.warn('清理事件监听器时出错:', error)
+  }
+})
+
+// 在 setup 顶部添加
+const currentInstance = getCurrentInstance()
 </script>
 
 <style scoped>

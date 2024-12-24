@@ -16,9 +16,12 @@ export class TerminalManager {
     this._terminal = null;
     this.options = options;
     this._fitAddon = null;
+    this._webLinksAddon = null;
+    this._searchAddon = null;
     this._lastDimensions = { cols: 0, rows: 0 };
     this.writeQueue = []
     this.isWriting = false
+    this._addons = new Set() // 用于跟踪所有已加载的插件
   }
 
   /**
@@ -32,12 +35,17 @@ export class TerminalManager {
     }
 
     this._terminal = new Terminal(this.options)
-    this._fitAddon = new FitAddon()
     
     try {
-      this._terminal.loadAddon(this._fitAddon)
-      this._terminal.loadAddon(new WebLinksAddon())
-      this._terminal.loadAddon(new SearchAddon())
+      // 创建并加载插件
+      this._fitAddon = new FitAddon()
+      this._webLinksAddon = new WebLinksAddon()
+      this._searchAddon = new SearchAddon()
+
+      // 按顺序加载插件并记录
+      this._loadAddon(this._fitAddon)
+      this._loadAddon(this._webLinksAddon)
+      this._loadAddon(this._searchAddon)
       
       if (container) {
         this._terminal.open(container)
@@ -88,6 +96,36 @@ export class TerminalManager {
     }
     
     return this._terminal
+  }
+
+  /**
+   * 安全地加载插件的辅助方法
+   * @param {Object} addon - 要加载的插件
+   */
+  _loadAddon(addon) {
+    if (addon && this._terminal) {
+      try {
+        this._terminal.loadAddon(addon)
+        this._addons.add(addon)
+      } catch (error) {
+        console.warn(`Failed to load addon:`, error)
+      }
+    }
+  }
+
+  /**
+   * 安全地卸载插件的辅助方法
+   * @param {Object} addon - 要卸载的插件
+   */
+  _disposeAddon(addon) {
+    if (addon && this._addons.has(addon)) {
+      try {
+        addon.dispose()
+      } catch (error) {
+        console.warn(`Addon cleanup warning:`, error)
+      }
+      this._addons.delete(addon)
+    }
   }
 
   /**
@@ -218,16 +256,37 @@ export class TerminalManager {
    */
   dispose() {
     try {
-      if (this._fitAddon) {
-        this._fitAddon.dispose()
-        this._fitAddon = null
-      }
       if (this._terminal) {
-        this._terminal.dispose()
+        // 1. 移除所有事件监听器
+        if (this._terminal._events) {
+          this._terminal._events = {}
+        }
+
+        // 2. 按照加载的相反顺序卸载插件
+        this._disposeAddon(this._searchAddon)
+        this._disposeAddon(this._webLinksAddon)
+        this._disposeAddon(this._fitAddon)
+
+        // 3. 清空插件引用
+        this._searchAddon = null
+        this._webLinksAddon = null
+        this._fitAddon = null
+        this._addons.clear()
+
+        // 4. 最后销毁终端
+        if (!this._terminal._disposed) {
+          try {
+            this._terminal.dispose()
+          } catch (error) {
+            console.warn('Terminal dispose warning:', error)
+          }
+        }
+
+        // 5. 清空终端引用
         this._terminal = null
       }
     } catch (error) {
-      console.error('Dispose error:', error)
+      console.warn('Terminal cleanup warning:', error)
     }
   }
 }
