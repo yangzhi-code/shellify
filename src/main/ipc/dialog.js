@@ -44,7 +44,8 @@ export function setupDialogHandlers() {
       properties: ['openFile'],
       filters: [
         { name: '私钥文件', extensions: ['pem', 'key', 'ppk', 'rsa', 'pub'] },
-        { name: '所有文件', extensions: ['*'] }
+        { name: '所有文件', extensions: ['*'] },
+        { name: '无后缀文件', extensions: [''] }
       ],
       title: '选择私钥文件'
     });

@@ -34,7 +34,19 @@ export class TerminalManager {
       return this._terminal
     }
 
-    this._terminal = new Terminal(this.options)
+    this._terminal = new Terminal({
+      cursorBlink: true,
+      cursorStyle: 'block',
+      fontSize: this.options.fontSize || 14,
+      fontFamily: 'Consolas, "Courier New", monospace',
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#d4d4d4'
+      },
+      allowTransparency: true,
+      scrollback: 10000,
+      convertEol: true
+    })
     
     try {
       // 创建并加载插件
@@ -66,8 +78,7 @@ export class TerminalManager {
           if (result === 'copy' && selection) {
             await window.electron.ipcRenderer.invoke('clipboard-write', selection)
           } else if (result === 'paste') {
-            const text = await window.electron.ipcRenderer.invoke('clipboard-read')
-            this._terminal.paste(text)
+            this.handlePaste()
           } else if (result === 'selectAll') {
             this._terminal.selectAll()
           }
@@ -82,8 +93,8 @@ export class TerminalManager {
             }
           }
           if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-            const text = await window.electron.ipcRenderer.invoke('clipboard-read')
-            this._terminal.paste(text)
+            e.preventDefault() // 阻止默认粘贴行为
+            this.handlePaste()
           }
         })
 
@@ -144,7 +155,7 @@ export class TerminalManager {
       // 调整终端大小
       this._fitAddon.fit();
 
-      // 获取新的尺寸
+      // 获���新的尺寸
       const newDimensions = {
         cols: this._terminal.cols,
         rows: this._terminal.rows
@@ -287,6 +298,20 @@ export class TerminalManager {
       }
     } catch (error) {
       console.warn('Terminal cleanup warning:', error)
+    }
+  }
+
+  // 添加统一的粘贴处理方法
+  async handlePaste() {
+    try {
+      const text = await window.electron.ipcRenderer.invoke('clipboard-read')
+      if (text && this._terminal) {
+        // 将换行符统一转换为 \r
+        const normalizedText = text.replace(/\n/g, '\r')
+        this._terminal.write(normalizedText)
+      }
+    } catch (err) {
+      console.error('粘贴失败:', err)
     }
   }
 }
