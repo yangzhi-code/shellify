@@ -54,27 +54,38 @@ const layoutMode = ref('terminal')
 const isConnectionBroken = ref(false);  // 跟踪连接状态
 const currentServerInfo = ref(null);    // 保存当前连接信息
 
-// 处理快速连接选择
+// 处理快速连接
 const handleQuickConnect = async (connection) => {
   try {
+    console.log('快速连接信息:', connection)
+    // 确保 connection 和 connection.info 存在
+    if (!connection || !connection.info) {
+      throw new Error('无效的连接信息')
+    }
+
     // 更新当前标签的连接信息
     props.item.info = {
       name: connection.info.name || '未命名连接',
       host: connection.info.host,
-      port: connection.info.port,
+      port: connection.info.port || 22,
       username: connection.info.username,
-      password: connection.info.password
+      password: connection.info.password,
+      authMethod: connection.info.authMethod || 'password',
+      privateKey: connection.info.privateKey || '',
+      passphrase: connection.info.passphrase || '',
+      encoding: connection.info.encoding || 'utf8'
     }
+
     // 初始化终端
     initTerminal()
     
     // 连接到服务器
     if (props.item.info.host && !props.item.data) {
-      connectToServer(props.item.info)
+      await connectToServer(props.item.info)
     }
   } catch (error) {
     console.error('连接失败:', error)
-    terminalManager.value?.writeln('连接失败' + error.message)
+    terminalManager.value?.writeln('连接失败: ' + error.message)
   }
 }
 
@@ -198,7 +209,7 @@ const handleConnectionError = (error) => {
   if (error.message.includes('认证失败')) {
     errorMessage += '用户名或密码错误';
   } else if (error.message.includes('ETIMEDOUT')) {
-    errorMessage += '连接超时，请检查网络或服务器地址';
+    errorMessage += '连接超时，��检查网络或服务器地址';
   } else if (error.message.includes('ECONNREFUSED')) {
     errorMessage += '连接被拒绝，请检查服务器地址和端口';
   } else if (error.message.includes('ENOTFOUND')) {

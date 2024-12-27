@@ -88,7 +88,7 @@ const getAllConnections = (nodes) => {
   return result
 }
 
-// 加载保存的连接
+// 加载保存的连��
 const loadConnections = async () => {
   try {
     const data = await window.electron.ipcRenderer.invoke('get-connections')
@@ -102,17 +102,24 @@ const loadConnections = async () => {
 
 // 处理连接
 const handleConnect = (connection) => {
-  // 更新当前标签的连接信息
-  props.item.info = {
-    name: connection.name || '未命名连接',
-    host: connection.host,
-    port: connection.port,
-    username: connection.username,
-    password: connection.password
+  // 确保传递完整的连接信息
+  const connectionInfo = {
+    info: {
+      name: connection.name || '未命名连接',
+      host: connection.host,
+      port: connection.port || 22,
+      username: connection.username,
+      password: connection.password,
+      authMethod: connection.authMethod || 'password',
+      privateKey: connection.privateKey || '',
+      passphrase: connection.passphrase || '',
+      encoding: connection.encoding || 'utf8'
+    },
+    type: 'file'
   }
   
   // 调用父组件传入的 onConnect 函数
-  props.onConnect(connection)
+  props.onConnect(connectionInfo)
 }
 
 onMounted(() => {

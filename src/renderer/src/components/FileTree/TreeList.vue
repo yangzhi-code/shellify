@@ -236,7 +236,7 @@ const handleDeleteNode = async (nodeId) => {
   try {
     // 显示确认对话框
     await ElMessageBox.confirm(
-      `确定要删除${node.type === 'folder' ? '文件夹' : '连接'} "${node.type === 'folder' ? node.name : node.info.name}" 吗？`,
+      `确定要删除${node.type === 'folder' ? '文件夹' : '连接'} "${node.type === 'folder' ? node.info.name : node.info.name}" 吗？`,
       '删除确认',
       {
         confirmButtonText: '确定',
