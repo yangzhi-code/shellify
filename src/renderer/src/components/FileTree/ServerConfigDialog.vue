@@ -97,7 +97,7 @@
 
     <!-- 按钮区域 -->
     <div class="form-buttons">
-      <el-button @click="$emit('cancel')" size="small">取消</el-button>
+      <el-button @click="handleCancel" size="small">取消</el-button>
       <el-button type="primary" @click="handleSubmit" :loading="saving" size="small">保存</el-button>
     </div>
   </el-form>
@@ -222,6 +222,14 @@ const handleSubmit = () => {
       }
     }
   })
+}
+
+// 添加取消处理函数
+const handleCancel = () => {
+  // 重置表单
+  formRef.value?.resetFields()
+  // 触发取消事件
+  emit('cancel')
 }
 
 // 初始化表单数据
@@ -383,7 +391,7 @@ const currentPassword = computed({
   line-height: 24px;
 }
 
-/* 移除数字输入框的箭头 */
+/* 移除数字输入框的���头 */
 :deep(.el-input-number.no-arrows .el-input-number__decrease),
 :deep(.el-input-number.no-arrows .el-input-number__increase) {
   display: none;
@@ -609,8 +617,36 @@ const currentPassword = computed({
   border-right: 1px solid var(--el-border-color-lighter);
 }
 
-/* 鼠标悬停效果 */
+/* 标悬停效果 */
 :deep(.el-radio:hover:not(.is-checked)) {
   background-color: var(--el-fill-color-light);
+}
+
+/* 调整对话框标题区域的样式 */
+:deep(.el-dialog__header) {
+  padding: 12px;  /* 减小标题区域的内边距 */
+  margin-right: 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+:deep(.el-dialog__title) {
+  font-size: 13px;  /* 减小标题文字大小 */
+  line-height: 1;   /* 减小行高 */
+  font-weight: 500;
+}
+
+:deep(.el-dialog__body) {
+  padding: 12px;    /* 减小内容区域的内边距 */
+}
+
+:deep(.el-dialog__headerbtn) {
+  top: 12px;        /* 调整关闭按钮位置 */
+  right: 12px;
+}
+
+/* 调整对话框整体大小 */
+:deep(.el-dialog) {
+  margin: 15vh auto 0 !important;  /* 调整对话框垂直位置 */
+  border-radius: 4px;              /* 圆角 */
 }
 </style>

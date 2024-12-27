@@ -43,7 +43,7 @@
           <!-- 弹窗容器 -->
           <el-dialog
             v-model="visible"
-            title="编辑"
+            title="连接"
             width="400px"
             :modal-append-to-body="false"
             :append-to-body="true"
@@ -53,6 +53,7 @@
             <ServerConfigDialog 
               :node="currentEditNode" 
               @update-node="updateNode"
+              @cancel="handleCancel"
             ></ServerConfigDialog>
           </el-dialog>
         </div>
@@ -186,6 +187,11 @@ const onDeleteNode = (id) => emit('delete-node', id)
 const onupdateNode = (id,formData) => emit('update-node', id,formData)
 
 const oncloseDialog = () => emit('close-dialog')
+
+// 添加取消处理函数
+const handleCancel = () => {
+  visible.value = false
+}
 </script>
 
 <style scoped>
