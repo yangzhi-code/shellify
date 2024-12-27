@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import { connect } from 'net';
 import sshService from '../services/ssh';
 import FileManager from '../services/ssh/FileManager';
+const fs = require('fs');
 
 // 添加 getFileManager 函数
 const getFileManager = async (connectionId) => {
@@ -24,11 +25,51 @@ export function setupSSHHandlers() {
    * @param {number} serverInfo.port - 端口号
    * @param {string} serverInfo.username - 用户名
    * @param {string} serverInfo.password - 密码
+   * @param {string} serverInfo.authMethod - 认证方法
+   * @param {string} serverInfo.privateKey - 私钥
+   * @param {string} serverInfo.passphrase - 密码短语
+   * @param {string} serverInfo.encoding - 编码
    * @returns {Promise<{id: string, message: string}>} 连接成功后的信息
    */
   ipcMain.handle('new-connection', async (event, serverInfo) => {
     try {
-      const { connectionId } = await sshService.connect(serverInfo);
+      // 准备认证配置
+      const config = {
+        host: serverInfo.host,
+        port: serverInfo.port || 22,
+        username: serverInfo.username,
+        readyTimeout: 20000,
+        keepaliveInterval: 10000
+      };
+
+      // 根据认证方式设置认证信息
+      if (serverInfo.authMethod === 'key') {
+        try {
+          // 读取私钥文件
+          if (!serverInfo.privateKey) {
+            throw new Error('未提供私钥文件');
+          }
+          const privateKey = fs.readFileSync(serverInfo.privateKey, 'utf8');
+          config.privateKey = privateKey;
+          
+          // 如果提供了密码短语，添加到配置中
+          if (serverInfo.passphrase) {
+            config.passphrase = serverInfo.passphrase;
+          }
+        } catch (error) {
+          console.error('读取私钥文件失败:', error);
+          throw new Error('私钥文件读取失败: ' + error.message);
+        }
+      } else {
+        // 使用密码认证
+        if (!serverInfo.password) {
+          throw new Error('未提供密码');
+        }
+        config.password = serverInfo.password;
+      }
+
+      // 创建连接
+      const { connectionId } = await sshService.connect(config);
       await sshService.createShell(connectionId);
       
       // 设置终端数据输出的回调

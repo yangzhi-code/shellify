@@ -36,7 +36,10 @@ const props = defineProps({
 // 计算是否显示快速连接界面
 const showQuickConnect = computed(() => {
   const info = props.item.info
-  return !info.host || !info.username || !info.password
+  if (!info.host || !info.username) return true
+  if (info.authMethod === 'password' && !info.password) return true
+  if (info.authMethod === 'key' && !info.privateKey) return true
+  return false
 })
 
 // 引用和状态
@@ -69,10 +72,14 @@ const handleQuickConnect = async (connection) => {
       host: connection.info.host,
       port: connection.info.port || 22,
       username: connection.info.username,
-      password: connection.info.password,
       authMethod: connection.info.authMethod || 'password',
-      privateKey: connection.info.privateKey || '',
-      passphrase: connection.info.passphrase || '',
+      ...(connection.info.authMethod === 'password'
+        ? { password: connection.info.password }
+        : {
+            privateKey: connection.info.privateKey,
+            passphrase: connection.info.passphrase
+          }
+      ),
       encoding: connection.info.encoding || 'utf8'
     }
 
@@ -185,7 +192,15 @@ const connectToServer = async (serverInfo) => {
       host: serverInfo.host,
       port: serverInfo.port,
       username: serverInfo.username,
-      password: serverInfo.password
+      authMethod: serverInfo.authMethod || 'password',
+      ...(serverInfo.authMethod === 'password'
+        ? { password: serverInfo.password }
+        : {
+            privateKey: serverInfo.privateKey,
+            passphrase: serverInfo.passphrase
+          }
+      ),
+      encoding: serverInfo.encoding || 'utf8'
     });
     
     props.item.data = response;

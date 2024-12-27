@@ -78,7 +78,11 @@ const getAllConnections = (nodes) => {
         host: node.info.host,
         port: node.info.port,
         username: node.info.username,
-        password: node.info.password
+        password: node.info.password,
+        authMethod: node.info.authMethod || 'password',
+        privateKey: node.info.privateKey || '',
+        passphrase: node.info.passphrase || '',
+        encoding: node.info.encoding || 'utf8'
       })
     }
     if (node.children && node.children.length > 0) {
@@ -88,7 +92,7 @@ const getAllConnections = (nodes) => {
   return result
 }
 
-// 加载保存的连��
+// 加载保存的连接
 const loadConnections = async () => {
   try {
     const data = await window.electron.ipcRenderer.invoke('get-connections')
@@ -102,6 +106,7 @@ const loadConnections = async () => {
 
 // 处理连接
 const handleConnect = (connection) => {
+  console.log('快速连接信息:', connection)
   // 确保传递完整的连接信息
   const connectionInfo = {
     info: {
