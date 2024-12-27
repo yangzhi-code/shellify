@@ -21,7 +21,16 @@
         <!-- 文件夹图标 -->
         <div v-if="node.type === 'folder'">
           <i class="folder-icon">📁</i>
-          <span>{{ node.name }}</span>
+          <span v-if="!isRenaming">{{ node.name }}</span>
+          <input
+            v-else
+            ref="renameInput"
+            v-model="newName"
+            @blur="finishRename"
+            @keyup.enter="finishRename"
+            @keyup.esc="cancelRename"
+            class="rename-input"
+          />
         </div>
         <!-- 文件图标 -->
         <div v-if="node.type === 'file'">
@@ -31,11 +40,15 @@
 
         <!-- 操作按钮 -->
         <div class="node-actions">
-          <!-- 添加文件夹 按钮 -->
+          <!-- 添加文件夹按钮 -->
           <button v-if="node.type === 'folder'" @click.stop="addfolder">📁</button>
-          <!-- 添加文件 按钮 -->
+          <!-- 添加文件按钮 -->
           <button v-if="node.type === 'folder'" @click.stop="addFile">➕</button>
-          <button @click.stop="editNode">✏️</button>
+          <!-- 重命名按钮 - 仅文件夹显示 -->
+          <button v-if="node.type === 'folder'" @click.stop="startRename">✏️</button>
+          <!-- 编辑按钮 - 仅文件显示 -->
+          <button v-if="node.type === 'file'" @click.stop="editNode">✏️</button>
+          <!-- 删除按钮 -->
           <button @click.stop="deleteNode">🗑️</button>
         </div>
         <!-- 服务器配置对话框 -->
@@ -83,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import ServerConfigDialog from './ServerConfigDialog.vue'
 import { useTabsStore } from '../../stores/terminalStore'
 const tabsStore = useTabsStore();
@@ -122,7 +135,7 @@ const handleDoubleClick = () => {
 
 // 添加文件夹子节点
 const addfolder = () => {
-  // 在添加子节点后，展开子节点
+  // 在添加子节点后，展开节点
   if (!isChildrenVisible.value) {
     isChildrenVisible.value = true
   }
@@ -192,6 +205,35 @@ const oncloseDialog = () => emit('close-dialog')
 const handleCancel = () => {
   visible.value = false
 }
+
+// 添加重命名相关的响应式变量
+const isRenaming = ref(false)
+const newName = ref('')
+const renameInput = ref(null)
+
+// 开始重命名
+const startRename = () => {
+  isRenaming.value = true
+  newName.value = props.node.name
+  // 等待 DOM 更新后聚焦输入框
+  nextTick(() => {
+    renameInput.value?.focus()
+  })
+}
+
+// 完成重命名
+const finishRename = () => {
+  if (newName.value && newName.value !== props.node.name) {
+    // 使用现有的更新节点逻辑，只更新名称
+    emit('update-node', props.node.id, { ...props.node, name: newName.value })
+  }
+  isRenaming.value = false
+}
+
+// 取消重命名
+const cancelRename = () => {
+  isRenaming.value = false
+}
 </script>
 
 <style scoped>
@@ -206,13 +248,8 @@ const handleCancel = () => {
   align-items: center;
   margin-top: 4px;
   margin-bottom: 4px;
-  box-sizing: border-box; /* 确保padding不会影响宽高 */
-  padding-right: calc(100% - 99%); /* 预留滚动条宽度 */
-}
-
-/* 鼠标悬停时的样式 */
-.tree-node-content:hover {
-  background-color: #d3d3d3; /* 灰色背景 */
+  box-sizing: border-box;
+  padding-right: calc(100% - 99%);
 }
 
 .tree-node {
@@ -230,22 +267,36 @@ const handleCancel = () => {
   align-items: center;
   justify-content: flex-start;
   width: 100%;
-  white-space: nowrap;  /* 防止换行 */
-  overflow: hidden;     /* 超出部分隐藏 */
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.node-header:hover {
+  background-color: var(--el-fill-color-light);
 }
 
 /* 文件夹和文件名称容器 */
 .node-header > div {
-  flex-shrink: 0;      /* 防止压缩 */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
+  height: 24px; /* 固定高度 */
 }
 
 /* 文件名称 */
 .node-header span {
   overflow: hidden;
-  text-overflow: ellipsis;  /* 超出显示省略号 */
+  text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+  color: var(--el-text-color-primary);
+  margin-right: 8px;
+  line-height: 24px; /* 与输入框高度一致 */
 }
 
 /* 操作按钮容器 */
@@ -259,9 +310,10 @@ const handleCancel = () => {
   flex-shrink: 0;       /* 保持不压缩 */
   margin-right: 8px;    /* 保持右边距 */
   font-style: normal;   /* 防止斜体 */
-  font-size: 15px;      /* 设置大小 */
+  font-size: 14px;      /* 设置大小 */
   display: inline-flex; /* 确保图标对齐 */
   align-items: center;  /* 垂直居中 */
+  color: var(--el-text-color-secondary);
 }
 
 .node-actions {
@@ -278,10 +330,25 @@ const handleCancel = () => {
 }
 
 .node-actions button {
-  margin: 0;
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0 2px;
+  padding: 0;
   border: none;
+  background: transparent;
+  border-radius: 4px;
   cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+}
+
+.node-actions button:hover {
+  background-color: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
 }
 
 .status {
@@ -301,14 +368,23 @@ const handleCancel = () => {
 
 /* 倒三角按钮样式 */
 .toggle-btn {
-  font-size: 14px; /* 变小 */
-  color: gray; /* 灰色 */
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
   background: none;
   border: none;
   cursor: pointer;
   margin-right: 8px;
   padding: 0;
-  text-align: center;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.toggle-btn:hover {
+  color: var(--el-color-primary);
 }
 
 :deep(.el-overlay) {
@@ -318,5 +394,27 @@ const handleCancel = () => {
 
 :deep(.el-dialog) {
   margin: 15vh auto !important;
+}
+
+/* 重命名输入框样式 */
+.rename-input {
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  height: 24px;
+  width: 140px;
+  outline: none;
+  background-color: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  transition: all 0.2s ease;
+  margin: 0; /* 移除外边距 */
+  line-height: 24px; /* 确保文字垂直居中 */
+  box-sizing: border-box; /* 确保padding不会增加实际高度 */
+}
+
+.rename-input:focus {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 2px var(--el-color-primary-light-8);
 }
 </style>
