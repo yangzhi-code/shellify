@@ -173,13 +173,22 @@ const testConnection = async () => {
     return
   }
   
+  // 只传递必要的简单数据
+  const testConfig = {
+    host: form.value.host,
+    port: form.value.port
+  }
+  
+  console.log('发起连接测试:', testConfig)
+  
   testing.value = true
   try {
-    // TODO: 实现连接测试逻辑
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    ElMessage.success('连接测试成功')
+    const message = await window.electron.ipcRenderer.invoke('test-connection', testConfig)
+    console.log('连接测试结果:', message)
+    ElMessage.success(message)
   } catch (error) {
-    ElMessage.error('连接测试失败')
+    console.error('连接测试错误:', error)
+    ElMessage.error(typeof error === 'string' ? error : '连接测试失败')
   } finally {
     testing.value = false
   }

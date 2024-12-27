@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron';
+import { connect } from 'net';
 import sshService from '../services/ssh';
 import FileManager from '../services/ssh/FileManager';
 
@@ -140,5 +141,71 @@ export function setupSSHHandlers() {
       console.error('重试上传失败:', error);
       throw error;
     }
+  });
+
+  // 测试连接处理器
+  ipcMain.handle('test-connection', async (event, config) => {
+    console.log('收到连接测试请求:', config);
+
+    return new Promise((resolve, reject) => {
+      // 参数验证
+      if (!config.host || !config.port) {
+        console.log('参数验证失败: 主机地址或端口为空');
+        reject('主机地址或端口不能为空');
+        return;
+      }
+
+      console.log('开始创建 TCP 连接...');
+      const socket = connect({
+        host: config.host,
+        port: parseInt(config.port), // 确保端口是数字
+        timeout: 3000
+      });
+
+      socket.on('connect', () => {
+        console.log('TCP 连接成功');
+        socket.end();
+        resolve('连接测试成功');
+      });
+
+      socket.on('error', (err) => {
+        console.error('TCP 连接错误:', err);
+        socket.destroy();
+        let message = '连接失败';
+        
+        switch (err.code) {
+          case 'ECONNREFUSED':
+            message = '连接被拒绝，请检查主机地址和端口是否正确';
+            break;
+          case 'ETIMEDOUT':
+            message = '连接超时，请检查网络连接';
+            break;
+          case 'EHOSTUNREACH':
+            message = '无法访问主机，请检查网络连接';
+            break;
+          case 'ENETUNREACH':
+            message = '网络不可达';
+            break;
+          default:
+            message = `连接失败: ${err.message}`;
+        }
+        
+        console.log('发送错误消息:', message);
+        reject(message);
+      });
+
+      socket.on('timeout', () => {
+        console.log('TCP 连接超时');
+        socket.destroy();
+        reject('连接超时，请检查网络连接');
+      });
+
+      socket.on('close', () => {
+        console.log('TCP 连接关闭');
+        if (!socket.destroyed) {
+          socket.destroy();
+        }
+      });
+    });
   });
 }
