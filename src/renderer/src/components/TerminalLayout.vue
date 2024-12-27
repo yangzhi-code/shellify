@@ -2,11 +2,12 @@
     <div class="terminal-layout">
       <!-- 布局切换按钮 -->
       <div class="layout-switcher" v-show="!showQuickConnect">
-        <el-button-group>
+        <el-button-group class="button-group">
           <el-button
             :type="layoutMode === 'terminal' ? 'primary' : 'default'"
             @click="switchLayout('terminal')"
             size="small"
+            class="layout-button"
           >
             <el-icon><Monitor /></el-icon>
           </el-button>
@@ -17,6 +18,7 @@
               size="small"
               :disabled="!isConnected"
               :title="!isConnected ? '请先连接到服务器' : ''"
+              class="layout-button"
             >
               <el-icon><CopyDocument /></el-icon>
             </el-button>
@@ -26,6 +28,7 @@
               size="small"
               :disabled="!isConnected"
               :title="!isConnected ? '请先连接到服务器' : ''"
+              class="layout-button"
             >
               <el-icon><Folder /></el-icon>
             </el-button>
@@ -73,7 +76,7 @@
   const terminalArea = ref(null)
   const fileArea = ref(null)
   
-  // 计算是���已连接
+  // 计算是否已连接
   const isConnected = computed(() => {
     return !!props.item.data?.id
   })
@@ -209,12 +212,46 @@
   
   .layout-switcher {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 100;
-    background-color: rgba(0, 0, 0, 0.6);
+    top: 35px;
+    right: 18px;
+    z-index: 1000;
+  }
+  
+  .button-group {
+    background: rgba(0, 0, 0, 0.3);
     padding: 4px;
-    border-radius: 4px;
+    border-radius: 6px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  }
+  
+  .layout-button {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.3s ease;
+  }
+  
+  .layout-button:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    transform: translateY(-1px);
+  }
+  
+  .layout-button.el-button--primary {
+    background: rgba(64, 158, 255, 0.6) !important;
+    border-color: rgba(64, 158, 255, 0.6) !important;
+  }
+  
+  .layout-button:disabled {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.3) !important;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  /* 图标样式 */
+  .el-icon {
+    font-size: 16px;
   }
   
   .content-area {
