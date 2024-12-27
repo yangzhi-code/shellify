@@ -8,7 +8,7 @@ let Store;
 class ConnectionStore {
   constructor() {
     this.store = null;
-    this.key = 'connections1'; // 存储的主键
+    this.key = 'connections'; // 存储的主键
   }
 
   async init() {
@@ -42,15 +42,23 @@ class ConnectionStore {
             host: node.info?.host || '',
             port: node.info?.port || 22,
             username: node.info?.username || '',
+            password: node.info?.password || '',
+            authMethod: node.info?.authMethod || 'password',
+            privateKey: node.info?.privateKey || '',
+            passphrase: node.info?.passphrase || '',
+            encoding: node.info?.encoding || 'utf8',
+            remark: node.info?.remark || '',
             // ... 其他必要的字段
           }
         };
       } else {
         return {
           id: node.id,
-          name: node.name || 'New Folder',
           type: 'folder',
-          children: this.validateConnections(node.children || [])
+          children: this.validateConnections(node.children || []),
+          info: {
+            name: node.info?.name || 'New Folder'
+          }
         };
       }
     });

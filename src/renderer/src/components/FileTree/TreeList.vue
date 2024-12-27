@@ -57,16 +57,49 @@ const init = async () => {
 }
 init()
 // 保存数据到本地存储
-const saveTreeData = () => {
-  const rawTreeData = toRaw(treeData) // 使用 toRaw 获取原始数据
-  window.electron.ipcRenderer
-    .invoke('save-connection', rawTreeData) // 传递原始数据
-    .then((response) => {
-      console.log('保存连接数据成功', response)
-    })
-    .catch((error) => {
-      console.error('保存连接数据失败', error)
-    })
+const saveTreeData = async () => {
+  try {
+    // 深拷贝并清理数据
+    const cleanData = JSON.parse(JSON.stringify(toRaw(treeData)))
+    
+    // 递归清理每个节点的不必要或不能序列化的数据
+    const cleanNode = (node) => {
+      // 只保留必要的字段
+      const cleanedNode = {
+        id: node.id,
+        type: node.type,
+        info: {
+          name: node.info?.name || '',
+          host: node.info?.host || '',
+          port: node.info?.port || 22,
+          username: node.info?.username || '',
+          password: node.info?.password || '',
+          authMethod: node.info?.authMethod || 'password',
+          privateKey: node.info?.privateKey || '',
+          passphrase: node.info?.passphrase || '',
+          encoding: node.info?.encoding || 'utf8',
+          remark: node.info?.remark || ''
+        }
+      }
+      
+      // 如果有子节点，递归处理
+      if (node.children && Array.isArray(node.children)) {
+        cleanedNode.children = node.children.map(child => cleanNode(child))
+      }
+
+      return cleanedNode
+    }
+
+    // 清理所有节点
+    const cleanedTreeData = cleanData.map(node => cleanNode(node))
+    console.log('清理后的树状数据', cleanedTreeData)
+    // 保存清理后的数据
+    await window.electron.ipcRenderer.invoke('save-connection', cleanedTreeData)
+    console.log('保存连接数据成功')
+  } catch (error) {
+    console.error('保存连接数据失败:', error)
+    ElMessage.error('保存连接数据失败')
+  }
 }
 // 事件发射器
 const emit = defineEmits(['close-dialog'])
@@ -75,7 +108,7 @@ const emit = defineEmits(['close-dialog'])
 const closeDialog = () => {
   emit('close-dialog')
 }
-// 监���数据变化，保存到本地存储
+// 监数据变化，保存到本地存储
 watch(
   () => treeData,
   (newValue, oldValue) => {
@@ -91,7 +124,7 @@ const addNewNode = () => {
     id: Date.now(), 
     type: 'folder',
     info: {
-      name: '新建文件'
+      name: '新建文件夹'
     },
     children: [] 
   })
@@ -114,24 +147,37 @@ const handleAddFolderNode = (parentId) => {
 }
 
 // 添加连接节点
-const handleAddFileNode = (parentId, formData) => {
+const handleAddFileNode = async (parentId, formData) => {
   try {
     console.log('添加连接节点', parentId, formData)
     const parent = findNode(treeData, parentId)
     console.log('找到的父节点', parent)
     if (parent) {
       if (!parent.children) parent.children = []
+      // 创建新节点时确保数据结构正确
       const newNode = {
         id: Date.now(),
         type: 'file',
-        info: formData,  // 直接使用传入的 formData
+        info: {
+          name: formData.name,
+          host: formData.host,
+          port: formData.port,
+          username: formData.username,
+          password: formData.password,
+          authMethod: formData.authMethod,
+          privateKey: formData.privateKey,
+          passphrase: formData.passphrase,
+          encoding: formData.encoding,
+          remark: formData.remark
+        },
         children: []
       }
       parent.children.push(newNode)
-      saveTreeData()
+      await saveTreeData()
     }
   } catch (error) {
     console.error('添加连接节点失败:', error)
+    ElMessage.error('添加连接失败')
   }
 }
 // 递归查找和更新节点

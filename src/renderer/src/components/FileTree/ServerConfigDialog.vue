@@ -48,33 +48,57 @@
         </el-form-item>
       </div>
 
-      <!-- 密码输入框 -->
-      <el-form-item label="密码" :prop="form.authMethod === 'password' ? 'password' : 'passphrase'">
+      <!-- 密码认证时的密码输入框 -->
+      <el-form-item 
+        v-if="form.authMethod === 'password'"
+        label="密码" 
+        prop="password"
+      >
         <el-input 
-          v-model="currentPassword"
+          v-model="form.password"
           type="password" 
-          :placeholder="form.authMethod === 'password' ? '密码' : '密钥密码'"
+          placeholder="密码"
           show-password
         />
       </el-form-item>
-      <!-- 私钥选择框始终显示 -->
-      <el-form-item label="私钥" prop="privateKey">
-        <div class="key-select">
-          <el-input 
-            v-model="privateKeyPath" 
-            placeholder="私钥文件" 
-            readonly
-            :disabled="form.authMethod === 'password'"
-          >
-            <template #append>
-              <el-button 
-                @click="selectPrivateKey"
-                :disabled="form.authMethod === 'password'"
-              >选择</el-button>
-            </template>
-          </el-input>
-        </div>
-      </el-form-item>
+
+      <!-- 密钥认证相关字段 -->
+      <template v-if="form.authMethod === 'key'">
+        <!-- 私钥文件选择 -->
+        <el-form-item 
+          label="私钥" 
+          prop="privateKey"
+        >
+          <div class="key-select">
+            <el-input 
+              v-model="form.privateKey" 
+              placeholder="私钥文件" 
+              readonly
+            >
+              <template #append>
+                <el-button 
+                  @click="selectPrivateKey"
+                  :loading="selectingFile"
+                >选择</el-button>
+              </template>
+            </el-input>
+          </div>
+        </el-form-item>
+
+        <!-- 密钥密码 -->
+        <el-form-item 
+          label="密码" 
+          prop="passphrase"
+          v-if="form.privateKey"
+        >
+          <el-input
+            v-model="form.passphrase"
+            type="password"
+            placeholder="私钥密码（如果有）"
+            show-password
+          />
+        </el-form-item>
+      </template>
     </div>
     
 
@@ -104,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps({
@@ -116,6 +140,7 @@ const formRef = ref(null)
 const privateKeyPath = ref('')
 const testing = ref(false)
 const saving = ref(false)
+const selectingFile = ref(false)
 
 // 表单数据
 const form = ref({
@@ -124,8 +149,10 @@ const form = ref({
   port: 22,
   authMethod: 'password',
   username: 'root',
+  // 密码认证相关
   password: '',
-  privateKey: null,
+  // 密钥认证相关
+  privateKey: '',
   passphrase: '',
   encoding: 'utf8',
   remark: '',
@@ -163,6 +190,13 @@ const rules = {
         callback()
       }
     }
+  }],
+  passphrase: [{
+    validator: (rule, value, callback) => {
+      // 密码短语是可选的
+      callback()
+    },
+    trigger: 'blur'
   }]
 }
 
@@ -196,14 +230,23 @@ const testConnection = async () => {
 
 // 选择私钥文件
 const selectPrivateKey = async () => {
+  if (form.value.authMethod !== 'key') {
+    ElMessage.warning('请先选择密钥认证方式')
+    return
+  }
+
+  selectingFile.value = true
   try {
     const result = await window.electron.ipcRenderer.invoke('select-private-key')
-    if (result.filePath) {
-      privateKeyPath.value = result.filePath
+    if (!result.canceled && result.filePath) {
       form.value.privateKey = result.filePath
+      ElMessage.success('已选择私钥文件')
     }
   } catch (error) {
-    ElMessage.error('选择文件失败')
+    console.error('选择私��文件失败:', error)
+    ElMessage.error('选择私钥文件失败')
+  } finally {
+    selectingFile.value = false
   }
 }
 
@@ -253,6 +296,18 @@ const currentPassword = computed({
     } else {
       form.value.passphrase = value
     }
+  }
+})
+
+// 监听认证方式变化
+watch(() => form.value.authMethod, (newMethod) => {
+  if (newMethod === 'password') {
+    // 切换到密码认证时清空密钥相关信息
+    form.value.privateKey = ''
+    form.value.passphrase = ''
+  } else {
+    // 切换到密钥认证时清空密码
+    form.value.password = ''
   }
 })
 </script>
@@ -547,10 +602,21 @@ const currentPassword = computed({
 
 .key-select :deep(.el-button) {
   height: 28px;
-  padding: 0 8px;
+  padding: 0 12px;
   margin: 0;
   border: none;
-  border-radius: 0;
+}
+
+/* 文件选择按钮悬停效果 */
+.key-select :deep(.el-button:not(:disabled):hover) {
+  background-color: var(--el-color-primary-light-3);
+  color: white;
+}
+
+/* 禁用状态样式 */
+.key-select :deep(.el-button:disabled) {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 /* 调整表单项间距 */

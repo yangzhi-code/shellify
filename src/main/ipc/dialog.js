@@ -37,4 +37,21 @@ export function setupDialogHandlers() {
     });
     return result;
   });
+
+  // 添加私钥文件选择处理器
+  ipcMain.handle('select-private-key', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: '私钥文件', extensions: ['pem', 'key', 'ppk', 'rsa', 'pub'] },
+        { name: '所有文件', extensions: ['*'] }
+      ],
+      title: '选择私钥文件'
+    });
+    
+    return {
+      canceled: result.canceled,
+      filePath: result.filePaths[0]
+    };
+  });
 } 
