@@ -197,7 +197,9 @@ const onAddFolderNode = (id) => emit('add-folder-node', id)
 // 文件子节点操作传递
 const onAddFileNode = (id) => emit('add-file-node', id)
 const onDeleteNode = (id) => emit('delete-node', id)
-const onupdateNode = (id,formData) => emit('update-node', id,formData)
+const onupdateNode = (id, formData) => {
+  emit('update-node', id, formData)
+}
 
 const oncloseDialog = () => emit('close-dialog')
 
@@ -224,8 +226,12 @@ const startRename = () => {
 // 完成重命名
 const finishRename = () => {
   if (newName.value && newName.value !== props.node.name) {
-    // 使用现有的更新节点逻辑，只更新名称
-    emit('update-node', props.node.id, { ...props.node, name: newName.value })
+    const updatedNode = {
+      ...props.node,
+      name: newName.value,
+      type: 'folder'
+    }
+    emit('update-node', props.node.id, updatedNode)
   }
   isRenaming.value = false
 }

@@ -12,7 +12,7 @@
         @add-folder-node="handleAddFolderNode"
         @add-file-node="handleAddFileNode"
         @delete-node="handleDeleteNode"
-        @update-node="onUpdateNode"
+        @update-node="handleUpdateNode"
         @close-dialog="closeDialog"
       />
     </div>
@@ -131,13 +131,34 @@ const findAndUpdateNode = (nodes, id, info) => {
   return false
 }
 
-// 修改文件节点
-const onUpdateNode = (nodeId, info) => {
+// 处理节点更新
+const handleUpdateNode = (id, updatedNode) => {
+  const updateNodeInTree = (nodes) => {
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].id === id) {
+        if (updatedNode.type === 'folder') {
+          // 更新文件夹名称
+          nodes[i].name = updatedNode.name
+        } else {
+          // 更新文件节点信息
+          nodes[i].info = updatedNode
+        }
+        return true
+      }
+      if (nodes[i].children && nodes[i].children.length > 0) {
+        if (updateNodeInTree(nodes[i].children)) {
+          return true
+        }
+      }
+    }
+    return false
+  }
 
-  if (findAndUpdateNode(treeData, nodeId, info)) {
+  // 更新树数据
+  const updated = updateNodeInTree(treeData)
+  if (updated) {
+    // 保存到本地存储
     saveTreeData()
-  } else {
-    console.warn("未找到要修改的节点:", nodeId)
   }
 }
 
@@ -170,6 +191,31 @@ const deleteNode = (nodes, id) => {
     }
   }
   return false
+}
+
+// 更新节点
+const updateNode = (id, updatedNode) => {
+  const updateNodeInTree = (nodes) => {
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].id === id) {
+        if (updatedNode.type === 'folder') {
+          nodes[i].name = updatedNode.name
+        } else {
+          nodes[i].info = updatedNode
+        }
+        return true
+      }
+      if (nodes[i].children && nodes[i].children.length > 0) {
+        if (updateNodeInTree(nodes[i].children)) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  updateNodeInTree(treeData)
+  saveTreeData()
 }
 </script>
 
