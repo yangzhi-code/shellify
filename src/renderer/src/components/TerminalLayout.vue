@@ -73,7 +73,7 @@
   const terminalArea = ref(null)
   const fileArea = ref(null)
   
-  // 计算是否已连接
+  // 计算是���已连接
   const isConnected = computed(() => {
     return !!props.item.data?.id
   })
@@ -81,7 +81,10 @@
   // 计算是否显示快速连接界面
   const showQuickConnect = computed(() => {
     const info = props.item.info
-    return !info.host || !info.username || !info.password
+    if (!info.host || !info.username) return true
+    if (info.authMethod === 'password' && !info.password) return true
+    if (info.authMethod === 'key' && !info.privateKey) return true
+    return false
   })
   
   // 切换布局
