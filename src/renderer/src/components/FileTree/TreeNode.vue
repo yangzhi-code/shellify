@@ -45,6 +45,9 @@
             v-model="visible"
             title="编辑"
             width="400px"
+            :modal-append-to-body="false"
+            :append-to-body="true"
+            :lock-scroll="false"
             :align-center="true"
           >
             <ServerConfigDialog 
@@ -135,7 +138,7 @@ const isNewNode = ref(false)
 const addFile = () => {
   // 标记为新增操作
   isNewNode.value = true
-  // 创建一个新的空节点对象用于表单显示
+  // 创建一个新的空节点对象用于单显示
   currentEditNode.value = {
     type: 'file',
     info: { name: '新连接' }
@@ -187,6 +190,7 @@ const oncloseDialog = () => emit('close-dialog')
 
 <style scoped>
 .toggle-container {
+  flex-shrink: 0;
   width: 15px;
 }
 .tree-node-content {
@@ -197,6 +201,7 @@ const oncloseDialog = () => emit('close-dialog')
   margin-top: 4px;
   margin-bottom: 4px;
   box-sizing: border-box; /* 确保padding不会影响宽高 */
+  padding-right: calc(100% - 99%); /* 预留滚动条宽度 */
 }
 
 /* 鼠标悬停时的样式 */
@@ -219,13 +224,38 @@ const oncloseDialog = () => emit('close-dialog')
   align-items: center;
   justify-content: flex-start;
   width: 100%;
+  white-space: nowrap;  /* 防止换行 */
+  overflow: hidden;     /* 超出部分隐藏 */
 }
 
+/* 文件夹和文件名称容器 */
+.node-header > div {
+  flex-shrink: 0;      /* 防止压缩 */
+  display: flex;
+  align-items: center;
+}
+
+/* 文件名称 */
+.node-header span {
+  overflow: hidden;
+  text-overflow: ellipsis;  /* 超出显示省略号 */
+  white-space: nowrap;
+}
+
+/* 操作按钮容器 */
+.node-actions {
+  margin-left: auto;    /* 推到最右边 */
+  flex-shrink: 0;       /* 防止压缩 */
+}
+
+/* 确保图标不会被压缩 */
 .folder-icon {
-  margin-right: 8px;
-  font-style: normal;
-  transform: none;
-  font-size: 15px;
+  flex-shrink: 0;       /* 保持不压缩 */
+  margin-right: 8px;    /* 保持右边距 */
+  font-style: normal;   /* 防止斜体 */
+  font-size: 15px;      /* 设置大小 */
+  display: inline-flex; /* 确保图标对齐 */
+  align-items: center;  /* 垂直居中 */
 }
 
 .node-actions {
@@ -273,5 +303,14 @@ const oncloseDialog = () => emit('close-dialog')
   margin-right: 8px;
   padding: 0;
   text-align: center;
+}
+
+:deep(.el-overlay) {
+  overflow: hidden;
+  position: fixed;
+}
+
+:deep(.el-dialog) {
+  margin: 15vh auto !important;
 }
 </style>

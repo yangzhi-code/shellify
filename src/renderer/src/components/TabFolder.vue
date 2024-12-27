@@ -37,13 +37,6 @@ const closedialog = () => {
 }
 //连接到服务器
 const openNewTerminal = () => {
-  const serverInfo = {
-    host: '208.99.44.183',
-    port: 22,
-    username: 'root',
-    password: '419199yZ'
-  }
-
   visible.value = true
 }
 
