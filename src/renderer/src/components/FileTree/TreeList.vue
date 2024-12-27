@@ -21,6 +21,7 @@
 
 <script setup>
 import { reactive, watch, toRaw } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import TreeNode from './TreeNode.vue'
 
 // 树状数据
@@ -74,7 +75,7 @@ const emit = defineEmits(['close-dialog'])
 const closeDialog = () => {
   emit('close-dialog')
 }
-// 监听数据变化，保存到本地存储
+// 监���数据变化，保存到本地存储
 watch(
   () => treeData,
   (newValue, oldValue) => {
@@ -163,8 +164,34 @@ const handleUpdateNode = (id, updatedNode) => {
 }
 
 // 删除节点
-const handleDeleteNode = (nodeId) => {
-  deleteNode(treeData, nodeId)
+const handleDeleteNode = async (nodeId) => {
+  // 找到要删除的节点
+  const node = findNode(treeData, nodeId)
+  if (!node) return
+
+  try {
+    // 显示确认对话框
+    await ElMessageBox.confirm(
+      `确定要删除${node.type === 'folder' ? '文件夹' : '连接'} "${node.type === 'folder' ? node.name : node.info.name}" 吗？`,
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+        draggable: true,
+        closeOnClickModal: false,
+        modalAppendToBody: false,
+        appendToBody: true,
+        lockScroll: false
+      }
+    )
+    
+    // 用户确认后执行删除
+    deleteNode(treeData, nodeId)
+  } catch {
+    // 用户取消删除，不做任何操作
+    console.log('取消删除')
+  }
 }
 
 // 查找节点
@@ -232,5 +259,16 @@ const updateNode = (id, updatedNode) => {
 .tree-container {
   height: 300px;
   overflow-y: auto; /* 使内容区域可以滚动 */
+}
+
+/* 添加确认对话框的样式控制 */
+:deep(.el-overlay) {
+  overflow: hidden;
+  position: fixed;
+}
+
+:deep(.el-message-box) {
+  margin: 15vh auto !important;
+  border-radius: 8px;
 }
 </style>
