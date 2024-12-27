@@ -134,12 +134,9 @@ const initTerminal = () => {
     // 使用单一的 onKey 监听处理所有键盘输入
     const disposable = terminal.onKey(e => {
       if (e.key === '\r' && isConnectionBroken.value && currentServerInfo.value) {
-        // 清除当前终端内容
         terminalManager.value.clear();
-        // 重新连接
         connectToServer(currentServerInfo.value);
       } else if (!isConnectionBroken.value) {
-        // 正常的输入处理
         inputHandler.value?.handleInput(e.key, {
           connectionId: props.item.data?.id,
           username: props.item.info.username,
@@ -224,7 +221,7 @@ const handleConnectionError = (error) => {
   if (error.message.includes('认证失败')) {
     errorMessage += '用户名或密码错误';
   } else if (error.message.includes('ETIMEDOUT')) {
-    errorMessage += '连接超时，��检查网络或服务器地址';
+    errorMessage += '连接超���，请检查网络或服务器地址';
   } else if (error.message.includes('ECONNREFUSED')) {
     errorMessage += '连接被拒绝，请检查服务器地址和端口';
   } else if (error.message.includes('ENOTFOUND')) {

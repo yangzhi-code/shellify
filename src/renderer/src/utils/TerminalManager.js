@@ -155,7 +155,7 @@ export class TerminalManager {
       // 调整终端大小
       this._fitAddon.fit();
 
-      // 获���新的尺寸
+      // 获新的尺寸
       const newDimensions = {
         cols: this._terminal.cols,
         rows: this._terminal.rows
@@ -306,9 +306,10 @@ export class TerminalManager {
     try {
       const text = await window.electron.ipcRenderer.invoke('clipboard-read')
       if (text && this._terminal) {
-        // 将换行符统一转换为 \r
-        const normalizedText = text.replace(/\n/g, '\r')
-        this._terminal.write(normalizedText)
+        // 只通过 onKey 事件处理粘贴的内容
+        for (const char of text) {
+          this._terminal._core._onKey.fire({ key: char })
+        }
       }
     } catch (err) {
       console.error('粘贴失败:', err)
