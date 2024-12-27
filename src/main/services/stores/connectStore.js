@@ -8,7 +8,7 @@ let Store;
 class ConnectionStore {
   constructor() {
     this.store = null;
-    this.key = 'connections'; // 存储的主键
+    this.key = 'connections1'; // 存储的主键
   }
 
   async init() {
@@ -22,14 +22,47 @@ class ConnectionStore {
   // 获取所有连接信息
   async getAllConnections() {
     if (!this.store) await this.init();
-    return this.store.get(this.key, []);
+    const connections = this.store.get(this.key, []);
+    // 确保返回的是正确的数据结构
+    return this.validateConnections(connections);
+  }
+
+  // 添加数据验证方法
+  validateConnections(connections) {
+    if (!Array.isArray(connections)) return [];
+    
+    // 转换为正确的数据结构
+    return connections.map(node => {
+      if (node.type === 'file') {
+        return {
+          id: node.id,
+          type: 'file',
+          info: {
+            name: node.info?.name || 'Unnamed',
+            host: node.info?.host || '',
+            port: node.info?.port || 22,
+            username: node.info?.username || '',
+            // ... 其他必要的字段
+          }
+        };
+      } else {
+        return {
+          id: node.id,
+          name: node.name || 'New Folder',
+          type: 'folder',
+          children: this.validateConnections(node.children || [])
+        };
+      }
+    });
   }
 
   // 保存新的连接信息
   async saveConnection(connection) {
     if (!this.store) await this.init();
-    this.store.set(this.key, connection);
-    return connection;
+    // 确保保存前数据结构正确
+    const validatedConnection = this.validateConnections(connection);
+    this.store.set(this.key, validatedConnection);
+    return validatedConnection;
   }
 
   // 删除指定连接信息

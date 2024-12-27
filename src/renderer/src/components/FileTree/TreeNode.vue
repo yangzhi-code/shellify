@@ -21,7 +21,7 @@
         <!-- 文件夹图标 -->
         <div v-if="node.type === 'folder'">
           <i class="folder-icon">📁</i>
-          <span v-if="!isRenaming">{{ node.name }}</span>
+          <span v-if="!isRenaming">{{ node.info?.name }}</span>
           <input
             v-else
             ref="renameInput"
@@ -35,7 +35,7 @@
         <!-- 文件图标 -->
         <div v-if="node.type === 'file'">
           <i class="folder-icon">📄</i>
-          <span>{{ node.info.name }}</span>
+          <span>{{ node.info?.name }}</span>
         </div>
 
         <!-- 操作按钮 -->
@@ -152,10 +152,18 @@ const isNewNode = ref(false)
 const addFile = () => {
   // 标记为新增操作
   isNewNode.value = true
-  // 创建一个新的空节点对象用于单显示
+  // 创建一个新的空节点对象，包含所有必要的字段
   currentEditNode.value = {
     type: 'file',
-    info: { name: '新连接' }
+    info: {
+      name: '新连接',
+      host: '',
+      port: 22,
+      username: '',
+      password: '',
+      privateKey: '',
+      passphrase: ''
+    }
   }
   // 显示编辑对话框
   visible.value = true
@@ -172,14 +180,22 @@ const editNode = () => {
 
 // 更新节点
 const updateNode = (formData) => {
-  if (isNewNode.value) {
-    // 如果是新增节点，则调用添加逻辑
-    emit('add-file-node', props.node.id, formData)
-  } else {
-    // 如果是编辑节点，则调用更新逻辑
-    emit('update-node', currentEditNode.value.id, formData)
+  try {
+    if (isNewNode.value) {
+      // 如果是新增节点，确保传递完整的节点结构
+      emit('add-file-node', props.node.id, formData)
+    } else {
+      // 如果是编辑节点，同样确保传递完整的节点结构
+      const updatedNode = {
+        ...currentEditNode.value,
+        info: formData
+      }
+      emit('update-node', currentEditNode.value.id, updatedNode)
+    }
+    visible.value = false
+  } catch (error) {
+    console.error('更新节点失败:', error)
   }
-  visible.value = false
 }
 
 // 删除节点
@@ -195,10 +211,20 @@ const toggleChildren = () => {
 // 文件夹子节点操作传递
 const onAddFolderNode = (id) => emit('add-folder-node', id)
 // 文件子节点操作传递
-const onAddFileNode = (id) => emit('add-file-node', id)
+const onAddFileNode = (id, formData) => {
+  try {
+    emit('add-file-node', id, formData)
+  } catch (error) {
+    console.error('添加文件节点失败:', error)
+  }
+}
 const onDeleteNode = (id) => emit('delete-node', id)
 const onupdateNode = (id, formData) => {
-  emit('update-node', id, formData)
+  try {
+    emit('update-node', id, formData)
+  } catch (error) {
+    console.error('更新节点失败:', error)
+  }
 }
 
 const oncloseDialog = () => emit('close-dialog')
@@ -216,8 +242,7 @@ const renameInput = ref(null)
 // 开始重命名
 const startRename = () => {
   isRenaming.value = true
-  newName.value = props.node.name
-  // 等待 DOM 更新后聚焦输入框
+  newName.value = props.node.info?.name
   nextTick(() => {
     renameInput.value?.focus()
   })
@@ -225,11 +250,14 @@ const startRename = () => {
 
 // 完成重命名
 const finishRename = () => {
-  if (newName.value && newName.value !== props.node.name) {
+  if (newName.value && newName.value !== props.node.info?.name) {
     const updatedNode = {
       ...props.node,
-      name: newName.value,
-      type: 'folder'
+      type: 'folder',
+      info: {
+        ...props.node.info,
+        name: newName.value
+      }
     }
     emit('update-node', props.node.id, updatedNode)
   }
@@ -402,7 +430,7 @@ const cancelRename = () => {
   margin: 15vh auto !important;
 }
 
-/* 重命名输入框样式 */
+/* 重命名入框样式 */
 .rename-input {
   border: 1px solid var(--el-border-color);
   border-radius: 4px;

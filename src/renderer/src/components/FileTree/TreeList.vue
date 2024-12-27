@@ -43,17 +43,17 @@ const treeData = reactive([
   }
 ])
 // 初始化数据
-const init = () => {
-  window.electron.ipcRenderer
-    .invoke('get-connections')
-    .then((response) => {
-      console.log('获取连接数据成功', response)
-      if (response.length === 0) return
-      treeData.splice(0, treeData.length, ...response) // 更新数据
-    })
-    .catch((error) => {
-      console.error('获取连接数据失败', error)
-    })
+const init = async () => {
+  try {
+    const response = await window.electron.ipcRenderer.invoke('get-connections')
+    console.log('获取连接数据成功', response)
+    if (response && Array.isArray(response)) {
+      // 清空现有数据并添加新数据
+      treeData.splice(0, treeData.length, ...response)
+    }
+  } catch (error) {
+    console.error('获取连接数据失败', error)
+  }
 }
 init()
 // 保存数据到本地存储
@@ -87,7 +87,14 @@ watch(
 
 // 新增根文件
 const addNewNode = () => {
-  treeData.push({ id: Date.now(), name: '新建文件', type: 'folder', children: [] })
+  treeData.push({ 
+    id: Date.now(), 
+    type: 'folder',
+    info: {
+      name: '新建文件'
+    },
+    children: [] 
+  })
 }
 
 // 添加文件夹子节点
@@ -95,25 +102,36 @@ const handleAddFolderNode = (parentId) => {
   const parent = findNode(treeData, parentId)
   if (parent) {
     if (!parent.children) parent.children = []
-    parent.children.push({ id: Date.now(), name: '新建文件夹', type: 'folder', children: [] })
+    parent.children.push({ 
+      id: Date.now(), 
+      type: 'folder',
+      info: {
+        name: '新建文件夹'
+      }, 
+      children: [] 
+    })
   }
 }
 
 // 添加连接节点
 const handleAddFileNode = (parentId, formData) => {
-  console.log('添加连接节点', parentId, formData)
-  const parent = findNode(treeData, parentId)
-  console.log('找到的父节点', parent)
-  if (parent) {
-    if (!parent.children) parent.children = []
-    // 使用vue的工具提取出formData的数据，去掉响应式
-    const plainFormData = toRaw(formData)
-    parent.children.push({ 
-      id: Date.now(), 
-      type: 'file',
-      info: plainFormData,  // 使用提取后的表单数据作为节点信息
-      children: [] 
-    })
+  try {
+    console.log('添加连接节点', parentId, formData)
+    const parent = findNode(treeData, parentId)
+    console.log('找到的父节点', parent)
+    if (parent) {
+      if (!parent.children) parent.children = []
+      const newNode = {
+        id: Date.now(),
+        type: 'file',
+        info: formData,  // 直接使用传入的 formData
+        children: []
+      }
+      parent.children.push(newNode)
+      saveTreeData()
+    }
+  } catch (error) {
+    console.error('添加连接节点失败:', error)
   }
 }
 // 递归查找和更新节点
@@ -134,32 +152,32 @@ const findAndUpdateNode = (nodes, id, info) => {
 
 // 处理节点更新
 const handleUpdateNode = (id, updatedNode) => {
-  const updateNodeInTree = (nodes) => {
-    for (let i = 0; i < nodes.length; i++) {
-      if (nodes[i].id === id) {
-        if (updatedNode.type === 'folder') {
-          // 更新文件夹名称
-          nodes[i].name = updatedNode.name
-        } else {
-          // 更新文件节点信息
-          nodes[i].info = updatedNode
-        }
-        return true
-      }
-      if (nodes[i].children && nodes[i].children.length > 0) {
-        if (updateNodeInTree(nodes[i].children)) {
+  try {
+    const updateNodeInTree = (nodes) => {
+      for (let i = 0; i < nodes.length; i++) {
+        if (nodes[i].id === id) {
+          if (updatedNode.type === 'folder') {
+            nodes[i].info = updatedNode.info
+          } else {
+            nodes[i].info = updatedNode.info
+          }
           return true
         }
+        if (nodes[i].children && nodes[i].children.length > 0) {
+          if (updateNodeInTree(nodes[i].children)) {
+            return true
+          }
+        }
       }
+      return false
     }
-    return false
-  }
 
-  // 更新树数据
-  const updated = updateNodeInTree(treeData)
-  if (updated) {
-    // 保存到本地存储
-    saveTreeData()
+    const updated = updateNodeInTree(treeData)
+    if (updated) {
+      saveTreeData()
+    }
+  } catch (error) {
+    console.error('更新节点失败:', error)
   }
 }
 

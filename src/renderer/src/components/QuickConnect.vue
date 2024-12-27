@@ -24,9 +24,9 @@
             :key="conn.id" 
             class="list-item"
           >
-            <span class="name-col">{{ conn.info.name || '未命名连接' }}</span>
-            <span class="host-col">{{ conn.info.host }}</span>
-            <span class="user-col">{{ conn.info.username }}</span>
+            <span class="name-col">{{ conn.name || '未命名连接' }}</span>
+            <span class="host-col">{{ conn.host }}</span>
+            <span class="user-col">{{ conn.username }}</span>
             <span class="action-col">
               <el-button 
                 type="primary" 
@@ -67,34 +67,36 @@ const props = defineProps({
   }
 })
 
-// 递归获取所有文件类型的连接
-const getAllFileConnections = (items) => {
-  let result = [];
-  
-  const traverse = (items) => {
-    items.forEach(item => {
-      if (item.type === 'file') {
-        result.push(item);
-      } else if (item.children && Array.isArray(item.children)) {
-        traverse(item.children);
-      }
-    });
-  };
-  
-  traverse(items);
-  return result;
-};
+// 递归获取所有连接
+const getAllConnections = (nodes) => {
+  let result = []
+  nodes.forEach(node => {
+    if (node.type === 'file' && node.info) {
+      result.push({
+        id: node.id,
+        name: node.info.name,
+        host: node.info.host,
+        port: node.info.port,
+        username: node.info.username,
+        password: node.info.password
+      })
+    }
+    if (node.children && node.children.length > 0) {
+      result = result.concat(getAllConnections(node.children))
+    }
+  })
+  return result
+}
 
 // 加载保存的连接
 const loadConnections = async () => {
   try {
-    const savedConnections = await window.electron.ipcRenderer.invoke('get-connections')
-    // 递归获取所有文件类型的连接
-    connections.value = getAllFileConnections(savedConnections)
-    console.log("调试1",connections.value)
+    const data = await window.electron.ipcRenderer.invoke('get-connections')
+    if (data && Array.isArray(data)) {
+      connections.value = getAllConnections(data)
+    }
   } catch (error) {
-    ElMessage.error('加载连接列表失败')
-    console.error('Failed to load connections:', error)
+    console.error('获取连接数据失败:', error)
   }
 }
 
@@ -102,11 +104,11 @@ const loadConnections = async () => {
 const handleConnect = (connection) => {
   // 更新当前标签的连接信息
   props.item.info = {
-    name: connection.info.name || '未命名连接',
-    host: connection.info.host,
-    port: connection.info.port,
-    username: connection.info.username,
-    password: connection.info.password
+    name: connection.name || '未命名连接',
+    host: connection.host,
+    port: connection.port,
+    username: connection.username,
+    password: connection.password
   }
   
   // 调用父组件传入的 onConnect 函数
