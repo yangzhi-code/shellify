@@ -5,7 +5,8 @@
       <EditorSidebar 
         :connection-id="connectionId"
         :current-path="currentPath"
-        @file-click="handleFileClick" 
+        @file-click="handleFileClick"
+        @file-dblclick="handleFileDoubleClick"
       />
     </div>
 
@@ -113,11 +114,11 @@ onMounted(() => {
       // 更新当前连接信息
       currentConnection.value = fileInfo
       
-      // 打开文件
+      // 转换为统一格式
       handleFileClick({
-        filePath: fileInfo.filePath,
-        fileName: fileInfo.fileName || '未命名',
-        fileType: fileInfo.fileType || 'text'
+        path: fileInfo.filePath,
+        name: fileInfo.fileName,
+        type: 'file'
       })
     }
   })
@@ -125,48 +126,62 @@ onMounted(() => {
 
 // 处理文件点击
 const handleFileClick = async (fileInfo) => {
-  if (!fileInfo?.filePath) {
+  console.log('处理文件点击:', fileInfo)
+  if (!fileInfo?.path) {
     console.warn('无效的文件信息:', fileInfo)
     return
   }
 
   try {
-    console.log('Opening file:', fileInfo.filePath)
+    console.log('Opening file:', fileInfo.path)
     
     // 如果标签页已存在，切换到该标签页
-    if (tabs.value.some(tab => tab.path === fileInfo.filePath)) {
-      handleTabSwitch(fileInfo.filePath)
+    if (tabs.value.some(tab => tab.path === fileInfo.path)) {
+      handleTabSwitch(fileInfo.path)
       return
     }
 
     // 先创建标签页，但不包含内容
     const newTab = {
-      path: fileInfo.filePath,
-      name: fileInfo.fileName,
-      content: '', // 初始为空
-      type: fileInfo.fileType
+      path: fileInfo.path,
+      name: fileInfo.name,
+      content: undefined, // 初始为 undefined
+      type: fileInfo.type
     }
+    console.log('创建新标签页:', newTab)
     tabs.value.push(newTab)
-    handleTabSwitch(fileInfo.filePath)
+    handleTabSwitch(fileInfo.path)
 
     // 读取文件内容
-    console.log('Reading file content...')
-    const content = await window.electron.ipcRenderer.invoke('ssh:read-file', {
+    const result = await window.electron.ipcRenderer.invoke('ssh:read-file', {
       connectionId: connectionId.value,
-      path: fileInfo.filePath
+      path: fileInfo.path
     })
 
+    if (!result) {
+      throw new Error('读取文件失败：未获取到内容')
+    }
+
+    // 处理二进制文件
+    if (result.binary) {
+      ElMessage.warning('这是一个二进制文件，可能无法正确显示')
+    }
+
     // 更新标签页内容
-    const tab = tabs.value.find(t => t.path === fileInfo.filePath)
+    const tab = tabs.value.find(t => t.path === fileInfo.path)
     if (tab) {
-      tab.content = content
-      console.log('File content loaded, length:', content.length)
+      // 确保所有必要的属性都存在
+      Object.assign(tab, {
+        content: result.content || '',
+        encoding: result.encoding || 'utf8',
+        binary: result.binary || false
+      })
     }
 
   } catch (error) {
     console.error('打开文件失败:', error)
     // 如果读取失败，移除标签页
-    const index = tabs.value.findIndex(tab => tab.path === fileInfo.filePath)
+    const index = tabs.value.findIndex(tab => tab.path === fileInfo.path)
     if (index !== -1) {
       tabs.value.splice(index, 1)
     }
@@ -228,6 +243,15 @@ const handleContentChange = (path, content) => {
   }
 }
 
+// 处理文件双击
+const handleFileDoubleClick = async (fileInfo) => {
+  console.log('处理文件双击:', fileInfo)
+  if (fileInfo.type === 'file') {
+    console.log('准备打开文件')
+    await handleFileClick(fileInfo)
+  }
+}
+
 onUnmounted(() => {
   // 清理 IPC 监听器
   EditorIpcService.removeFileOpenListener()
@@ -256,7 +280,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  flex-shrink: 0; /* 防止侧边栏被压缩 */
+  flex-shrink: 0; /* 止侧边栏被压缩 */
 }
 
 /* 拖动条样式 */

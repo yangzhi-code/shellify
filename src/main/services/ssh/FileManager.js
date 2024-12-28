@@ -687,22 +687,60 @@ class FileManager {
 
       // 读取文件
       const content = await new Promise((resolve, reject) => {
-        sftp.readFile(remotePath, 'utf8', (err, data) => {
+        sftp.readFile(remotePath, (err, data) => {
           if (err) {
             reject(err)
           } else {
-            resolve(data)
+            // 尝试检测编码
+            let encoding = 'utf8';
+            try {
+              // 检查是否是二进制文件
+              const isBinary = this._isBinaryContent(data);
+              if (isBinary) {
+                // 如果是二进制文件，返回 base64 编码
+                resolve({
+                  content: data.toString('base64'),
+                  encoding: 'base64',
+                  binary: true
+                });
+                return;
+              }
+              
+              // 尝试不同的编码
+              const encodings = ['utf8', 'utf16le'];
+              for (const enc of encodings) {
+                try {
+                  const text = data.toString(enc);
+                  if (text.includes('')) {
+                    continue;
+                  }
+                  encoding = enc;
+                  break;
+                } catch (e) {
+                  continue;
+                }
+              }
+              
+              resolve({
+                content: data.toString(encoding),
+                encoding,
+                binary: false
+              });
+            } catch (e) {
+              // 如果编码检测失败，默认使用 utf8
+              resolve({
+                content: data.toString('utf8'),
+                encoding: 'utf8',
+                binary: false
+              });
+            }
           }
         })
       })
 
-      // 检查内容
-      if (content === undefined || content === null) {
-        throw new Error('无法读取文件内容')
-      }
-
-      console.log(`[FileManager] Read file ${remotePath}, content length:`, content.length)
+      console.log(`[FileManager] Read file ${remotePath}, encoding: ${content.encoding}`)
       return content
+
     } catch (error) {
       console.error(`[FileManager] Failed to read file ${remotePath}:`, error)
       throw new Error(`读取文件失败: ${error.message}`)
@@ -712,6 +750,20 @@ class FileManager {
   async writeFile(connectionId, remotePath, content) {
     const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
     return sftp.writeFile(remotePath, content);
+  }
+
+  // 检查是否是二进制内容
+  _isBinaryContent(buffer) {
+    // 检查前4KB的内容
+    const sampleSize = Math.min(4096, buffer.length);
+    for (let i = 0; i < sampleSize; i++) {
+      const byte = buffer[i];
+      // 如果是控制字符（除了换行、回车、制表符）或者 null 字节，认为是二进制
+      if ((byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) || byte === 0) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 

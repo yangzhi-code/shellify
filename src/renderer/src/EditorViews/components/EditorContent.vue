@@ -10,10 +10,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { EditorView, lineNumbers } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
+import { python } from '@codemirror/lang-python'
+import { cpp } from '@codemirror/lang-cpp'
+import { java } from '@codemirror/lang-java'
+import { php } from '@codemirror/lang-php'
+import { html } from '@codemirror/lang-html'
+import { css } from '@codemirror/lang-css'
+import { xml } from '@codemirror/lang-xml'
+import { markdown } from '@codemirror/lang-markdown'
+import { sql } from '@codemirror/lang-sql'
+import { StreamLanguage } from '@codemirror/language'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { history } from '@codemirror/commands'
 import { indentOnInput, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
@@ -36,21 +46,91 @@ const emit = defineEmits(['cursor-change', 'content-change'])
 const editorRefs = ref({})
 const editors = new Map()
 
+// 根据文件名获取语言模式
+const getLanguageExtension = (filename) => {
+  // 移除路径，只保留文件名
+  const basename = filename.split('/').pop()?.toLowerCase()
+
+  // 根据扩展名判断
+  const ext = basename.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    // JavaScript 相关
+    case 'js':
+    case 'jsx':
+    case 'ts':
+    case 'tsx':
+    case 'json':
+      return javascript()
+
+    // Python
+    case 'py':
+    case 'pyw':
+      return python()
+
+    // C/C++
+    case 'c':
+    case 'cpp':
+    case 'h':
+    case 'hpp':
+      return cpp()
+
+    // Java
+    case 'java':
+      return java()
+
+    // Web
+    case 'html':
+    case 'htm':
+      return html()
+    case 'css':
+    case 'scss':
+    case 'less':
+      return css()
+    case 'xml':
+    case 'svg':
+      return xml()
+    case 'php':
+      return php()
+
+    // 标记语言
+    case 'md':
+    case 'markdown':
+      return markdown()
+
+    // 数据库
+    case 'sql':
+      return sql()
+
+    // 默认返回 null，使用普通文本模式
+    default:
+      return null
+  }
+}
+
 // 创建编辑器实例
 const createEditor = (tab) => {
+  console.log('Creating editor with tab:', tab)
   const el = editorRefs.value[tab.path]
-  if (!el || editors.has(tab.path)) return
+  if (!el) {
+    console.log('Skip editor creation:', { 
+      hasElement: !!el, 
+      hasEditor: editors.has(tab.path),
+      tabContent: tab.content ? tab.content.length : 0
+    })
+    return
+  }
 
-  console.log('Creating editor for tab:', {
-    path: tab.path,
-    contentLength: tab.content ? tab.content.length : 0,
-    contentPreview: tab.content ? tab.content.substring(0, 100) : 'empty'
-  })
+  // 如果已存在编辑器实例，先销毁它
+  if (editors.has(tab.path)) {
+    console.log('Destroying existing editor for:', tab.path)
+    editors.get(tab.path).destroy()
+    editors.delete(tab.path)
+  }
 
   // 清空容器
   el.innerHTML = ''
 
-  // 使用独立的扩展组合
+  // 准备扩展
   const extensions = [
     lineNumbers(),
     history(),
@@ -58,8 +138,21 @@ const createEditor = (tab) => {
     bracketMatching(),
     closeBrackets(),
     syntaxHighlighting(defaultHighlightStyle),
-    javascript(),
-    oneDark,
+    oneDark
+  ]
+
+  // 根据文件类型添加特定扩展
+  if (!tab.binary) {
+    const langExtension = getLanguageExtension(tab.path)
+    if (langExtension) {
+      extensions.push(langExtension)
+    }
+  } else {
+    extensions.push(EditorState.readOnly.of(true))
+  }
+
+  // 添加主题和事件监听
+  extensions.push(
     EditorView.theme({
       '&': {
         height: '100%',
@@ -80,20 +173,22 @@ const createEditor = (tab) => {
         column: pos - line.from + 1
       })
     })
-  ]
+  );
 
+  // 创建编辑器状态
   const state = EditorState.create({
     doc: tab.content || '',
     extensions
   })
 
+  console.log('Creating editor with content length:', tab.content?.length || 0)
   const editor = new EditorView({
     state,
     parent: el
   })
 
   editors.set(tab.path, editor)
-  console.log('Editor created successfully for:', tab.path)
+  console.log('Editor created with content:', editor.state.doc.toString().length)
 }
 
 // 获取编辑器内容
@@ -105,33 +200,73 @@ const getContent = (path) => {
 // 监听标签变化，包括内容更新
 watch(() => props.tabs, (newTabs) => {
   console.log('Tabs changed, checking for updates...')
+
+  // 清理已关闭标签页的编辑器实例
+  const currentPaths = new Set(newTabs.map(tab => tab.path))
+  for (const [path, editor] of editors.entries()) {
+    if (!currentPaths.has(path)) {
+      console.log('Cleaning up editor for closed tab:', path)
+      editor.destroy()
+      editors.delete(path)
+      delete editorRefs.value[path]
+    }
+  }
+
   newTabs.forEach(tab => {
+    console.log('Processing tab:', tab)
+    if (!tab || !tab.path) {
+      console.warn('Invalid tab:', tab)
+      return
+    }
+
     if (!editors.has(tab.path)) {
       console.log('Creating new editor for:', tab.path)
       createEditor(tab)
-    } else if (tab.content !== editors.get(tab.path).state.doc.toString()) {
-      console.log('Updating content for:', tab.path)
+    } else {
       const editor = editors.get(tab.path)
-      editor.dispatch({
-        changes: {
-          from: 0,
-          to: editor.state.doc.length,
-          insert: tab.content || ''
-        }
+      const currentContent = editor.state.doc.toString()
+      console.log('Content comparison:', {
+        path: tab.path,
+        currentLength: currentContent?.length || 0,
+        newLength: tab.content?.length || 0,
+        isDifferent: tab.content !== currentContent
       })
+      if (tab.content !== undefined && tab.content !== currentContent) {
+        console.log('Updating content for:', tab.path)
+        editor.dispatch({
+          changes: {
+            from: 0,
+            to: editor.state.doc.length,
+            insert: tab.content || ''
+          }
+        })
+      }
     }
   })
-}, { deep: true })
+}, { deep: true, immediate: true })
 
 // 监听激活标签变化
 watch(() => props.activeTab, (newPath, oldPath) => {
+  console.log('Active tab changed:', { newPath, oldPath })
+  if (!newPath) return
+
   if (oldPath) {
     const oldEl = editorRefs.value[oldPath]
     if (oldEl) oldEl.style.display = 'none'
   }
-  if (newPath) {
-    const newEl = editorRefs.value[newPath]
-    if (newEl) newEl.style.display = 'block'
+
+  const newEl = editorRefs.value[newPath]
+  console.log('New element for path:', newPath, newEl)
+  if (newEl) {
+    newEl.style.display = 'block'
+    // 确保编辑器已创建
+    if (!editors.has(newPath)) {
+      const tab = props.tabs.find(t => t.path === newPath)
+      if (tab) {
+        console.log('Creating editor for newly activated tab')
+        createEditor(tab)
+      }
+    }
   }
 })
 
@@ -143,6 +278,16 @@ onMounted(() => {
       createEditor(tab)
     }
   }
+})
+
+// 组件卸载时清理所有编辑器实例
+onUnmounted(() => {
+  console.log('Cleaning up all editors')
+  for (const editor of editors.values()) {
+    editor.destroy()
+  }
+  editors.clear()
+  editorRefs.value = {}
 })
 
 defineExpose({

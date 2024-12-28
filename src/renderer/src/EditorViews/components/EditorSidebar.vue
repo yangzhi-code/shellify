@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-sidebar-container">
+  <div class="editor-sidebar">
     <div class="sidebar-header">
       <span class="title">资源管理器</span>
     </div>
@@ -9,16 +9,19 @@
       :props="defaultProps"
       :load="loadNode"
       lazy
-      @node-click="handleNodeClick"
     >
       <template #default="{ node, data }">
-        <span class="custom-tree-node">
+        <div 
+          class="custom-tree-node" 
+          @click="handleNodeClick(data)"
+          @dblclick.stop="handleNodeDoubleClick(data)"
+        >
           <el-icon>
             <Folder v-if="data.type === 'directory'" />
             <Document v-else />
           </el-icon>
           <span>{{ node.label }}</span>
-        </span>
+        </div>
       </template>
     </el-tree>
   </div>
@@ -26,20 +29,20 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Folder, Document } from '@element-plus/icons-vue'
+import { Document, Folder } from '@element-plus/icons-vue'
 
 const props = defineProps({
   connectionId: {
     type: String,
-    default: ''
+    required: true
   },
   currentPath: {
     type: String,
-    default: '/'
+    required: true
   }
 })
 
-const emit = defineEmits(['file-click'])
+const emit = defineEmits(['file-click', 'file-dblclick'])
 const treeRef = ref(null)
 const treeData = ref([])
 
@@ -80,14 +83,21 @@ const loadNode = async (node, resolve) => {
 }
 
 const handleNodeClick = (data) => {
+  console.log('Node clicked:', data)
+  emit('file-click', data)
+}
+
+const handleNodeDoubleClick = (data) => {
+  console.log('Node double clicked:', data)
   if (data.type === 'file') {
-    emit('file-click', data)
+    console.log('Emitting file-dblclick event')
+    emit('file-dblclick', data)
   }
 }
 </script>
 
 <style scoped>
-.editor-sidebar-container {
+.editor-sidebar {
   height: 100%;
   display: flex;
   flex-direction: column;
