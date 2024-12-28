@@ -30,6 +30,7 @@
 <script setup>
 import { ref } from 'vue'
 import { Document, Folder } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const props = defineProps({
   connectionId: {
@@ -49,7 +50,7 @@ const treeData = ref([])
 const defaultProps = {
   children: 'children',
   label: 'name',
-  isLeaf: (data) => data.type === 'file'
+  isLeaf: (data) => data.type === 'file' || data.isLeaf
 }
 
 const loadNode = async (node, resolve) => {
@@ -57,7 +58,21 @@ const loadNode = async (node, resolve) => {
     const parentPath = props.currentPath ? 
       props.currentPath.substring(0, props.currentPath.lastIndexOf('/')) || '/' : 
       '/'
-    resolve([{ name: parentPath, path: parentPath, type: 'directory' }])
+    try {
+      const files = await window.electron.ipcRenderer.invoke('ssh:list-files', {
+        connectionId: props.connectionId,
+        path: parentPath
+      })
+      resolve([{ 
+        name: parentPath, 
+        path: parentPath, 
+        type: 'directory',
+        isLeaf: files.length === 0  // 如果目录为空，设置为叶子节点
+      }])
+    } catch (error) {
+      console.error('检查根目录失败:', error)
+      resolve([{ name: parentPath, path: parentPath, type: 'directory' }])
+    }
     return
   }
 
@@ -75,20 +90,95 @@ const loadNode = async (node, resolve) => {
       connectionId: props.connectionId,
       path: node.data.path
     })
-    resolve(files)
+    // 对于文件夹，预先检查是否为空
+    const processedFiles = await Promise.all(files.map(async file => {
+      if (file.type === 'directory') {
+        try {
+          const subFiles = await window.electron.ipcRenderer.invoke('ssh:list-files', {
+            connectionId: props.connectionId,
+            path: file.path
+          })
+          return {
+            ...file,
+            isLeaf: subFiles.length === 0  // 如果目录为空，设置为叶子节点
+          }
+        } catch (error) {
+          console.error('检查子目录失败:', error)
+          return file
+        }
+      }
+      return file
+    }))
+    resolve(processedFiles)
   } catch (error) {
     console.error('加载文件失败:', error)
     resolve([])
   }
 }
 
+// 定义可打开的文件类型
+const OPENABLE_EXTENSIONS = new Set([
+  // 文本文件
+  'txt', 'log', 'md', 'markdown',
+
+  // 配置文件
+  'json', 'yaml', 'yml', 'toml', 'ini', 'conf', 'config',
+  'properties', 'prop', 'env',
+
+  // 编程语言
+  'js', 'jsx', 'ts', 'tsx', 'vue', 'html', 'htm', 'css', 'scss', 'less',
+  'py', 'pyw', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs',
+  'php', 'rb', 'pl', 'pm', 'sh', 'bash', 'zsh', 'fish',
+  'sql', 'mysql', 'pgsql', 'lua', 'swift',
+
+  // 标记语言
+  'xml', 'svg', 'wxml', 'xaml',
+])
+
+// 定义特殊文件名列表（不带扩展名但可以打开的文件）
+const SPECIAL_FILES = new Set([
+  'dockerfile',
+  'makefile',
+  'jenkinsfile',
+  '.env',
+  '.gitignore',
+  '.dockerignore',
+  'nginx.conf',
+  '.babelrc',
+  '.eslintrc',
+  '.prettierrc',
+])
+
+// 检查文件是否可以打开
+const isFileOpenable = (filename) => {
+  // 转换为小写以进行大小写不敏感的比较
+  const lowerFilename = filename.toLowerCase()
+
+  // 检查特殊文件名
+  if (SPECIAL_FILES.has(lowerFilename)) {
+    return true
+  }
+
+  // 获取文件扩展名
+  const ext = lowerFilename.split('.').pop()
+  return OPENABLE_EXTENSIONS.has(ext)
+}
+
 const handleNodeClick = (data) => {
   console.log('Node clicked:', data)
+  if (data.type === 'file' && !isFileOpenable(data.name)) {
+    ElMessage.warning('该类型的文件不支持在编辑器中打开')
+    return
+  }
   emit('file-click', data)
 }
 
 const handleNodeDoubleClick = (data) => {
   console.log('Node double clicked:', data)
+  if (data.type === 'file' && !isFileOpenable(data.name)) {
+    ElMessage.warning('该类型的文件不支持在编辑器中打开')
+    return
+  }
   if (data.type === 'file') {
     console.log('Emitting file-dblclick event')
     emit('file-dblclick', data)

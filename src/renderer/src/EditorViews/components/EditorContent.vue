@@ -170,7 +170,9 @@ const createEditor = (tab) => {
       const line = update.state.doc.lineAt(pos)
       emit('cursor-change', {
         line: line.number,
-        column: pos - line.from + 1
+        column: pos - line.from + 1,
+        totalLines: update.state.doc.lines,
+        totalChars: update.state.doc.length
       })
     })
   );
@@ -189,6 +191,16 @@ const createEditor = (tab) => {
 
   editors.set(tab.path, editor)
   console.log('Editor created with content:', editor.state.doc.toString().length)
+
+  // 初始化时发送光标位置和文档信息
+  const pos = editor.state.selection.main.head
+  const line = editor.state.doc.lineAt(pos)
+  emit('cursor-change', {
+    line: line.number,
+    column: pos - line.from + 1,
+    totalLines: editor.state.doc.lines,
+    totalChars: editor.state.doc.length
+  })
 }
 
 // 获取编辑器内容
@@ -267,6 +279,18 @@ watch(() => props.activeTab, (newPath, oldPath) => {
         createEditor(tab)
       }
     }
+    // 切换标签页时更新光标位置
+    const editor = editors.get(newPath)
+    if (editor) {
+      const pos = editor.state.selection.main.head
+      const line = editor.state.doc.lineAt(pos)
+      emit('cursor-change', {
+        line: line.number,
+        column: pos - line.from + 1,
+        totalLines: editor.state.doc.lines,
+        totalChars: editor.state.doc.length
+      })
+    }
   }
 })
 
@@ -316,12 +340,13 @@ defineExpose({
 
 :deep(.cm-scroller) {
   font-family: 'Consolas', 'Monaco', monospace;
-  padding: 4px 0;
 }
 
 :deep(.cm-gutters) {
   border-right: 1px solid var(--el-border-color-lighter);
   background: var(--el-bg-color);
+  min-height: 100%;
+  padding: 0;
 }
 
 :deep(.cm-activeLineGutter) {
@@ -329,6 +354,11 @@ defineExpose({
 }
 
 :deep(.cm-line) {
-  padding: 0 4px 0 8px;
+  padding: 0 4px 0 4px;
+}
+
+:deep(.cm-content) {
+  min-height: 100%;
+  padding: 0;
 }
 </style> 

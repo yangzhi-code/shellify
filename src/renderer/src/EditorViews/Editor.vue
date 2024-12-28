@@ -79,7 +79,7 @@ const connectionId = computed(() => currentConnection.value?.data?.id)
 const currentPath = computed(() => currentConnection.value?.filePath || '/')
 
 // 添加侧边栏宽度调整相关的状态
-const sidebarWidth = ref(260)
+const sidebarWidth = ref(200)
 const isResizing = ref(false)
 
 // 开始调整大小
@@ -231,8 +231,10 @@ const handleSave = async () => {
 }
 
 // 处理光标位置变化
-const handleCursorChange = ({ line, column }) => {
-  cursorPosition.value = `Ln ${line}, Col ${column}`
+const handleCursorChange = ({ line, column, totalLines, totalChars }) => {
+  cursorPosition.value = totalLines ? 
+    `Ln ${line}, Col ${column} (${totalLines} 行, ${totalChars} 字符)` :
+    `Ln ${line}, Col ${column}`
 }
 
 // 处理内容变化
