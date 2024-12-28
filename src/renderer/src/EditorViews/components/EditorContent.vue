@@ -138,17 +138,12 @@ defineExpose({
 
 <style scoped>
 .editor-content {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
+  height: 100%;
+  background: var(--el-bg-color);
 }
 
 .editor-instance {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  height: 100%;
   display: none;
 }
 
@@ -162,5 +157,19 @@ defineExpose({
 
 :deep(.cm-scroller) {
   font-family: 'Consolas', 'Monaco', monospace;
+  padding: 4px 0;
+}
+
+:deep(.cm-gutters) {
+  border-right: 1px solid var(--el-border-color-lighter);
+  background: var(--el-bg-color);
+}
+
+:deep(.cm-activeLineGutter) {
+  background: transparent;
+}
+
+:deep(.cm-line) {
+  padding: 0 4px 0 8px;
 }
 </style> 

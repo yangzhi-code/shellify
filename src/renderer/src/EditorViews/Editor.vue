@@ -1,13 +1,19 @@
 <template>
   <div class="editor-layout">
     <!-- 左侧边栏 -->
-    <div class="editor-sidebar">
+    <div class="editor-sidebar" :style="{ width: sidebarWidth + 'px' }">
       <EditorSidebar 
         :connection-id="connectionId"
         :current-path="currentPath"
         @file-click="handleFileClick" 
       />
     </div>
+
+    <!-- 拖动条 -->
+    <div 
+      class="resize-handle"
+      @mousedown="startResize"
+    ></div>
 
     <!-- 主编辑区域 -->
     <div class="editor-main">
@@ -70,6 +76,33 @@ const connectionId = computed(() => currentConnection.value?.data?.id)
 
 // 添加计算属性用于处理路径
 const currentPath = computed(() => currentConnection.value?.filePath || '/')
+
+// 添加侧边栏宽度调整相关的状态
+const sidebarWidth = ref(260)
+const isResizing = ref(false)
+
+// 开始调整大小
+const startResize = (e) => {
+  isResizing.value = true
+  const startX = e.clientX
+  const startWidth = sidebarWidth.value
+
+  const handleMouseMove = (e) => {
+    if (!isResizing.value) return
+    const newWidth = startWidth + e.clientX - startX
+    // 限制最小和最大宽度
+    sidebarWidth.value = Math.min(Math.max(newWidth, 160), 600)
+  }
+
+  const handleMouseUp = () => {
+    isResizing.value = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+  }
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+}
 
 // 初始化标签页
 onMounted(() => {
@@ -187,18 +220,96 @@ onUnmounted(() => {
 .editor-layout {
   height: 100vh;
   display: flex;
-  background: var(--el-bg-color);
+  background: var(--el-bg-color-page);
+  color: var(--el-text-color-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
+  overflow: hidden;
+  position: fixed; /* 防止页面滚动 */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .editor-sidebar {
-  width: 250px;
-  border-right: 1px solid var(--el-border-color-light);
-  background: var(--el-bg-color-overlay);
+  height: 100%;
+  border-right: 1px solid var(--el-border-color-lighter);
+  background: var(--el-bg-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0; /* 防止侧边栏被压缩 */
+}
+
+/* 拖动条样式 */
+.resize-handle {
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  background: var(--el-color-primary-light-8);
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  width: 9px;
+  height: 100%;
 }
 
 .editor-main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  background: var(--el-bg-color);
+}
+
+/* 工具栏样式 */
+:deep(.editor-toolbar) {
+  height: 35px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  flex-shrink: 0;
+}
+
+/* 标签栏样式 */
+:deep(.editor-tabs) {
+  height: 35px;
+  background: var(--el-bg-color-page);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  flex-shrink: 0;
+}
+
+/* 编辑器内容区域 */
+:deep(.editor-content) {
+  flex: 1;
+  overflow: hidden;
+  background: var(--el-bg-color);
+  min-height: 0;
+}
+
+/* 状态栏样式 */
+:deep(.editor-status-bar) {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 12px;
+  background: var(--el-bg-color);
+  border-top: 1px solid var(--el-border-color-lighter);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 </style> 

@@ -38,10 +38,47 @@ const handleClose = (path) => {
 
 <style scoped>
 .editor-tabs {
-  border-bottom: 1px solid var(--el-border-color-light);
+  display: flex;
+  align-items: center;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
-:deep(.el-tabs__header) {
-  margin: 0;
+.tab {
+  height: 100%;
+  padding: 0 10px;
+  min-width: 120px;
+  max-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  border-right: 1px solid var(--el-border-color-lighter);
+  background: var(--el-bg-color);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tab.active {
+  background: var(--el-bg-color);
+  border-top: 2px solid var(--el-color-primary);
+}
+
+.tab:hover:not(.active) {
+  background: var(--el-fill-color-light);
+}
+
+.tab-close {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.tab-close:hover {
+  background: var(--el-fill-color);
 }
 </style> 
