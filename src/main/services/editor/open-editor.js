@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import icon from '../../../../resources/icon.png?asset'
+import fs from 'fs/promises'
 
 // 创建编辑器窗口
 function createEditorWindow(fileInfo) {
@@ -13,7 +14,7 @@ function createEditorWindow(fileInfo) {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../../../preload/index.js'),
+      preload: join(__dirname, '../../preload/index.js'),
       sandbox: false,
       nodeIntegration: true,
       contextIsolation: false,
@@ -44,11 +45,3 @@ function createEditorWindow(fileInfo) {
     editorWindow.webContents.send('file-to-edit', fileInfo)
   })
 }
-
-export function setupOpenEditorHandlers() {
-  // 监听打开编辑器请求
-  ipcMain.on('open-editor', (event, fileInfo) => {
-    console.log('Main process received open-editor event:', fileInfo);
-    createEditorWindow(fileInfo)
-  })
-} 

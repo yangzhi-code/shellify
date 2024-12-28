@@ -1,38 +1,34 @@
-import { setupSSHHandlers } from './ssh';
-import { setupMenuHandlers } from './menu';
-import { setupStoreHandlers } from './store';
-import { setupClipboardHandlers } from './clipboard';
-import { setupFileHandlers } from './file';
-import { setupDownloadHandlers } from './download';
-import { setupSettingsHandlers } from './settings';
-import { setupDialogHandlers } from './dialog';
-import { setupUploadHandlers } from './upload';
-import { setupOpenEditorHandlers } from './editor/open-editor';
+import { ipcMain } from 'electron'
+import { editorHandlers } from './editor/editor'
+import { setupSSHHandlers } from './ssh'
+import { setupMenuHandlers } from './menu'
+import { setupStoreHandlers } from './store'
+import { setupClipboardHandlers } from './clipboard'
+import { setupFileHandlers } from './file'
+import { setupDownloadHandlers } from './download'
+import { setupSettingsHandlers } from './settings'
+import { setupDialogHandlers } from './dialog'
+import { setupUploadHandlers } from './upload'
 
-/**
- * 初始化所有 IPC 处理器
- * 这是 IPC 模块的统一入口点
- * 负责设置所有的主进程 IPC 通信处理器
- */
+// 注册所有 IPC 处理器
 export function setupIpcHandlers() {
-  // 设置 SSH 相关处理器（连接、终端、状态监控等）
-  setupSSHHandlers();
-  // 设置连接配置存储处理器
-  setupStoreHandlers();
-  // 设置剪贴板操作处理器
-  setupClipboardHandlers();
-  // 设置上下文菜单处理器
-  setupMenuHandlers();
-  // 设置文件相关处理器
-  setupFileHandlers();
-  // 设置下载处理程序
-  setupDownloadHandlers();
-  // 设置上传处理程序
-  setupUploadHandlers();
-  // 设置设置处理器
-  setupSettingsHandlers();
-  // 设置对话框处理程序
-  setupDialogHandlers();
-  // 设置打开编辑器处理程序
-  setupOpenEditorHandlers();
+  // 注册编辑器相关处理器
+  Object.entries(editorHandlers).forEach(([channel, handler]) => {
+    if (channel.includes('save') || channel.includes('read')) {
+      ipcMain.handle(channel, handler)
+    } else {
+      ipcMain.on(channel, handler)
+    }
+  })
+
+  // 设置其他处理器
+  setupSSHHandlers()
+  setupStoreHandlers()
+  setupClipboardHandlers()
+  setupMenuHandlers()
+  setupFileHandlers()
+  setupDownloadHandlers()
+  setupUploadHandlers()
+  setupSettingsHandlers()
+  setupDialogHandlers()
 } 
