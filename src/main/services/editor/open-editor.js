@@ -7,6 +7,7 @@ import fs from 'fs/promises'
 // 创建编辑器窗口
 function createEditorWindow(fileInfo) {
   console.log('Creating editor window with fileInfo:', fileInfo);
+
   const editorWindow = new BrowserWindow({
     width: 1100,
     height: 670,
@@ -22,7 +23,7 @@ function createEditorWindow(fileInfo) {
     }
   })
 
-  console.log('Editor window created');
+  console.log('到这里');
 
   require('@electron/remote/main').enable(editorWindow.webContents)
 
@@ -33,11 +34,15 @@ function createEditorWindow(fileInfo) {
 
   // 加载编辑器页面
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    console.log('文件数据:', fileInfo);
     console.log('Loading dev URL:', `${process.env['ELECTRON_RENDERER_URL']}/editor.html`);
-    editorWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/editor.html`)
+    const queryParams = new URLSearchParams(fileInfo).toString()
+    editorWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/editor.html?${queryParams}`)
   } else {
     console.log('Loading production file');
-    editorWindow.loadFile(join(__dirname, '../../../renderer/editor.html'))
+    editorWindow.loadFile(join(__dirname, '../../../renderer/editor.html'), {
+      query: fileInfo
+    })
   }
 
   editorWindow.webContents.on('did-finish-load', () => {

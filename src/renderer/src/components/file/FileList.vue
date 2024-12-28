@@ -74,6 +74,9 @@
 <script setup>
 import { Document, Folder, Download, Edit, Delete } from '@element-plus/icons-vue';
 import { formatFileSize } from '../../utils/format';
+import { useTabsStore } from '../../stores/terminalStore';
+import { Row } from 'ant-design-vue';
+import { toRaw } from 'vue';
 
 const props = defineProps({
   files: Array,
@@ -104,13 +107,20 @@ const cancelEdit = (row) => {
     emit('cancel-new-folder');
   }
 };
-
-const handleEdit = (row) => {
-  window.electron.ipcRenderer.send('open-editor', {
-    path: row.path,
-    name: row.name,
-    type: row.type
-  });
+// 打开编辑器
+const handleEdit = (row, connectionId) => {
+  //通过connectionId查找editableTabs
+  const editableTabs = useTabsStore().findEditableTabsByConnectionId(connectionId)
+  var editableTab = toRaw(editableTabs)
+  // 合并 SSH 连接信息和文件信息
+  const editorInfo = {
+    ...editableTab,  // SSH 连接信息
+    filePath: row.path,  // 文件路径
+    fileName: row.name,  // 文件名
+    fileType: row.type   // 文件类型
+  }
+  //通过id打开编辑器
+  window.electron.ipcRenderer.send('open-editor', editorInfo);
 };
 </script>
 

@@ -3,8 +3,7 @@ class EditorIpcService {
   static async readFile(path) {
     try {
       console.log('Reading file:', path)
-      const content = await window.electron.ipcRenderer.invoke('read-file', path)
-      return content
+      return await window.electron.ipcRenderer.invoke('read-file', path)
     } catch (error) {
       console.error('Failed to read file:', error)
       throw error

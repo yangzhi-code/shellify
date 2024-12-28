@@ -56,4 +56,27 @@ export function setupFileHandlers() {
       throw error;
     }
   });
+
+  // SSH 文件读取处理器
+  ipcMain.handle('ssh:read-file', async (event, { connectionId, path }) => {
+    try {
+
+      return await FileManager.readFile(connectionId, path);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      throw error;
+    }
+  });
+
+  // SSH 文件保存处理器
+  ipcMain.handle('ssh:save-file', async (event, { connectionId, path, content }) => {
+    try {
+
+      await FileManager.writeFile(connectionId, path, content);
+      return true;
+    } catch (error) {
+      console.error('Error saving file:', error);
+      throw error;
+    }
+  });
 }

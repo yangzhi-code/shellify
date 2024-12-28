@@ -676,6 +676,16 @@ class FileManager {
       throw error
     }
   }
+  //读取文件
+  async readFile(connectionId, remotePath) {
+    const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+    return sftp.readFile(remotePath, 'utf8');
+  }
+  //写入文件
+  async writeFile(connectionId, remotePath, content) {
+    const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+    return sftp.writeFile(remotePath, content);
+  }
 }
 
 export default new FileManager(); 

@@ -6,7 +6,7 @@ import fs from 'fs/promises'
 
 // 创建编辑器窗口
 function createEditorWindow(fileInfo) {
-  console.log('Creating editor window with fileInfo:', fileInfo);
+  console.log('创建编辑器窗口携带的参数:', fileInfo);
   const editorWindow = new BrowserWindow({
     width: 1100,
     height: 670,
@@ -14,7 +14,7 @@ function createEditorWindow(fileInfo) {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../../preload/index.js'),
+      preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: true,
       contextIsolation: false,
@@ -31,7 +31,7 @@ function createEditorWindow(fileInfo) {
 
   // 加载编辑器页面
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    console.log('Loading dev URL:', `${process.env['ELECTRON_RENDERER_URL']}/editor.html`);
+    console.log('编辑器开发环境地址:', `${process.env['ELECTRON_RENDERER_URL']}/editor.html`);
     editorWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/editor.html`)
   } else {
     console.log('Loading production file');
@@ -39,7 +39,7 @@ function createEditorWindow(fileInfo) {
   }
 
   editorWindow.webContents.on('did-finish-load', () => {
-    console.log('Editor window finished loading, sending file info:', fileInfo);
+    console.log('编辑器窗口加载完成,发送文件信息:', fileInfo);
     editorWindow.webContents.send('file-to-edit', fileInfo)
   })
 }
@@ -47,9 +47,9 @@ function createEditorWindow(fileInfo) {
 // 编辑器相关的 IPC 处理器
 export const editorHandlers = {
   // 打开编辑器窗口
-  'open-editor': (event, fileInfo) => {
-    console.log('Main process received open-editor event:', fileInfo);
-    createEditorWindow(fileInfo)
+  'open-editor': (event, editableTab) => {
+    console.log('打开一个新的编辑器:',editableTab);
+    createEditorWindow(editableTab)
   },
 
   // 读取文件内容
