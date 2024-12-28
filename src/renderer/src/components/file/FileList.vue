@@ -11,6 +11,7 @@
           <el-icon v-else><Document /></el-icon>
           
           <el-input
+            class="edit-input"
             v-if="row.isEditing"
             v-model="row.editingName"
             size="small"
@@ -98,7 +99,6 @@ const cancelEdit = (row) => {
     emit('cancel-new-folder');
   }
 };
-
 </script>
 
 <style scoped>
@@ -107,27 +107,15 @@ const cancelEdit = (row) => {
   overflow: auto;
   width: 100% !important;
   min-width: 0;
-  --el-table-header-cell-height: 32px;
-  --el-table-row-height: 32px;
-}
-
-:deep(.el-table__inner-wrapper) {
-  min-width: 0;
-  width: 100% !important;
-}
-
-:deep(.el-table td.el-table__cell) {
-  padding: 4px 0;
-}
-
-:deep(.el-table th.el-table__cell) {
-  padding: 4px 0;
+  --el-table-header-cell-height: 20px; /* 表头高度 */
+  --el-table-row-height: 20px; /* 列表行高 */
 }
 
 .file-name-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px; /* 减少间距，适应更小的行高 */
+  height: 20px; /* 确保和行高一致 */
 }
 
 .file-name {
@@ -138,22 +126,28 @@ const cancelEdit = (row) => {
   color: var(--el-color-primary);
 }
 
+.edit-input :deep(.el-input__inner) {
+  display: flex;
+  align-items: center;
+  height: 18px; /* 输入框高度略小于行高，避免视觉溢出 */
+  padding: 0 1px; /* 减少输入框的内边距 */
+  margin: 0; /* 去除额外的外边距 */
+  box-sizing: border-box;
+}
+
+:deep(.el-table td.el-table__cell),
+:deep(.el-table th.el-table__cell) {
+  padding: 0; /* 去除单元格额外内边距 */
+}
+
 :deep(.el-button--small) {
-  height: 24px;
-  padding: 0 8px;
+  height: 18px; /* 按钮高度适配行高 */
+  padding: 0 4px; /* 减少按钮内边距 */
 }
 
 :deep(.el-icon) {
   display: flex;
   align-items: center;
-  font-size: 14px;
+  font-size: 12px; /* 缩小图标尺寸 */
 }
-
-:deep(.el-input__wrapper) {
-  padding: 0 8px;
-}
-
-:deep(.el-input__inner) {
-  height: 24px;
-}
-</style> 
+</style>
