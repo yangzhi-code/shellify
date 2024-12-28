@@ -130,28 +130,46 @@ const handleFileClick = async (fileInfo) => {
     return
   }
 
-  // 如果标签页已存在，切换到该标签页
-  if (tabs.value.some(tab => tab.path === fileInfo.filePath)) {
-    handleTabSwitch(fileInfo.filePath)
-    return
-  }
-
   try {
-    // 使用 SSH 连接信息读取文件
+    console.log('Opening file:', fileInfo.filePath)
+    
+    // 如果标签页已存在，切换到该标签页
+    if (tabs.value.some(tab => tab.path === fileInfo.filePath)) {
+      handleTabSwitch(fileInfo.filePath)
+      return
+    }
+
+    // 先创建标签页，但不包含内容
+    const newTab = {
+      path: fileInfo.filePath,
+      name: fileInfo.fileName,
+      content: '', // 初始为空
+      type: fileInfo.fileType
+    }
+    tabs.value.push(newTab)
+    handleTabSwitch(fileInfo.filePath)
+
+    // 读取文件内容
+    console.log('Reading file content...')
     const content = await window.electron.ipcRenderer.invoke('ssh:read-file', {
       connectionId: connectionId.value,
       path: fileInfo.filePath
     })
-    
-    tabs.value.push({
-      path: fileInfo.filePath,
-      name: fileInfo.fileName,
-      content,
-      type: fileInfo.fileType
-    })
-    handleTabSwitch(fileInfo.filePath)
+
+    // 更新标签页内容
+    const tab = tabs.value.find(t => t.path === fileInfo.filePath)
+    if (tab) {
+      tab.content = content
+      console.log('File content loaded, length:', content.length)
+    }
+
   } catch (error) {
     console.error('打开文件失败:', error)
+    // 如果读取失败，移除标签页
+    const index = tabs.value.findIndex(tab => tab.path === fileInfo.filePath)
+    if (index !== -1) {
+      tabs.value.splice(index, 1)
+    }
     ElMessage.error('打开文件失败：' + error.message)
   }
 }

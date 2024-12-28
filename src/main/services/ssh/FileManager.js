@@ -678,8 +678,35 @@ class FileManager {
   }
   //读取文件
   async readFile(connectionId, remotePath) {
-    const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
-    return sftp.readFile(remotePath, 'utf8');
+    try {
+      // 确保有连接
+      const sftp = await SSHConnectionManager.getSFTPSession(connectionId)
+      if (!sftp) {
+        throw new Error('SFTP 会话未建立')
+      }
+
+      // 读取文件
+      const content = await new Promise((resolve, reject) => {
+        sftp.readFile(remotePath, 'utf8', (err, data) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(data)
+          }
+        })
+      })
+
+      // 检查内容
+      if (content === undefined || content === null) {
+        throw new Error('无法读取文件内容')
+      }
+
+      console.log(`[FileManager] Read file ${remotePath}, content length:`, content.length)
+      return content
+    } catch (error) {
+      console.error(`[FileManager] Failed to read file ${remotePath}:`, error)
+      throw new Error(`读取文件失败: ${error.message}`)
+    }
   }
   //写入文件
   async writeFile(connectionId, remotePath, content) {

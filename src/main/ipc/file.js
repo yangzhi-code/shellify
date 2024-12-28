@@ -60,11 +60,20 @@ export function setupFileHandlers() {
   // SSH 文件读取处理器
   ipcMain.handle('ssh:read-file', async (event, { connectionId, path }) => {
     try {
-
-      return await FileManager.readFile(connectionId, path);
+      console.log('[IPC] Reading file:', path)
+      const content = await FileManager.readFile(connectionId, path)
+      
+      // 检查内容是否为空
+      if (content === undefined || content === null) {
+        throw new Error('文件内容为空')
+      }
+      
+      console.log('[IPC] File read successfully, content length:', content.length)
+      return content
     } catch (error) {
-      console.error('Error reading file:', error);
-      throw error;
+      console.error('[IPC] Error reading file:', error)
+      // 确保返回一个有意义的错误消息
+      throw new Error(error.message || '读取文件失败')
     }
   });
 

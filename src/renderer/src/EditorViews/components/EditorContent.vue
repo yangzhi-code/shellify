@@ -11,14 +11,14 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { EditorView } from '@codemirror/view'
+import { EditorView, lineNumbers } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
-import { syntaxHighlighting, defaultHighlightStyle, indentOnInput, bracketMatching, foldGutter } from '@codemirror/language'
-import { lineNumbers } from '@codemirror/view'
 import { javascript } from '@codemirror/lang-javascript'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { autocompletion } from '@codemirror/autocomplete'
+import { history } from '@codemirror/commands'
+import { indentOnInput, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
+import { bracketMatching } from '@codemirror/language'
+import { closeBrackets } from '@codemirror/autocomplete'
 
 const props = defineProps({
   tabs: {
@@ -41,48 +41,50 @@ const createEditor = (tab) => {
   const el = editorRefs.value[tab.path]
   if (!el || editors.has(tab.path)) return
 
+  console.log('Creating editor for tab:', {
+    path: tab.path,
+    contentLength: tab.content ? tab.content.length : 0,
+    contentPreview: tab.content ? tab.content.substring(0, 100) : 'empty'
+  })
+
   // 清空容器
   el.innerHTML = ''
 
-  const state = EditorState.create({
-    doc: tab.content,
-    extensions: [
-      lineNumbers(),
-      history(),
-      indentOnInput(),
-      bracketMatching(),
-      autocompletion(),
-      foldGutter(),
-      syntaxHighlighting(defaultHighlightStyle),
-      defaultKeymap,
-      historyKeymap,
-      javascript(),
-      oneDark,
-      EditorView.theme({
-        '&': {
-          height: '100%',
-          fontSize: '14px'
-        },
-        '.cm-scroller': {
-          fontFamily: 'Consolas, "Courier New", monospace'
-        }
-      }),
-      EditorView.updateListener.of(update => {
-        if (update.docChanged) {
-          emit('content-change', tab.path, update.state.doc.toString())
-        }
-      }),
-      EditorView.domEventHandling({
-        'keyup': (event, view) => {
-          const pos = view.state.selection.main.head
-          const line = view.state.doc.lineAt(pos)
-          emit('cursor-change', {
-            line: line.number,
-            column: pos - line.from + 1
-          })
-        }
+  // 使用独立的扩展组合
+  const extensions = [
+    lineNumbers(),
+    history(),
+    indentOnInput(),
+    bracketMatching(),
+    closeBrackets(),
+    syntaxHighlighting(defaultHighlightStyle),
+    javascript(),
+    oneDark,
+    EditorView.theme({
+      '&': {
+        height: '100%',
+        fontSize: '14px'
+      },
+      '.cm-scroller': {
+        fontFamily: 'Consolas, "Courier New", monospace'
+      }
+    }),
+    EditorView.updateListener.of(update => {
+      if (update.docChanged) {
+        emit('content-change', tab.path, update.state.doc.toString())
+      }
+      const pos = update.state.selection.main.head
+      const line = update.state.doc.lineAt(pos)
+      emit('cursor-change', {
+        line: line.number,
+        column: pos - line.from + 1
       })
-    ]
+    })
+  ]
+
+  const state = EditorState.create({
+    doc: tab.content || '',
+    extensions
   })
 
   const editor = new EditorView({
@@ -91,7 +93,7 @@ const createEditor = (tab) => {
   })
 
   editors.set(tab.path, editor)
-  console.log('Editor created for:', tab.path)
+  console.log('Editor created successfully for:', tab.path)
 }
 
 // 获取编辑器内容
@@ -100,11 +102,23 @@ const getContent = (path) => {
   return editor ? editor.state.doc.toString() : ''
 }
 
-// 监听标签变化
+// 监听标签变化，包括内容更新
 watch(() => props.tabs, (newTabs) => {
+  console.log('Tabs changed, checking for updates...')
   newTabs.forEach(tab => {
     if (!editors.has(tab.path)) {
+      console.log('Creating new editor for:', tab.path)
       createEditor(tab)
+    } else if (tab.content !== editors.get(tab.path).state.doc.toString()) {
+      console.log('Updating content for:', tab.path)
+      const editor = editors.get(tab.path)
+      editor.dispatch({
+        changes: {
+          from: 0,
+          to: editor.state.doc.length,
+          insert: tab.content || ''
+        }
+      })
     }
   })
 }, { deep: true })
