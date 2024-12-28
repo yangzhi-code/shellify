@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed, h } from 'vue'
 import { Document, Folder, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -138,7 +138,7 @@ const OPENABLE_EXTENSIONS = new Set([
   'json', 'yaml', 'yml', 'toml', 'ini', 'conf', 'config',
   'properties', 'prop', 'env',
 
-  // 编程语言
+  // 编程��言
   'js', 'jsx', 'ts', 'tsx', 'vue', 'html', 'htm', 'css', 'scss', 'less',
   'py', 'pyw', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs',
   'php', 'rb', 'pl', 'pm', 'sh', 'bash', 'zsh', 'fish',
@@ -216,6 +216,12 @@ const handleContextMenu = (e, data) => {
   showContextMenu.value = true
 }
 
+// 倒计时相关
+const countdown = ref(5)
+const confirmButtonText = computed(() => {
+  return countdown.value > 0 ? `确定 (${countdown.value}s)` : '确定'
+})
+
 // 处理删除操作
 const handleDelete = async () => {
   showContextMenu.value = false
@@ -236,40 +242,122 @@ const handleDelete = async () => {
       }
     }
 
-    // 显示确认对话框
+    // 重置倒计时
+    countdown.value = 5
+    let timer = startCountdown()
+
+    try {
+      // 显示确认对话框
+      await ElMessageBox.confirm(
+        h('div', { class: 'delete-confirm-content' }, [
+          h('p', { class: 'warning-text' }, '⚠️ 警告：删除后将无法恢复'),
+          h('p', { class: 'file-info' }, [
+            '确定要删除',
+            node.type === 'directory' ? '文件夹' : '文件',
+            ' "',
+            h('span', { class: 'file-name' }, node.name),
+            '" 吗？'
+          ])
+        ]),
+        '删除确认',
+        {
+          confirmButtonText: confirmButtonText.value,
+          distinguishCancelAndClose: true,
+          confirmButtonProps: {
+            disabled: true,
+            class: 'is-disabled'
+          },
+          beforeClose: async (action, instance, done) => {
+            if (action === 'confirm' && countdown.value > 0) {
+              return
+            }
+            clearInterval(timer)
+            done()
+          },
+          cancelButtonText: '取消',
+          type: 'warning',
+          customClass: 'delete-confirm-dialog'
+        }
+      )
+
+      // 执行删除操作
+      await window.electron.ipcRenderer.invoke('ssh:delete-file', {
+        connectionId: props.connectionId,
+        path: node.path,
+        isDirectory: node.type === 'directory'
+      })
+
+      // 刷新父节点
+      const treeInstance = treeRef.value
+      const currentNode = treeInstance.getNode(node)
+      const parentNode = currentNode.parent
+      if (parentNode && parentNode.level !== 0) {
+        parentNode.loaded = false
+        parentNode.expand()
+      }
+
+      ElMessage.success('删除成功')
+    } catch (error) {
+      // 只有在不是取消操作时才显示错误
+      const errorStr = error.toString().toLowerCase()
+      if (!errorStr.includes('cancel') && !errorStr.includes('close')) {
+        console.error('删除失败:', error)
+        ElMessage.error('删除失败: ' + error.message)
+      }
+      // 确保清理定时器
+      if (timer) {
+        clearInterval(timer)
+      }
+    }
+  } catch (error) {
+    console.error('检查目录失败:', error)
+    ElMessage.error('检查目录失败: ' + error.message)
+  }
+}
+
+// 创建倒计时定时器
+const startCountdown = () => {
+  countdown.value = 5
+  return setInterval(() => {
+    if (countdown.value > 0) {
+      countdown.value--
+      // 更新确认按钮状态
+      const confirmButton = document.querySelector('.delete-confirm-dialog .el-button--primary')
+      if (confirmButton) {
+        confirmButton.disabled = countdown.value > 0
+        confirmButton.classList.toggle('is-disabled', countdown.value > 0)
+        // 更新按钮文本
+        confirmButton.textContent = countdown.value > 0 ? `确定 (${countdown.value}s)` : '确定'
+      }
+    }
+  }, 1000)
+}
+
+// 修改确认对话框的显示
+const showDeleteConfirm = async (node) => {
+  let timer = startCountdown()
+  try {
     await ElMessageBox.confirm(
       `确定要删除${node.type === 'directory' ? '文件夹' : '文件'} "${node.name}" 吗？`,
       '删除确认',
       {
-        confirmButtonText: '确定',
+        confirmButtonText: '确定 (5s)',  // 设置初始文本
+        distinguishCancelAndClose: true,
+        beforeClose: async (action, instance, done) => {
+          if (action === 'confirm' && countdown.value > 0) {
+            return
+          }
+          clearInterval(timer)
+          done()
+        },
         cancelButtonText: '取消',
         type: 'warning'
       }
     )
-
-    // 执行删除操作
-    await window.electron.ipcRenderer.invoke('ssh:delete-file', {
-      connectionId: props.connectionId,
-      path: node.path,
-      isDirectory: node.type === 'directory'
-    })
-
-    // 刷新父节点
-    const treeInstance = treeRef.value
-    const currentNode = treeInstance.getNode(node)
-    const parentNode = currentNode.parent
-    if (parentNode && parentNode.level !== 0) {
-      // 手动触发父节点的重新加载
-      parentNode.loaded = false
-      parentNode.expand()
-    }
-
-    ElMessage.success('删除成功')
+    return true
   } catch (error) {
-    if (error.toString() !== 'Error: cancel') {
-      console.error('删除失败:', error)
-      ElMessage.error('删除失败: ' + error.message)
-    }
+    clearInterval(timer)
+    return false
   }
 }
 
@@ -415,5 +503,91 @@ onUnmounted(() => {
 .menu-item .el-icon {
   margin-right: 8px;
   font-size: 14px;
+}
+
+/* 添加禁用按钮的样式 */
+:deep(.el-message-box__btns .el-button--primary[disabled]) {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* 删除确认对话框样式 */
+:deep(.delete-confirm-dialog) {
+  .delete-confirm-content {
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .warning-text {
+    color: var(--el-color-danger);
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .file-info {
+    color: var(--el-text-color-regular);
+    font-size: 14px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .file-name {
+    color: var(--el-text-color-primary);
+    font-size: 13px;
+    font-family: monospace;
+    background-color: var(--el-fill-color-light);
+    padding: 2px 4px;
+    border-radius: 2px;
+    word-break: break-all;
+    max-width: 100%;
+    display: inline-block;
+  }
+
+  /* 调整消息框的整体样式 */
+  &.el-message-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .el-message-box__header {
+    text-align: center;
+    width: 100%;
+  }
+
+  .el-message-box__content {
+    text-align: center;
+    width: 100%;
+  }
+
+  .el-message-box__btns {
+    justify-content: center;
+    .el-button--primary {
+      font-size: 13px;
+      
+      &[disabled],
+      &.is-disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+        background-color: var(--el-button-disabled-bg);
+        border-color: var(--el-button-disabled-border-color);
+        color: var(--el-button-disabled-text-color);
+        pointer-events: none;
+      }
+    }
+    
+    .el-button--default {
+      font-size: 13px;
+    }
+  }
 }
 </style> 
