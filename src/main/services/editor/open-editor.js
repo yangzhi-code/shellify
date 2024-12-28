@@ -2,11 +2,10 @@ import { BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import icon from '../../../../resources/icon.png?asset'
-import fs from 'fs/promises'
 
 // 创建编辑器窗口
 function createEditorWindow(fileInfo) {
-  console.log('Creating editor window with fileInfo:', fileInfo);
+  console.log('创建编辑器窗口，文件信息:', fileInfo)
 
   const editorWindow = new BrowserWindow({
     width: 1100,
@@ -23,30 +22,26 @@ function createEditorWindow(fileInfo) {
     }
   })
 
-  console.log('到这里');
-
   require('@electron/remote/main').enable(editorWindow.webContents)
 
   editorWindow.on('ready-to-show', () => {
-    console.log('Editor window ready to show');
     editorWindow.show()
   })
 
-  // 加载编辑器页面
+  // 直接加载编辑器页面，不传递参数
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    console.log('文件数据:', fileInfo);
-    console.log('Loading dev URL:', `${process.env['ELECTRON_RENDERER_URL']}/editor.html`);
-    const queryParams = new URLSearchParams(fileInfo).toString()
-    editorWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/editor.html?${queryParams}`)
+    editorWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/editor.html`)
   } else {
-    console.log('Loading production file');
-    editorWindow.loadFile(join(__dirname, '../../../renderer/editor.html'), {
-      query: fileInfo
-    })
+    editorWindow.loadFile(join(__dirname, '../../../renderer/editor.html'))
   }
 
+  // 等待页面加载完成后发送文件信息
   editorWindow.webContents.on('did-finish-load', () => {
-    console.log('Editor window finished loading, sending file info:', fileInfo);
+    console.log('编辑器窗口加载完成,发送文件信息:', fileInfo)
     editorWindow.webContents.send('file-to-edit', fileInfo)
   })
+
+  return editorWindow
 }
+
+export { createEditorWindow }

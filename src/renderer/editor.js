@@ -4,16 +4,15 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import './assets/main.css'
 
-// 从 URL 参数中获取所有参数
-const urlParams = new URLSearchParams(window.location.search)
-const props = Object.fromEntries(urlParams.entries())
+// 创建应用时使用默认值
+const app = createApp(Editor, {
+  editableTab: {
+    data: { id: null },
+    filePath: '',
+    fileName: '',
+    fileType: 'text'
+  }
+})
 
-if (!props.connectionId) {
-  console.error('No connection ID provided')
-} else {
-  const app = createApp(Editor, {
-    ...props // 传递所有参数给组件
-  })
-  app.use(ElementPlus)
-  app.mount('#app')
-} 
+app.use(ElementPlus)
+app.mount('#app') 

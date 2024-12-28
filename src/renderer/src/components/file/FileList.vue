@@ -77,6 +77,7 @@ import { formatFileSize } from '../../utils/format';
 import { useTabsStore } from '../../stores/terminalStore';
 import { Row } from 'ant-design-vue';
 import { toRaw } from 'vue';
+const tabsStore = useTabsStore()
 
 const props = defineProps({
   files: Array,
@@ -108,9 +109,12 @@ const cancelEdit = (row) => {
   }
 };
 // 打开编辑器
-const handleEdit = (row, connectionId) => {
+const handleEdit = (row) => {
   //通过connectionId查找editableTabs
-  const editableTabs = useTabsStore().findEditableTabsByConnectionId(connectionId)
+  var connectionId = tabsStore.activeConnectionId
+  var editableTab = tabsStore.editableTabs
+  const editableTabs = tabsStore.editableTabs.find(tab => tab.data?.id === connectionId)
+  
   var editableTab = toRaw(editableTabs)
   // 合并 SSH 连接信息和文件信息
   const editorInfo = {

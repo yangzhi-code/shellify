@@ -95,10 +95,6 @@ export const useTabsStore = defineStore('tabs', {
         this.editableTabsValue = ''
         this.activeConnectionId = null
       }
-    },
-    //通过连接id查找editableTabs
-    findEditableTabsByConnectionId(connectionId) {
-      return this.editableTabs.find(tab => tab.data?.id === connectionId)
     }
   }
 })

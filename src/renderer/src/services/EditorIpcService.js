@@ -24,12 +24,23 @@ class EditorIpcService {
 
   // 监听文件打开事件
   static onFileOpen(callback) {
-    window.electron.ipcRenderer.on('file-to-edit', callback)
+    // 移除之前的监听器，避免重复
+    window.electron.ipcRenderer.removeAllListeners('file-to-edit')
+    
+    window.electron.ipcRenderer.on('file-to-edit', (_event, fileInfo) => {
+      // 确保 fileInfo 是正确的对象格式
+      if (typeof fileInfo === 'object' && fileInfo !== null) {
+        console.log('收到文件信息:', fileInfo)
+        callback(fileInfo)
+      } else {
+        console.warn('收到无效的文件信息:', fileInfo)
+      }
+    })
   }
 
   // 移除文件打开事件监听
-  static removeFileOpenListener(callback) {
-    window.electron.ipcRenderer.removeListener('file-to-edit', callback)
+  static removeFileOpenListener() {
+    window.electron.ipcRenderer.removeAllListeners('file-to-edit')
   }
 }
 

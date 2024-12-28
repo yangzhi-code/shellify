@@ -4,6 +4,7 @@
     <div class="editor-sidebar">
       <EditorSidebar 
         :connection-id="connectionId"
+        :current-path="currentPath"
         @file-click="handleFileClick" 
       />
     </div>
@@ -40,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import EditorSidebar from './components/EditorSidebar.vue'
 import EditorToolbar from './components/EditorToolbar.vue'
@@ -56,15 +57,46 @@ const fileType = ref('Text')
 const cursorPosition = ref('Ln 1, Col 1')
 const editorRef = ref(null)
 
-const props = defineProps({
-  connectionId: {
-    type: String,
-    required: true
-  }
+// 当前编辑器的连接信息
+const currentConnection = ref({
+  data: { id: null },
+  filePath: '',
+  fileName: '',
+  fileType: 'text'
+})
+
+// 计算属性：获取连接 ID
+const connectionId = computed(() => currentConnection.value?.data?.id)
+
+// 添加计算属性用于处理路径
+const currentPath = computed(() => currentConnection.value?.filePath || '/')
+
+// 初始化标签页
+onMounted(() => {
+  // 监听文件打开请求
+  EditorIpcService.onFileOpen((fileInfo) => {
+    console.log('EditorIpcService 收到文件信息:', fileInfo)
+    if (fileInfo && typeof fileInfo === 'object') {
+      // 更新当前连接信息
+      currentConnection.value = fileInfo
+      
+      // 打开文件
+      handleFileClick({
+        filePath: fileInfo.filePath,
+        fileName: fileInfo.fileName || '未命名',
+        fileType: fileInfo.fileType || 'text'
+      })
+    }
+  })
 })
 
 // 处理文件点击
 const handleFileClick = async (fileInfo) => {
+  if (!fileInfo?.filePath) {
+    console.warn('无效的文件信息:', fileInfo)
+    return
+  }
+
   // 如果标签页已存在，切换到该标签页
   if (tabs.value.some(tab => tab.path === fileInfo.filePath)) {
     handleTabSwitch(fileInfo.filePath)
@@ -74,9 +106,10 @@ const handleFileClick = async (fileInfo) => {
   try {
     // 使用 SSH 连接信息读取文件
     const content = await window.electron.ipcRenderer.invoke('ssh:read-file', {
-      connectionId: props.connectionId,
+      connectionId: connectionId.value,
       path: fileInfo.filePath
     })
+    
     tabs.value.push({
       path: fileInfo.filePath,
       name: fileInfo.fileName,
@@ -85,7 +118,7 @@ const handleFileClick = async (fileInfo) => {
     })
     handleTabSwitch(fileInfo.filePath)
   } catch (error) {
-    console.error('Failed to open file:', error)
+    console.error('打开文件失败:', error)
     ElMessage.error('打开文件失败：' + error.message)
   }
 }
@@ -120,7 +153,7 @@ const handleSave = async () => {
   try {
     const content = editorRef.value.getContent(tab.path)
     await window.electron.ipcRenderer.invoke('ssh:save-file', {
-      connectionId: props.connectionId,
+      connectionId: connectionId.value,
       path: tab.path,
       content
     })
@@ -144,17 +177,9 @@ const handleContentChange = (path, content) => {
   }
 }
 
-// 监听文件打开请求
-onMounted(() => {
-  console.log('Editor component mounted')
-  EditorIpcService.onFileOpen(async (info) => {
-    console.log('Received file info:', info)
-    handleFileClick(info)
-  })
-})
-
 onUnmounted(() => {
-  EditorIpcService.removeFileOpenListener(handleFileClick)
+  // 清理 IPC 监听器
+  EditorIpcService.removeFileOpenListener()
 })
 </script>
 

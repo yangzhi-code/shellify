@@ -31,7 +31,11 @@ import { Folder, Document } from '@element-plus/icons-vue'
 const props = defineProps({
   connectionId: {
     type: String,
-    required: true
+    default: ''
+  },
+  currentPath: {
+    type: String,
+    default: '/'
   }
 })
 
@@ -47,7 +51,19 @@ const defaultProps = {
 
 const loadNode = async (node, resolve) => {
   if (node.level === 0) {
-    resolve([{ name: '/', path: '/', type: 'directory' }])
+    const parentPath = props.currentPath ? 
+      props.currentPath.substring(0, props.currentPath.lastIndexOf('/')) || '/' : 
+      '/'
+    resolve([{ name: parentPath, path: parentPath, type: 'directory' }])
+    return
+  }
+
+  if (!props.connectionId) {
+    console.log('当前连接信息:', { 
+      connectionId: props.connectionId, 
+      currentPath: props.currentPath 
+    })
+    resolve([])
     return
   }
 
@@ -58,12 +74,7 @@ const loadNode = async (node, resolve) => {
     })
     resolve(files)
   } catch (error) {
-    console.error('Failed to load files:', error)
-    if (error.message?.includes('Channel open failure')) {
-      window.$message?.error?.('连接已断开，请重新连接')
-      return
-    }
-    window.$message?.error?.('加载文件列表失败: ' + (error.message || '未知错误'))
+    console.error('加载文件失败:', error)
     resolve([])
   }
 }
