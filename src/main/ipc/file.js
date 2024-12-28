@@ -88,4 +88,15 @@ export function setupFileHandlers() {
       throw error;
     }
   });
+
+  // 删除文件或文件夹
+  ipcMain.handle('ssh:delete-file', async (event, { connectionId, path, isDirectory }) => {
+    try {
+      await FileManager.deleteFile(connectionId, path, isDirectory)
+      return true
+    } catch (error) {
+      console.error('删除文件失败:', error)
+      throw new Error(`删除失败: ${error.message}`)
+    }
+  })
 }

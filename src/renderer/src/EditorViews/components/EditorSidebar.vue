@@ -15,6 +15,7 @@
           class="custom-tree-node" 
           @click="handleNodeClick(data)"
           @dblclick.stop="handleNodeDoubleClick(data)"
+          @contextmenu.prevent="handleContextMenu($event, data)"
         >
           <el-icon>
             <Folder v-if="data.type === 'directory'" />
@@ -24,13 +25,25 @@
         </div>
       </template>
     </el-tree>
+
+    <!-- 右键菜单 -->
+    <div 
+      v-show="showContextMenu" 
+      class="context-menu"
+      :style="{ left: menuPosition.x + 'px', top: menuPosition.y + 'px' }"
+    >
+      <div class="menu-item" @click="handleDelete">
+        <el-icon><Delete /></el-icon>
+        <span>删除</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { Document, Folder } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { Document, Folder, Delete } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const props = defineProps({
   connectionId: {
@@ -166,24 +179,125 @@ const isFileOpenable = (filename) => {
 
 const handleNodeClick = (data) => {
   console.log('Node clicked:', data)
-  if (data.type === 'file' && !isFileOpenable(data.name)) {
-    ElMessage.warning('该类型的文件不支持在编辑器中打开')
-    return
+  if (data.type === 'file') {
+    if (!isFileOpenable(data.name)) {
+      ElMessage.warning('该类型的文件不支持在编辑器中打开')
+      return
+    }
+    emit('file-click', data)
   }
-  emit('file-click', data)
 }
 
 const handleNodeDoubleClick = (data) => {
   console.log('Node double clicked:', data)
-  if (data.type === 'file' && !isFileOpenable(data.name)) {
-    ElMessage.warning('该类型的文件不支持在编辑器中打开')
-    return
-  }
   if (data.type === 'file') {
+    if (!isFileOpenable(data.name)) {
+      ElMessage.warning('该类型的文件不支持在编辑器中打开')
+      return
+    }
     console.log('Emitting file-dblclick event')
     emit('file-dblclick', data)
   }
 }
+
+const showContextMenu = ref(false)
+const menuPosition = ref({ x: 0, y: 0 })
+const selectedNode = ref(null)
+
+// 处理右键菜单
+const handleContextMenu = (e, data) => {
+  e.preventDefault()
+  e.stopPropagation()  // 阻止事件冒泡
+  selectedNode.value = data
+  menuPosition.value = {
+    x: e.clientX,
+    y: e.clientY
+  }
+  showContextMenu.value = true
+}
+
+// 处理删除操作
+const handleDelete = async () => {
+  showContextMenu.value = false
+  const node = selectedNode.value
+  if (!node) return
+  
+  try {
+    // 如果是目录，先检查是否为空
+    if (node.type === 'directory') {
+      const files = await window.electron.ipcRenderer.invoke('ssh:list-files', {
+        connectionId: props.connectionId,
+        path: node.path
+      })
+      
+      if (files.length > 0) {
+        ElMessage.warning('不能删除非空文件夹')
+        return
+      }
+    }
+
+    // 显示确认对话框
+    await ElMessageBox.confirm(
+      `确定要删除${node.type === 'directory' ? '文件夹' : '文件'} "${node.name}" 吗？`,
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // 执行删除操作
+    await window.electron.ipcRenderer.invoke('ssh:delete-file', {
+      connectionId: props.connectionId,
+      path: node.path,
+      isDirectory: node.type === 'directory'
+    })
+
+    // 刷新父节点
+    const treeInstance = treeRef.value
+    const currentNode = treeInstance.getNode(node)
+    const parentNode = currentNode.parent
+    if (parentNode && parentNode.level !== 0) {
+      // 手动触发父节点的重新加载
+      parentNode.loaded = false
+      parentNode.expand()
+    }
+
+    ElMessage.success('删除成功')
+  } catch (error) {
+    if (error.toString() !== 'Error: cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败: ' + error.message)
+    }
+  }
+}
+
+// 点击其他地方关闭菜单
+const closeContextMenu = () => {
+  showContextMenu.value = false
+}
+
+// 添加和移除全局点击事件监听
+onMounted(() => {
+  setTimeout(() => {
+    document.addEventListener('click', closeContextMenu)
+    document.addEventListener('contextmenu', (e) => {
+      if (!e.target.closest('.custom-tree-node')) {
+        closeContextMenu()
+      }
+    })
+  }, 0)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeContextMenu)
+  document.removeEventListener('contextmenu', (e) => {
+    if (!e.target.closest('.custom-tree-node')) {
+      closeContextMenu()
+    }
+  })
+})
 </script>
 
 <style scoped>
@@ -271,5 +385,35 @@ const handleNodeDoubleClick = (data) => {
 
 :deep(.el-tree-node.is-expanded > .el-tree-node__content .el-icon) {
   color: var(--el-color-primary);
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--el-bg-color);
+  border-radius: 4px;
+  box-shadow: var(--el-box-shadow-light);
+  padding: 4px 0;
+  min-width: 120px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 28px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--el-text-color-regular);
+}
+
+.menu-item:hover {
+  background-color: var(--el-fill-color-light);
+}
+
+.menu-item .el-icon {
+  margin-right: 8px;
+  font-size: 14px;
 }
 </style> 

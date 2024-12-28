@@ -627,7 +627,7 @@ class FileManager {
             mode: 0o644
           }, async (err) => {
             if (err) {
-              console.error('文件上传失败:', err);
+              console.error('文件上传��败:', err);
               await UploadManager.updateOrCreate({
                 uploadId,
                 connectionId,
@@ -758,12 +758,63 @@ class FileManager {
     const sampleSize = Math.min(4096, buffer.length);
     for (let i = 0; i < sampleSize; i++) {
       const byte = buffer[i];
-      // 如果是控制字符（除了换行、回车、制表符）或者 null 字节，认为是二进制
+      // 如果控制字符（除了换行、回车、制表符）或者 null 字节，认为是二进制
       if ((byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) || byte === 0) {
         return true;
       }
     }
     return false;
+  }
+
+  /**
+   * 删除文件或空文件夹
+   * @param {string} connectionId - SSH连接ID
+   * @param {string} path - 文件或文件夹路径
+   * @param {boolean} isDirectory - 是否是文件夹
+   */
+  async deleteFile(connectionId, path, isDirectory) {
+    try {
+      // 获取 SFTP 会话
+      const sftp = await SSHConnectionManager.getSFTPSession(connectionId)
+      if (!sftp) {
+        throw new Error('SFTP 会话未建立')
+      }
+
+      // 使用 Promise 包装删除操作
+      await new Promise((resolve, reject) => {
+        if (isDirectory) {
+          sftp.rmdir(path, (err) => {
+            if (err) {
+              reject(new Error(err.message))
+            } else {
+              resolve()
+            }
+          })
+        } else {
+          sftp.unlink(path, (err) => {
+            if (err) {
+              reject(new Error(err.message))
+            } else {
+              resolve()
+            }
+          })
+        }
+      })
+
+      return true
+    } catch (error) {
+      console.error('删除文件失败:', error)
+      // 优化错误消息
+      let errorMessage = '删除失败'
+      if (error.message.includes('Permission denied')) {
+        errorMessage = '权限不足，无法删除'
+      } else if (error.message.includes('No such file')) {
+        errorMessage = '文件或目录不存在'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      throw new Error(errorMessage)
+    }
   }
 }
 
