@@ -75,6 +75,17 @@ watch([keyword, caseSensitive, recursive], () => {
       recursive: recursive.value
     }
   });
+
+  // 当搜索框被清空时（包括退格清空），触发搜索
+  if (!keyword.value) {
+    emit('search', {
+      keyword: '',
+      options: {
+        caseSensitive: caseSensitive.value,
+        recursive: recursive.value
+      }
+    });
+  }
 }, { deep: true });
 
 const updateKeyword = (value) => {
@@ -83,20 +94,24 @@ const updateKeyword = (value) => {
 
 const handleSearch = () => {
   console.log('搜索触发', keyword.value, { caseSensitive: caseSensitive.value, recursive: recursive.value });
-  if (keyword.value.trim()) {
-    emit('search', {
-      keyword: keyword.value,
-      options: {
-        caseSensitive: caseSensitive.value,
-        recursive: recursive.value
-      }
-    });
-  }
+  emit('search', {
+    keyword: keyword.value.trim(),
+    options: {
+      caseSensitive: caseSensitive.value,
+      recursive: recursive.value
+    }
+  });
 };
 
 const handleClear = () => {
   keyword.value = '';
-  emit('clear');
+  emit('search', {
+    keyword: '',
+    options: {
+      caseSensitive: caseSensitive.value,
+      recursive: recursive.value
+    }
+  });
 };
 </script>
 
