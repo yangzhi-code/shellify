@@ -190,8 +190,13 @@ const handleFileClick = async (fileInfo) => {
 }
 
 // 处理标签切换
-const handleTabSwitch = (path) => {
+const handleTabSwitch = async (path) => {
   activeTab.value = path
+  // 更新当前路径，这会触发 EditorSidebar 中的 watch
+  currentConnection.value = {
+    ...currentConnection.value,
+    filePath: path
+  }
 }
 
 // 处理标签关闭

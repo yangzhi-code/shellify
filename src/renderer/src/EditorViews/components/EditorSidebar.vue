@@ -8,6 +8,7 @@
       :data="treeData"
       :props="defaultProps"
       :load="loadNode"
+      node-key="path"
       lazy
     >
       <template #default="{ node, data }">
@@ -41,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, h } from 'vue'
+import { ref, onMounted, onUnmounted, computed, h, watch } from 'vue'
 import { Document, Folder, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -138,7 +139,7 @@ const OPENABLE_EXTENSIONS = new Set([
   'json', 'yaml', 'yml', 'toml', 'ini', 'conf', 'config',
   'properties', 'prop', 'env',
 
-  // 编程��言
+  // 编程语言
   'js', 'jsx', 'ts', 'tsx', 'vue', 'html', 'htm', 'css', 'scss', 'less',
   'py', 'pyw', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs',
   'php', 'rb', 'pl', 'pm', 'sh', 'bash', 'zsh', 'fish',
@@ -385,6 +386,41 @@ onUnmounted(() => {
       closeContextMenu()
     }
   })
+})
+
+// 展开到指定路径并选中
+const expandAndSelect = async (path) => {
+  if (!path || !treeRef.value) return
+
+  try {
+    // 获取父目录路径
+    const parentPath = path.substring(0, path.lastIndexOf('/')) || '/'
+
+    // 先展开父目录
+    const parentNode = treeRef.value.getNode(parentPath)
+    if (parentNode) {
+      await parentNode.expand()
+      // 等待节点加载完成
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    // 选中目标文件
+    treeRef.value.setCurrentKey(path)
+  } catch (error) {
+    console.error('展开并选中文件失败:', error)
+  }
+}
+
+// 监听 currentPath 的变化
+watch(() => props.currentPath, async (newPath) => {
+  if (newPath && newPath !== '/' && treeRef.value) {
+    await expandAndSelect(newPath)
+  }
+})
+
+// 暴露方法给父组件
+defineExpose({
+  expandAndSelect
 })
 </script>
 
