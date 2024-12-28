@@ -18,7 +18,11 @@ export default defineConfig({
     plugins: [vue()],
     build: {
       rollupOptions: {
-        external: ['@electron/remote']
+        external: ['@electron/remote'],
+        input: {
+          main: resolve('src/renderer/index.html'),
+          editor: resolve('src/renderer/editor.html')
+        }
       }
     }
   }

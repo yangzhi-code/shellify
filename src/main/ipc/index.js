@@ -7,6 +7,7 @@ import { setupDownloadHandlers } from './download';
 import { setupSettingsHandlers } from './settings';
 import { setupDialogHandlers } from './dialog';
 import { setupUploadHandlers } from './upload';
+import { setupOpenEditorHandlers } from './editor/open-editor';
 
 /**
  * 初始化所有 IPC 处理器
@@ -32,4 +33,6 @@ export function setupIpcHandlers() {
   setupSettingsHandlers();
   // 设置对话框处理程序
   setupDialogHandlers();
+  // 设置打开编辑器处理程序
+  setupOpenEditorHandlers();
 } 

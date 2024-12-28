@@ -16,7 +16,6 @@
       :loading="loading"
       @file-click="handleFileClick"
       @download="downloadFile"
-      @rename="renameFile"
       @delete="deleteFile"
       @save-new-folder="saveNewFolder"
       @cancel-new-folder="cancelNewFolder"
@@ -116,7 +115,7 @@ const handleCurrentChange = (val) => {
   currentPage.value = val
 }
 
-// 文件大小格式化
+// ��件大小格式化
 const formatFileSize = (size) => {
   if (!size) return '-'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -177,10 +176,6 @@ const downloadFile = async (file) => {
   } finally {
     file.loading = false;
   }
-}
-
-const renameFile = (file) => {
-  // TODO: 实现文件重命名
 }
 
 const deleteFile = (file) => {
@@ -367,7 +362,7 @@ const saveNewFolder = async (folderName) => {
   }
 };
 
-// 取消新建文件夹
+// 取消新建���件夹
 const cancelNewFolder = () => {
   isCreatingNewFolder.value = false;
   fileList.value = fileList.value.filter(f => !f.isNew);
