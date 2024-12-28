@@ -212,7 +212,7 @@
   
   .layout-switcher {
     position: absolute;
-    top: 35px;
+    top: 36px;
     right: 18px;
     z-index: 1000;
   }

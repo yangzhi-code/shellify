@@ -97,6 +97,7 @@
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import NetworkChart from './NetworkChart.vue'
 import { useTabsStore } from '../stores/terminalStore'
+import { ElMessage } from 'element-plus'
 
 const tabsStore = useTabsStore()
 
@@ -255,7 +256,7 @@ watch(
     clearStatusTimer()
     resetStatus()
     
-    // 如果是空标签或者没有连接，直接返��
+    // 如果是空标签或者没有连接，直接返回
     if (!currentTab.value?.data?.id || !shouldShowStats.value) {
       return
     }
@@ -296,7 +297,11 @@ const handleInterfaceChange = (interfaceName) => {
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text)
-    ElMessage.success('已复制到剪贴板')
+    ElMessage({
+      message: 'IP已复制到剪贴板',
+      type: 'success',
+      duration: 2000
+    })
   } catch (err) {
     ElMessage.error('复制失败')
     console.error('复制失败:', err)
