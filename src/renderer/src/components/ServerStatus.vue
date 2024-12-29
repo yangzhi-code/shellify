@@ -201,21 +201,21 @@ const fetchServerStatus = async () => {
 
 // 颜色计算函数 - 进度条颜色
 const getCpuColor = (value) => {
-  if (value > 90) return '#ff4444'
-  if (value > 70) return '#ffbb33'
-  return '#00C851'
+  if (value > 90) return 'var(--el-color-danger)'
+  if (value > 70) return 'var(--el-color-warning)'
+  return 'var(--el-color-success)'
 }
 
 const getMemoryColor = (value) => {
-  if (value > 90) return '#ff4444'
-  if (value > 70) return '#ffbb33'
-  return '#00C851'
+  if (value > 90) return 'var(--el-color-danger)'
+  if (value > 70) return 'var(--el-color-warning)'
+  return 'var(--el-color-success)'
 }
 
 const getDiskColor = (value) => {
-  if (value > 90) return '#ff4444'
-  if (value > 70) return '#ffbb33'
-  return '#00C851'
+  if (value > 90) return 'var(--el-color-danger)'
+  if (value > 70) return 'var(--el-color-warning)'
+  return 'var(--el-color-success)'
 }
 
 // 文字颜色
@@ -386,7 +386,7 @@ const copyToClipboard = async (text) => {
 .progress-bar {
   flex: 1;
   height: 20px;
-  background-color: var(--el-fill-color-light);
+  background-color: var(--el-border-color-lighter);
   border-radius: 2px;
   overflow: visible;
   position: relative;
@@ -744,7 +744,7 @@ const copyToClipboard = async (text) => {
 .disk-progress {
   flex: 1;
   height: 4px;
-  background-color: #f0f0f0;
+  background-color: var(--el-border-color-lighter);
   border-radius: 2px;
   overflow: hidden;
 }

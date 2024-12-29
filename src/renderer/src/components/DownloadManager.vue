@@ -468,7 +468,7 @@ onUnmounted(() => {
 
 <style scoped>
 .download-manager {
-  background-color: #f0f0f0;
+  background-color: var(--tab-bar-bg);
   display: flex;
   align-items: center;
   justify-content: center;

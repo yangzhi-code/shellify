@@ -29,7 +29,7 @@ const showSettings = ref(false)
 .tab-menu {
   width: 100%;
   height: 30px;
-  background-color: #f0f0f0;
+  background-color: var(--tab-bar-bg);
   display: flex;
   align-items: center;
   padding: 0 8px;

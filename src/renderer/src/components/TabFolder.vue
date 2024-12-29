@@ -60,12 +60,12 @@ const handleDblClick = (item) => {
 .tab-folder {
   width: 100%;
   height: 30px;
-  background-color: #f0f0f0;
+  background-color: var(--tab-bar-bg);
 }
 .tab-folder-item {
   width: 50px;
   height: 30px;
-  background-color: #f0f0f0;
+  background-color: var(--tab-bar-bg);
   display: flex;
   align-items: center;
   justify-content: center;

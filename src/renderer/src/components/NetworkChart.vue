@@ -37,7 +37,7 @@
 .network-chart {
   width: 100%;
   height: 160px;
-  background: #fff;
+  background: var(--el-bg-color);
 }
 
 .chart-header {

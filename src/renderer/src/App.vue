@@ -104,7 +104,7 @@ const startResize = (e) => {
 
 .sidebar {
   width: 200px;
-  background: #f5f5f5;
+  background: var(--el-bg-color);
   height: 100%;
   padding: 5px;
   overflow-y: auto;
@@ -114,14 +114,14 @@ const startResize = (e) => {
 
 .resizer {
   width: 2px;
-  background: #e0e0e0;
+  background: var(--el-border-color-light);
   cursor: col-resize;
   transition: background 0.2s;
 }
 
 .resizer:hover,
 .resizer:active {
-  background: #bdbdbd;
+  background: var(--el-border-color-light);
 }
 
 .main {
