@@ -161,6 +161,7 @@
 import { ref, watch, toRaw } from 'vue'
 import { Close, Setting, Monitor, Edit, Operation } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { themeManager } from '../../styles/theme'
 
 const props = defineProps({
   visible: {
@@ -232,15 +233,19 @@ const resetSettings = async () => {
   }
 }
 
+// 监听主题变化
+watch(() => settings.value.theme, (newTheme) => {
+  themeManager.applyTheme(newTheme)
+})
+
 // 保存设置
 const saveSettings = async () => {
   try {
-    
     const settingsValue = toRaw(settings.value)
-    console.log('settings:save', settingsValue)
     await window.electron.ipcRenderer.invoke('settings:save', settingsValue)
     ElMessage.success('设置保存成功')
-
+    // 应用主题
+    themeManager.applyTheme(settingsValue.theme)
   } catch (error) {
     ElMessage.error('设置保存失败：' + error.message)
   }
