@@ -73,7 +73,7 @@ const currentConnection = ref({
 })
 
 // 计算属性：获取连接 ID
-const connectionId = computed(() => currentConnection.value?.data?.id)
+const connectionId = computed(() => currentConnection.value?.data?.id || '')
 
 // 添加计算属性用于处理路径
 const currentPath = computed(() => currentConnection.value?.filePath || '/')

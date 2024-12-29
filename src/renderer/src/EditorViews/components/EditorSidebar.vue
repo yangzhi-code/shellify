@@ -49,11 +49,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const props = defineProps({
   connectionId: {
     type: String,
-    required: true
+    required: true,
+    default: ''
   },
   currentPath: {
     type: String,
-    required: true
+    required: true,
+    default: '/'
   }
 })
 
