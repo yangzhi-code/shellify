@@ -37,10 +37,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onUnmounted, onBeforeUnmount, getCurrentInstance } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted, onBeforeUnmount, getCurrentInstance, h } from 'vue';
 import FileToolbar from './file/FileToolbar.vue';
 import FileList from './file/FileList.vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 const props = defineProps({
   connectionId: {
@@ -115,7 +115,7 @@ const handleCurrentChange = (val) => {
   currentPage.value = val
 }
 
-// ��件大小格式化
+// 文件大小格式化
 const formatFileSize = (size) => {
   if (!size) return '-'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -178,8 +178,113 @@ const downloadFile = async (file) => {
   }
 }
 
-const deleteFile = (file) => {
-  // TODO: 实现文件删除
+// 倒计时相关
+const countdown = ref(5)
+const confirmButtonText = computed(() => {
+  return countdown.value > 0 ? `确定 (${countdown.value}s)` : '确定'
+})
+
+// 创建倒计时定时器
+const startCountdown = () => {
+  countdown.value = 5
+  return setInterval(() => {
+    if (countdown.value > 0) {
+      countdown.value--
+      // 更新确认按钮状态
+      const confirmButton = document.querySelector('.delete-confirm-dialog .el-button--primary')
+      if (confirmButton) {
+        confirmButton.disabled = countdown.value > 0
+        confirmButton.classList.toggle('is-disabled', countdown.value > 0)
+        confirmButton.textContent = countdown.value > 0 ? `确定 (${countdown.value}s)` : '确定'
+      }
+    }
+  }, 1000)
+}
+
+const deleteFile = async (file) => {
+  try {
+    // 如果是目录，先检查是否为空
+    if (file.type === 'directory') {
+      const files = await window.electron.ipcRenderer.invoke('ssh:list-files', {
+        connectionId: props.connectionId,
+        path: file.path
+      })
+      
+      if (files.length > 0) {
+        ElMessage.warning('不能删除非空文件夹')
+        return
+      }
+    }
+
+    // 重置倒计时
+    countdown.value = 5
+    let timer = startCountdown()
+
+    try {
+      // 显示确认对话框
+      await ElMessageBox.confirm(
+        h('div', { class: 'delete-confirm-content' }, [
+          h('p', { class: 'warning-text' }, '⚠️ 警告：删除后将无法恢复'),
+          h('p', { class: 'file-info' }, [
+            '确定要删除',
+            file.type === 'directory' ? '文件夹' : '文件',
+            ' "',
+            h('span', { class: 'file-name' }, file.name),
+            '" 吗？'
+          ])
+        ]),
+        '删除确认',
+        {
+          confirmButtonText: confirmButtonText.value,
+          distinguishCancelAndClose: true,
+          confirmButtonProps: {
+            disabled: true,
+            class: 'is-disabled'
+          },
+          beforeClose: async (action, instance, done) => {
+            if (action === 'confirm' && countdown.value > 0) {
+              return
+            }
+            clearInterval(timer)
+            done()
+          },
+          cancelButtonText: '取消',
+          type: 'warning',
+          customClass: 'delete-confirm-dialog',
+          modalAppendToBody: false,
+          appendToBody: true,
+          lockScroll: false,
+          closeOnClickModal: false,
+          draggable: true
+        }
+      )
+
+      // 执行删除操作
+      await window.electron.ipcRenderer.invoke('ssh:delete-file', {
+        connectionId: props.connectionId,
+        path: file.path,
+        isDirectory: file.type === 'directory'
+      })
+
+      // 刷新文件列表
+      await loadFileList()
+      ElMessage.success('删除成功')
+    } catch (error) {
+      // 只有在不是取消操作时才显示错误
+      const errorStr = error.toString().toLowerCase()
+      if (!errorStr.includes('cancel') && !errorStr.includes('close')) {
+        console.error('删除失败:', error)
+        ElMessage.error('删除失败: ' + error.message)
+      }
+      // 确保清理定时器
+      if (timer) {
+        clearInterval(timer)
+      }
+    }
+  } catch (error) {
+    console.error('检查目录失败:', error)
+    ElMessage.error('检查目录失败: ' + error.message)
+  }
 }
 
 // 导航到根目录
@@ -362,7 +467,7 @@ const saveNewFolder = async (folderName) => {
   }
 };
 
-// 取消新建���件夹
+// 取消新建文件夹
 const cancelNewFolder = () => {
   isCreatingNewFolder.value = false;
   fileList.value = fileList.value.filter(f => !f.isNew);
@@ -435,6 +540,7 @@ const currentInstance = getCurrentInstance()
   background: #fff;
   min-width: 0;
   width: 100%;
+  overflow: hidden;
 }
 
 .pagination-container {
@@ -446,5 +552,91 @@ const currentInstance = getCurrentInstance()
 
 :deep(.el-pagination) {
   justify-content: flex-end;
+}
+
+/* 删除确认对话框样式 */
+:deep(.delete-confirm-dialog) {
+  :deep(.el-overlay) {
+    overflow: hidden;
+    position: fixed;
+  }
+
+  &.el-message-box {
+    margin: 15vh auto !important;
+    position: fixed !important;
+    top: 0;
+    left: 50% !important;
+    transform: translateX(-50%);
+  }
+
+  .delete-confirm-content {
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .warning-text {
+    color: var(--el-color-danger);
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .file-info {
+    color: var(--el-text-color-regular);
+    font-size: 14px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .file-name {
+    color: var(--el-text-color-primary);
+    font-size: 13px;
+    font-family: monospace;
+    background-color: var(--el-fill-color-light);
+    padding: 2px 4px;
+    border-radius: 2px;
+    word-break: break-all;
+    max-width: 100%;
+    display: inline-block;
+  }
+
+  .el-message-box__header {
+    text-align: center;
+    width: 100%;
+  }
+
+  .el-message-box__content {
+    text-align: center;
+    width: 100%;
+  }
+
+  .el-message-box__btns {
+    justify-content: center;
+    .el-button--primary {
+      font-size: 13px;
+      
+      &[disabled],
+      &.is-disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+        background-color: var(--el-button-disabled-bg);
+        border-color: var(--el-button-disabled-border-color);
+        color: var(--el-button-disabled-text-color);
+        pointer-events: none;
+      }
+    }
+    
+    .el-button--default {
+      font-size: 13px;
+    }
+  }
 }
 </style> 
