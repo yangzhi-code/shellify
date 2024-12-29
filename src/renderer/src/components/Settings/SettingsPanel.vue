@@ -354,6 +354,7 @@ watch(() => props.visible, (newValue) => {
   height: 1px;
 }
 
+
 :deep(.el-form-item) {
   margin-bottom: 20px;
 }
@@ -366,9 +367,11 @@ watch(() => props.visible, (newValue) => {
   line-height: 32px;
 }
 
+
 .full-width {
   width: 100%;
 }
+
 
 .shortcut-form :deep(.el-input__inner) {
   cursor: pointer;
@@ -380,24 +383,6 @@ watch(() => props.visible, (newValue) => {
 
 :deep(.el-icon) {
   vertical-align: middle;
-}
-
-:deep(.el-input__inner),
-:deep(.el-input-number__decrease),
-:deep(.el-input-number__increase),
-:deep(.el-select),
-:deep(.el-switch) {
-  background-color: var(--settings-input-bg);
-  border-color: var(--settings-input-border);
-  color: var(--settings-input-text);
-
-  &:hover {
-    border-color: var(--settings-input-hover-border);
-  }
-
-  &:focus {
-    border-color: var(--settings-input-focus-border);
-  }
 }
 
 :deep(.el-form-item__label) {
@@ -420,5 +405,32 @@ watch(() => props.visible, (newValue) => {
     color: var(--el-color-primary);
     background-color: var(--el-color-primary-light-9);
   }
+}
+
+/* 静态选择框的背景颜色 - 提高优先级 */
+:deep(.el-select .el-input__wrapper) {
+  background-color: var(--el-bg-color-overlay) !important;
+  box-shadow: 0 0 0 1px var(--el-border-color) inset !important;
+}
+
+:deep(.el-select .el-input__inner) {
+  color: var(--el-text-color-regular) !important;
+}
+
+/* 选择框的悬停和焦点状态 */
+:deep(.el-select) .el-input__wrapper {
+  &:hover {
+    box-shadow: 0 0 0 1px var(--el-border-color-hover) inset !important;
+  }
+
+  &.is-focus {
+    box-shadow: 0 0 0 1px var(--el-color-primary) inset !important;
+  }
+}
+
+/* 下拉菜单样式 */
+:deep(.el-select-dropdown) {
+  background-color: var(--el-bg-color-overlay) !important;
+  border-color: var(--el-border-color) !important;
 }
 </style> 

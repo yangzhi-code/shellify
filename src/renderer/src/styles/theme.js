@@ -14,7 +14,7 @@ export const themes = {
     '--el-color-primary-light-9': '#ecf5ff',  // 主色浅色变体，用于hover效果
     
     // 终端相关
-    '--terminal-bg': '#f6f6f6',               // 终端背景色
+    '--terminal-bg': '#1e1e1e',               // 终端背景色
     '--terminal-text': '#333333',             // 终端文字颜色
     '--terminal-cursor': '#333333',           // 终端光标颜色
     '--terminal-selection': '#b2d7fd',        // 终端选中文本背景色
