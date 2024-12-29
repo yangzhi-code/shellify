@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import icon from '../../../../resources/icon.png?asset'
+import icon from '../../resources/icon.png?asset'
 
 // 创建编辑器窗口
 function createEditorWindow(fileInfo) {
@@ -24,13 +24,16 @@ function createEditorWindow(fileInfo) {
 
   require('@electron/remote/main').enable(editorWindow.webContents)
 
+
   editorWindow.on('ready-to-show', () => {
     editorWindow.show()
   })
 
   // 直接加载编辑器页面，不传递参数
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    editorWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      // 打开开发者工具
+    editorWindow.openDevTools();
+    editorWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/editor.html`)
   } else {
     editorWindow.loadFile(join(__dirname, '../renderer/editor.html'))
   }
