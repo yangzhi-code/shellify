@@ -419,6 +419,7 @@ const expandAndSelect = async (path) => {
 
   try {
     console.log('准备展开并选中路径:', path)
+    
     // 获取父目录路径
     const parentPath = path.substring(0, path.lastIndexOf('/')) || '/'
     console.log('父目录路径:', parentPath)
