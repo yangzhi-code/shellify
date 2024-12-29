@@ -35,7 +35,8 @@ const tabsStore = useTabsStore();
   
 <style scoped>
 .tab-bar {
-  background-color: #f0f0f0;
+  background-color: var(--tab-bar-bg);
+  border-bottom: 1px solid var(--tab-bar-border);
   width: 100%;
   display: flex;
   flex-direction: row;
@@ -58,8 +59,8 @@ const tabsStore = useTabsStore();
 }
 /* 标签选中样式 */
 .tab-bar-item.active {
-  background-color: #4caf50; /* 填充颜色 */
-  color: white;
+  background-color: var(--tab-item-active-bg);
+  color: var(--tab-item-active-text);
   border-color: #4caf50; /* 选中边框颜色 */
 }
 

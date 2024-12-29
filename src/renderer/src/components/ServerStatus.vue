@@ -314,28 +314,31 @@ const copyToClipboard = async (text) => {
   padding: 6px;
   font-size: 11px;
   height: 100%;
-  background-color: #f5f5f5;
+  background-color: var(--el-bg-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  color: var(--el-text-color-regular);
 }
 
 .status-section {
   margin-bottom: 6px;
   padding: 8px;
-  background-color: #ffffff;
+  background-color: var(--el-bg-color-overlay);
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
+  border: 1px solid var(--el-border-color-light);
 }
 
 .status-header {
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #2c3e50;
-  border-bottom: 1px solid #eee;
+  color: var(--el-text-color-primary);
+  border-bottom: 1px solid var(--el-border-color-light);
   padding-bottom: 4px;
+  background-color: var(--el-fill-color-light);
 }
 
 .status-item {
@@ -343,20 +346,25 @@ const copyToClipboard = async (text) => {
   justify-content: space-between;
   margin-bottom: 6px;
   font-size: 11px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .label {
-  color: #666;
+  color: var(--el-text-color-regular);
 }
 
 .value {
-  color: #2c3e50;
+  color: var(--el-text-color-primary);
   min-width: 40px;
   text-align: right;
 }
 
 .value.highlight {
-  color: #409eff;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  &:hover {
+    color: var(--el-color-primary-light-3);
+  }
 }
 
 .resource-item {
@@ -371,14 +379,14 @@ const copyToClipboard = async (text) => {
 
 .resource-label {
   font-size: 11px;
-  color: #666;
+  color: var(--el-text-color-regular);
   width: 35px; /* 固定标签宽度 */
 }
 
 .progress-bar {
   flex: 1;
   height: 20px;
-  background-color: #f0f0f0;
+  background-color: var(--el-fill-color-light);
   border-radius: 2px;
   overflow: visible;
   position: relative;
@@ -397,7 +405,7 @@ const copyToClipboard = async (text) => {
   left: 8px;
   top: 50%;
   transform: translateY(-50%);
-  color: #666;
+  color: var(--el-text-color-regular);
   font-size: 11px;
   font-family: monospace;
   white-space: nowrap;
@@ -445,6 +453,7 @@ const copyToClipboard = async (text) => {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 4px;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .disk-item {
@@ -534,6 +543,7 @@ const copyToClipboard = async (text) => {
 .load-tooltip {
   text-align: left;
   line-height: 1.5;
+  color: var(--el-text-color-regular);
 }
 
 /* 资源组布局 */
@@ -638,7 +648,8 @@ const copyToClipboard = async (text) => {
 }
 
 .network-stats {
-  background-color: #1e1e1e;
+  background-color: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color-light);
   border-radius: 4px;
   padding: 8px;
 }
@@ -648,7 +659,7 @@ const copyToClipboard = async (text) => {
   justify-content: space-between;
   margin-bottom: 8px;
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--el-fill-color-light);
   border-radius: 4px;
 }
 
@@ -659,13 +670,13 @@ const copyToClipboard = async (text) => {
 }
 
 .speed-label {
-  color: #fff;
+  color: var(--el-text-color-primary);
   font-size: 14px;
   font-weight: bold;
 }
 
 .speed-value {
-  color: #fff;
+  color: var(--el-text-color-regular);
   font-size: 12px;
 }
 

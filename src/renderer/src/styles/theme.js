@@ -42,7 +42,38 @@ export const themes = {
     
     // 其他自定义颜色
     '--app-border': '#dcdfe6',
-    '--app-shadow': 'rgba(0, 0, 0, 0.1)'
+    '--app-shadow': 'rgba(0, 0, 0, 0.1)',
+    
+    // 状态栏相关
+    '--status-bar-bg': '#f0f0f0',
+    '--status-bar-text': '#606266',
+    '--status-bar-border': '#dcdfe6',
+    '--status-bar-item-hover': '#e4e7ed',
+
+    // 标签栏相关
+    '--tab-bar-bg': '#ffffff',
+    '--tab-bar-border': '#dcdfe6',
+    '--tab-item-bg': '#f5f7fa',
+    '--tab-item-text': '#606266',
+    '--tab-item-active-bg': '#ffffff',
+    '--tab-item-active-text': '#409eff',
+    '--tab-item-hover-bg': '#ecf5ff',
+
+    // 工具栏相关
+    '--toolbar-bg': '#f5f7fa',
+    '--toolbar-border': '#e4e7ed',
+    '--toolbar-button-hover': '#ecf5ff',
+    '--toolbar-button-active': '#409eff',
+    '--toolbar-text': '#606266',
+    '--toolbar-icon': '#909399',
+
+    // 设置面板相关
+    '--settings-input-bg': '#ffffff',
+    '--settings-input-text': '#606266',
+    '--settings-input-border': '#dcdfe6',
+    '--settings-input-hover-border': '#c0c4cc',
+    '--settings-input-focus-border': '#409eff',
+    '--settings-label-text': '#606266',
   },
   
   dark: {
@@ -87,7 +118,38 @@ export const themes = {
     
     // 其他自定义颜色
     '--app-border': '#4c4c4c',
-    '--app-shadow': 'rgba(0, 0, 0, 0.3)'
+    '--app-shadow': 'rgba(0, 0, 0, 0.3)',
+    
+    // 状态栏相关
+    '--status-bar-bg': '#1a1a1a',
+    '--status-bar-text': '#cccccc',
+    '--status-bar-border': '#2d2d2d',
+    '--status-bar-item-hover': '#2a2d2e',
+
+    // 标签栏相关
+    '--tab-bar-bg': '#1e1e1e',
+    '--tab-bar-border': '#2d2d2d',
+    '--tab-item-bg': '#252526',
+    '--tab-item-text': '#cccccc',
+    '--tab-item-active-bg': '#1e1e1e',
+    '--tab-item-active-text': '#409eff',
+    '--tab-item-hover-bg': '#2a2d2e',
+
+    // 工具栏相关
+    '--toolbar-bg': '#252526',
+    '--toolbar-border': '#2d2d2d',
+    '--toolbar-button-hover': '#2a2d2e',
+    '--toolbar-button-active': '#094771',
+    '--toolbar-text': '#cccccc',
+    '--toolbar-icon': '#858585',
+
+    // 设置面板相关
+    '--settings-input-bg': '#1d1d1d',
+    '--settings-input-text': '#cccccc',
+    '--settings-input-border': '#2d2d2d',
+    '--settings-input-hover-border': '#4c4c4c',
+    '--settings-input-focus-border': '#409eff',
+    '--settings-label-text': '#cccccc',
   }
 }
 

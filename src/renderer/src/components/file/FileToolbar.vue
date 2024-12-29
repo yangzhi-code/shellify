@@ -132,4 +132,26 @@ defineEmits([
   align-items: center;
   font-size: 14px;
 }
+
+.file-toolbar {
+  background-color: var(--toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
+}
+
+.toolbar-button {
+  color: var(--toolbar-text);
+
+  .el-icon {
+    color: var(--toolbar-icon);
+  }
+
+  &:hover {
+    background-color: var(--toolbar-button-hover);
+  }
+
+  &.active {
+    background-color: var(--toolbar-button-active);
+    color: #ffffff;
+  }
+}
 </style> 

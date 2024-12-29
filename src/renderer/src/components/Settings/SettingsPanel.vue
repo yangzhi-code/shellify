@@ -381,4 +381,44 @@ watch(() => props.visible, (newValue) => {
 :deep(.el-icon) {
   vertical-align: middle;
 }
+
+:deep(.el-input__inner),
+:deep(.el-input-number__decrease),
+:deep(.el-input-number__increase),
+:deep(.el-select),
+:deep(.el-switch) {
+  background-color: var(--settings-input-bg);
+  border-color: var(--settings-input-border);
+  color: var(--settings-input-text);
+
+  &:hover {
+    border-color: var(--settings-input-hover-border);
+  }
+
+  &:focus {
+    border-color: var(--settings-input-focus-border);
+  }
+}
+
+:deep(.el-form-item__label) {
+  color: var(--settings-label-text);
+}
+
+:deep(.el-select-dropdown) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+}
+
+:deep(.el-select-dropdown__item) {
+  color: var(--el-text-color-regular);
+
+  &.hover {
+    background-color: var(--el-fill-color-light);
+  }
+
+  &.selected {
+    color: var(--el-color-primary);
+    background-color: var(--el-color-primary-light-9);
+  }
+}
 </style> 
