@@ -1,5 +1,6 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import SettingsManager from '../services/SQLite/SettingsManager';
+import settingsStore from '../services/stores/settingsStore';
 
 export function setupSettingsHandlers() {
     // 获取下载路径
@@ -20,5 +21,42 @@ export function setupSettingsHandlers() {
             properties: ['openDirectory'],
             buttonLabel: '选择文件夹'
         });
+    });
+
+    // 保存设置
+    ipcMain.handle('settings:save', async (event, settings) => {
+        try {
+            await settingsStore.saveSettings(settings);
+            return true;
+        } catch (error) {
+            throw new Error('保存设置失败：' + error.message);
+        }
+    });
+
+    // 加载设置
+    ipcMain.handle('settings:load', async () => {
+        try {
+            return await settingsStore.getAllSettings();
+        } catch (error) {
+            throw new Error('加载设置失败：' + error.message);
+        }
+    });
+
+    // 重置设置
+    ipcMain.handle('settings:reset', async () => {
+        try {
+            return await settingsStore.resetSettings();
+        } catch (error) {
+            throw new Error('重置设置失败：' + error.message);
+        }
+    });
+
+    // 更新部分设置
+    ipcMain.handle('settings:update', async (event, partialSettings) => {
+        try {
+            return await settingsStore.updateSettings(partialSettings);
+        } catch (error) {
+            throw new Error('更新设置失败：' + error.message);
+        }
     });
 } 

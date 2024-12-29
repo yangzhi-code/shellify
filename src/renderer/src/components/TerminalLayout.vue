@@ -214,7 +214,7 @@
     position: absolute;
     top: 36px;
     right: 18px;
-    z-index: 1000;
+    z-index: 100;
   }
   
   .button-group {
