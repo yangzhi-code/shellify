@@ -48,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import EditorSidebar from './components/EditorSidebar.vue'
 import EditorToolbar from './components/EditorToolbar.vue'
@@ -123,6 +123,9 @@ onMounted(() => {
       })
     }
   })
+
+  // 添加快捷键监听
+  document.addEventListener('keydown', handleKeyDown)
 })
 
 // 处理文件点击
@@ -236,6 +239,18 @@ const handleSave = async () => {
   }
 }
 
+// 添加快捷键处理函数
+const handleKeyDown = async (e) => {
+  // 检查是否按下 Ctrl+S 或 Command+S (Mac)
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault() // 阻止默认的保存行为
+    if (activeTab.value) {
+      console.log('触发快捷键保存:', activeTab.value)
+      await handleSave()
+    }
+  }
+}
+
 // 处理光标位置变化
 const handleCursorChange = ({ line, column, totalLines, totalChars }) => {
   cursorPosition.value = totalLines ? 
@@ -263,6 +278,9 @@ const handleFileDoubleClick = async (fileInfo) => {
 onUnmounted(() => {
   // 清理 IPC 监听器
   EditorIpcService.removeFileOpenListener()
+
+  // 移除快捷键监听
+  document.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -293,17 +311,20 @@ onUnmounted(() => {
 
 /* 拖动条样式 */
 .resize-handle {
-  width: 5px;
+  width: 1px;
   height: 100%;
   cursor: col-resize;
-  background: transparent;
+  background: none;
   position: relative;
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
 .resize-handle:hover,
 .resize-handle:active {
-  background: var(--el-color-primary-light-8);
+  opacity: 1;
+  background: var(--el-color-primary-light-9);
 }
 
 .resize-handle::after {

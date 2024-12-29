@@ -2,7 +2,6 @@
   <div class="editor-toolbar">
     <el-button-group>
       <el-button size="small" @click="handleSave">
-       
         保存
       </el-button>
     </el-button-group>

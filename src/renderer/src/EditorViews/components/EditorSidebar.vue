@@ -126,13 +126,13 @@ const loadNode = async (node, resolve) => {
     // 对于文件夹，预先检查是否为空
     const processedFiles = await Promise.all(files.map(async file => {
       if (file.type === 'directory') {
-        console.log('检查目录是否为空:', file.path)
+        //console.log('检查目录是否为空:', file.path)
         try {
           const subFiles = await window.electron.ipcRenderer.invoke('ssh:list-files', {
             connectionId: props.connectionId,
             path: file.path
           })
-          console.log('目录检查完成:', file.path, '包含文件数:', subFiles.length)
+          //console.log('目录检查完成:', file.path, '包含文件数:', subFiles.length)
           return {
             ...file,
             isLeaf: subFiles.length === 0
@@ -419,7 +419,7 @@ const expandAndSelect = async (path) => {
 
   try {
     console.log('准备展开并选中路径:', path)
-    
+
     // 获取父目录路径
     const parentPath = path.substring(0, path.lastIndexOf('/')) || '/'
     console.log('父目录路径:', parentPath)
@@ -504,6 +504,30 @@ defineExpose({
   font-size: 13px;
   background: transparent;
   height: 0;
+
+  /* 自定义滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--el-border-color);
+    border-radius: 2px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* 仅在悬停时显示滚动条 */
+  &::-webkit-scrollbar-thumb {
+    visibility: hidden;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    visibility: visible;
+  }
 }
 
 :deep(.el-tree-node) {
