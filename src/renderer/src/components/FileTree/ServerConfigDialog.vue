@@ -243,7 +243,7 @@ const selectPrivateKey = async () => {
       ElMessage.success('已选择私钥文件')
     }
   } catch (error) {
-    console.error('选择私��文件失败:', error)
+    console.error('选择私钥文件失败:', error)
     ElMessage.error('选择私钥文件失败')
   } finally {
     selectingFile.value = false
@@ -714,5 +714,90 @@ watch(() => form.value.authMethod, (newMethod) => {
 :deep(.el-dialog) {
   margin: 15vh auto 0 !important;  /* 调整对话框垂直位置 */
   border-radius: 4px;              /* 圆角 */
+}
+
+/* 调整所有输入框的背景色和文字颜色 */
+:deep(.el-input__wrapper),
+:deep(.el-textarea__wrapper),
+:deep(.el-select .el-input__wrapper),
+:deep(.el-input-number .el-input__wrapper) {
+  background-color: var(--el-component-bg) !important;
+  border-color: var(--el-component-border) !important;
+}
+
+:deep(.el-input__inner),
+:deep(.el-textarea__inner) {
+  color: var(--el-component-text);
+}
+
+/* 下拉菜单样式 */
+:deep(.el-select-dropdown) {
+  background-color: var(--el-component-bg) !important;
+  border-color: var(--el-component-border) !important;
+
+  .el-select-dropdown__item {
+    color: var(--el-component-text);
+
+    &:hover {
+      background-color: var(--el-component-hover-bg);
+    }
+
+    &.selected {
+      color: var(--el-color-primary);
+      background-color: var(--el-component-active-bg);
+    }
+  }
+}
+
+/* 编码选择框样式 */
+.encoding-item {
+  :deep(.el-select) {
+    .el-input__wrapper {
+      background-color: var(--el-component-bg) !important;
+      border-color: var(--el-component-border) !important;
+    }
+
+    .el-input__inner {
+      color: var(--el-component-text);
+    }
+  }
+}
+
+/* 单选框组样式 */
+.auth-radio-group {
+  background-color: var(--el-component-bg);
+  border-color: var(--el-component-border);
+
+  :deep(.el-radio) {
+    .el-radio__label {
+      color: var(--el-component-text);
+    }
+
+    &.is-checked {
+      .el-radio__label {
+        color: var(--el-color-white);
+      }
+    }
+
+    &:hover:not(.is-checked) {
+      background-color: var(--el-component-hover-bg);
+    }
+  }
+}
+
+/* 禁用状态样式 */
+:deep(.el-input.is-disabled .el-input__wrapper) {
+  background-color: var(--el-component-disabled-bg) !important;
+  color: var(--el-component-disabled-text);
+}
+
+/* 表单标签颜色 */
+:deep(.el-form-item__label) {
+  color: var(--el-text-color-regular);
+}
+
+/* 必填星号颜色 */
+:deep(.el-form-item.is-required .el-form-item__label:before) {
+  color: var(--el-color-danger);
 }
 </style>
