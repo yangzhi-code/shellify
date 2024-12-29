@@ -168,13 +168,14 @@ onMounted(() => {
 
 .section-header h2 {
   font-size: 1.2em;
+  color: var(--el-text-color-primary);
   margin: 0;
 }
 
 .connection-list {
-  background: #fff;
+  background: var(--el-bg-color-overlay);
   border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .list-container {
@@ -184,24 +185,24 @@ onMounted(() => {
 .list-header {
   display: flex;
   padding: 12px 16px;
-  background-color: #f5f7fa;
-  border-bottom: 1px solid #e4e7ed;
+  background-color: var(--el-fill-color-light);
+  border-bottom: 1px solid var(--el-border-color-lighter);
   font-weight: 500;
-  color: #000;
+  color: var(--el-text-color-primary);
   font-size: 0.9em;
 }
 
 .list-item {
   display: flex;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
   align-items: center;
   transition: background-color 0.2s;
-  color: #000;
+  color: var(--el-text-color-regular);
 }
 
 .list-item:hover {
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
 }
 
 .list-item:last-child {
@@ -212,19 +213,19 @@ onMounted(() => {
 .name-col {
   flex: 2;
   padding-right: 16px;
-  color: #000;
+  color: var(--el-text-color-regular);
 }
 
 .host-col {
   flex: 2;
   padding-right: 16px;
-  color: #000;
+  color: var(--el-text-color-regular);
 }
 
 .user-col {
   flex: 1;
   padding-right: 16px;
-  color: #000;
+  color: var(--el-text-color-regular);
 }
 
 .action-col {
@@ -236,6 +237,7 @@ onMounted(() => {
 .empty-state {
   padding: 40px;
   text-align: center;
+  color: var(--el-text-color-secondary);
 }
 
 /* 按钮样式调整 */
