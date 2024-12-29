@@ -109,10 +109,10 @@ const getLanguageExtension = (filename) => {
 
 // 创建编辑器实例
 const createEditor = (tab) => {
-  console.log('Creating editor with tab:', tab)
+  console.log('正在创建编辑器，标签信息:', tab)
   const el = editorRefs.value[tab.path]
   if (!el) {
-    console.log('Skip editor creation:', { 
+    console.log('跳过编辑器创建:', { 
       hasElement: !!el, 
       hasEditor: editors.has(tab.path),
       tabContent: tab.content ? tab.content.length : 0
@@ -122,7 +122,7 @@ const createEditor = (tab) => {
 
   // 如果已存在编辑器实例，先销毁它
   if (editors.has(tab.path)) {
-    console.log('Destroying existing editor for:', tab.path)
+    console.log('销毁已存在的编辑器:', tab.path)
     editors.get(tab.path).destroy()
     editors.delete(tab.path)
   }
@@ -183,14 +183,14 @@ const createEditor = (tab) => {
     extensions
   })
 
-  console.log('Creating editor with content length:', tab.content?.length || 0)
+  console.log('创建编辑器，内容长度:', tab.content?.length || 0)
   const editor = new EditorView({
     state,
     parent: el
   })
 
   editors.set(tab.path, editor)
-  console.log('Editor created with content:', editor.state.doc.toString().length)
+  console.log('编辑器创建完成，内容长度:', editor.state.doc.toString().length)
 
   // 初始化时发送光标位置和文档信息
   const pos = editor.state.selection.main.head
@@ -211,13 +211,13 @@ const getContent = (path) => {
 
 // 监听标签变化，包括内容更新
 watch(() => props.tabs, (newTabs) => {
-  console.log('Tabs changed, checking for updates...')
+  console.log('标签变化，检查更新...')
 
   // 清理已关闭标签页的编辑器实例
   const currentPaths = new Set(newTabs.map(tab => tab.path))
   for (const [path, editor] of editors.entries()) {
     if (!currentPaths.has(path)) {
-      console.log('Cleaning up editor for closed tab:', path)
+      console.log('清理已关闭标签页的编辑器:', path)
       editor.destroy()
       editors.delete(path)
       delete editorRefs.value[path]
@@ -225,26 +225,26 @@ watch(() => props.tabs, (newTabs) => {
   }
 
   newTabs.forEach(tab => {
-    console.log('Processing tab:', tab)
+    console.log('处理标签:', tab)
     if (!tab || !tab.path) {
-      console.warn('Invalid tab:', tab)
+      console.warn('无效的标签:', tab)
       return
     }
 
     if (!editors.has(tab.path)) {
-      console.log('Creating new editor for:', tab.path)
+      console.log('为新标签创建编辑器:', tab.path)
       createEditor(tab)
     } else {
       const editor = editors.get(tab.path)
       const currentContent = editor.state.doc.toString()
-      console.log('Content comparison:', {
+      console.log('内容比较:', {
         path: tab.path,
         currentLength: currentContent?.length || 0,
         newLength: tab.content?.length || 0,
         isDifferent: tab.content !== currentContent
       })
       if (tab.content !== undefined && tab.content !== currentContent) {
-        console.log('Updating content for:', tab.path)
+        console.log('更新内容:', tab.path)
         editor.dispatch({
           changes: {
             from: 0,
@@ -259,7 +259,7 @@ watch(() => props.tabs, (newTabs) => {
 
 // 监听激活标签变化
 watch(() => props.activeTab, (newPath, oldPath) => {
-  console.log('Active tab changed:', { newPath, oldPath })
+  console.log('活动标签变化:', { newPath, oldPath })
   if (!newPath) return
 
   if (oldPath) {
@@ -268,14 +268,13 @@ watch(() => props.activeTab, (newPath, oldPath) => {
   }
 
   const newEl = editorRefs.value[newPath]
-  console.log('New element for path:', newPath, newEl)
+  console.log('新元素路径:', newPath, newEl)
   if (newEl) {
     newEl.style.display = 'block'
-    // 确保编辑器已创建
     if (!editors.has(newPath)) {
       const tab = props.tabs.find(t => t.path === newPath)
       if (tab) {
-        console.log('Creating editor for newly activated tab')
+        console.log('为新激活的标签创建编辑器')
         createEditor(tab)
       }
     }

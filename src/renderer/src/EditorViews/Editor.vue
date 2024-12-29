@@ -113,6 +113,7 @@ onMounted(() => {
     if (fileInfo && typeof fileInfo === 'object') {
       // 更新当前连接信息
       currentConnection.value = fileInfo
+      console.log('开始打开文件-------:', currentConnection.value)
       
       // 转换为统一格式
       handleFileClick({

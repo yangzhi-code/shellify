@@ -68,20 +68,39 @@ const defaultProps = {
 }
 
 const loadNode = async (node, resolve) => {
+  console.log('开始加载节点:', node, props.connectionId)
+
   if (node.level === 0) {
+    console.log('加载根节点')
     const parentPath = props.currentPath ? 
       props.currentPath.substring(0, props.currentPath.lastIndexOf('/')) || '/' : 
       '/'
+    console.log('父目录路径:', parentPath)
+
     try {
+      if (!props.connectionId) {
+        console.log('未找到有效的连接ID,仅创建根节点')
+        resolve([{ 
+          name: parentPath, 
+          path: parentPath, 
+          type: 'directory',
+          isLeaf: false
+        }])
+        return
+      }
+
+      console.log('开始加载根目录文件列表...')
       const files = await window.electron.ipcRenderer.invoke('ssh:list-files', {
         connectionId: props.connectionId,
         path: parentPath
       })
+      console.log('根目录文件列表加载完成，文件数量:', files.length)
+
       resolve([{ 
         name: parentPath, 
         path: parentPath, 
         type: 'directory',
-        isLeaf: files.length === 0  // 如果目录为空，设置为叶子节点
+        isLeaf: files.length === 0
       }])
     } catch (error) {
       console.error('检查根目录失败:', error)
@@ -91,30 +110,32 @@ const loadNode = async (node, resolve) => {
   }
 
   if (!props.connectionId) {
-    console.log('当前连接信息:', { 
-      connectionId: props.connectionId, 
-      currentPath: props.currentPath 
-    })
+    console.log('未找到有效的连接ID，无法加载子节点')
     resolve([])
     return
   }
 
   try {
+    console.log('开始加载子节点，路径:', node.data.path)
     const files = await window.electron.ipcRenderer.invoke('ssh:list-files', {
       connectionId: props.connectionId,
       path: node.data.path
     })
+    console.log('子节点文件列表加载完成，文件数量:', files.length)
+
     // 对于文件夹，预先检查是否为空
     const processedFiles = await Promise.all(files.map(async file => {
       if (file.type === 'directory') {
+        console.log('检查目录是否为空:', file.path)
         try {
           const subFiles = await window.electron.ipcRenderer.invoke('ssh:list-files', {
             connectionId: props.connectionId,
             path: file.path
           })
+          console.log('目录检查完成:', file.path, '包含文件数:', subFiles.length)
           return {
             ...file,
-            isLeaf: subFiles.length === 0  // 如果目录为空，设置为叶子节点
+            isLeaf: subFiles.length === 0
           }
         } catch (error) {
           console.error('检查子目录失败:', error)
@@ -123,6 +144,7 @@ const loadNode = async (node, resolve) => {
       }
       return file
     }))
+    console.log('所有文件处理完成，总数:', processedFiles.length)
     resolve(processedFiles)
   } catch (error) {
     console.error('加载文件失败:', error)
@@ -179,24 +201,27 @@ const isFileOpenable = (filename) => {
 }
 
 const handleNodeClick = (data) => {
-  console.log('Node clicked:', data)
+  console.log('节点被点击:', data)
   if (data.type === 'file') {
     if (!isFileOpenable(data.name)) {
+      console.log('文件类型不支持打开:', data.name)
       ElMessage.warning('该类型的文件不支持在编辑器中打开')
       return
     }
+    console.log('触发文件点击事件:', data)
     emit('file-click', data)
   }
 }
 
 const handleNodeDoubleClick = (data) => {
-  console.log('Node double clicked:', data)
+  console.log('节点被双击:', data)
   if (data.type === 'file') {
     if (!isFileOpenable(data.name)) {
+      console.log('文件类型不支持打开:', data.name)
       ElMessage.warning('该类型的文件不支持在编辑器中打开')
       return
     }
-    console.log('Emitting file-dblclick event')
+    console.log('触发文件双击事件:', data)
     emit('file-dblclick', data)
   }
 }
@@ -393,18 +418,23 @@ const expandAndSelect = async (path) => {
   if (!path || !treeRef.value) return
 
   try {
+    console.log('准备展开并选中路径:', path)
     // 获取父目录路径
     const parentPath = path.substring(0, path.lastIndexOf('/')) || '/'
+    console.log('父目录路径:', parentPath)
 
     // 先展开父目录
     const parentNode = treeRef.value.getNode(parentPath)
     if (parentNode) {
+      console.log('找到父节点，开始展开')
       await parentNode.expand()
       // 等待节点加载完成
       await new Promise(resolve => setTimeout(resolve, 100))
+      console.log('父节点展开完成')
     }
 
     // 选中目标文件
+    console.log('设置当前选中节点:', path)
     treeRef.value.setCurrentKey(path)
   } catch (error) {
     console.error('展开并选中文件失败:', error)
@@ -415,6 +445,23 @@ const expandAndSelect = async (path) => {
 watch(() => props.currentPath, async (newPath) => {
   if (newPath && newPath !== '/' && treeRef.value) {
     await expandAndSelect(newPath)
+  }
+})
+
+// 监听 connectionId 的变化，重新加载根目录
+watch(() => props.connectionId, async (newId) => {
+  console.log('连接ID变化，准备重新加载目录:', newId)
+  if (newId && treeRef.value) {
+    // 获取根节点
+    const rootNode = treeRef.value.getNode('/')
+    if (rootNode) {
+      // 重置节点状态
+      rootNode.loaded = false
+      rootNode.expanded = false
+      // 触发重新加载
+      await rootNode.expand()
+      console.log('根目录重新加载完成')
+    }
   }
 })
 
