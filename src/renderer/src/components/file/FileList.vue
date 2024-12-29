@@ -130,22 +130,22 @@ const handleEdit = (row) => {
 
 <style scoped>
 .el-table {
-  --el-table-header-bg-color: var(--file-list-header-bg);
-  --el-table-bg-color: var(--file-list-bg);
-  --el-table-border-color: var(--file-list-border);
-  --el-table-text-color: var(--file-item-text);
+  --el-table-header-bg-color: var(--el-fill-color-light);
+  --el-table-bg-color: var(--el-bg-color);
+  --el-table-border-color: var(--el-border-color);
+  --el-table-text-color: var(--el-text-color-regular);
   --el-table-header-text-color: var(--el-text-color-primary);
-  background-color: var(--file-list-bg);
+  background-color: var(--el-bg-color);
 }
 
 :deep(.el-table__row) {
   &:hover td {
-    background-color: var(--file-item-hover) !important;
+    background-color: var(--el-fill-color-light) !important;
   }
 }
 
 :deep(.el-table__row.current-row) td {
-  background-color: var(--file-item-active) !important;
+  background-color: var(--el-fill-color-darker) !important;
 }
 
 .file-name-cell {
@@ -154,16 +154,70 @@ const handleEdit = (row) => {
   gap: 8px;
 
   .el-icon {
-    color: var(--file-item-icon);
+    color: var(--el-text-color-secondary);
     font-size: 16px;
   }
 }
 
 .file-name {
-  color: var(--file-item-text);
+  color: var(--el-text-color-regular);
   cursor: pointer;
   &:hover {
     color: var(--el-color-primary);
   }
+}
+
+/* 添加表格边框颜色 */
+:deep(.el-table__inner-wrapper::before) {
+  background-color: var(--el-border-color);
+}
+
+/* 确保表格单元格边框颜色正确 */
+:deep(.el-table__cell) {
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+/* 表头背景色 */
+:deep(.el-table__header) {
+  background-color: var(--el-fill-color-light);
+}
+
+/* 操作按钮样式 */
+:deep(.el-button-group) {
+  .el-button {
+    background-color: var(--el-bg-color); /* 使用深色背景 */
+    border-color: var(--el-border-color);
+    color: var(--el-text-color-regular);
+  }
+}
+
+/* 删除按钮样式 */
+:deep(.el-button--danger) {
+  background-color: var(--el-bg-color); /* 使用深色背景 */
+  border-color: var(--el-border-color);
+}
+
+/* 加载遮罩层样式 */
+:deep(.el-loading-mask) {
+  background-color: var(--el-bg-color);
+}
+
+:deep(.el-loading-spinner) {
+  .el-loading-text {
+    color: var(--el-text-color-regular);
+  }
+  
+  .path {
+    stroke: var(--el-color-primary);
+  }
+}
+
+/* 表格背景色 */
+:deep(.el-table__body-wrapper) {
+  background-color: var(--el-bg-color);
+}
+
+:deep(.el-table) {
+  --el-table-row-hover-bg-color: var(--el-fill-color-light);
 }
 </style>

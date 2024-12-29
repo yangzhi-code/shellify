@@ -66,12 +66,13 @@ defineEmits([
 <style scoped>
 .toolbar {
   padding: 4px 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--el-border-color-lighter);
   display: flex;
   align-items: center;
   gap: 16px;
   min-width: 0;
   flex-shrink: 0;
+  background-color: var(--el-bg-color);
 }
 
 .path-nav {
@@ -101,6 +102,7 @@ defineEmits([
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  color: var(--el-text-color-regular);
 }
 
 :deep(.el-breadcrumb__inner:hover) {
@@ -109,6 +111,7 @@ defineEmits([
 
 :deep(.el-breadcrumb__separator) {
   margin: 0 4px;
+  color: var(--el-text-color-secondary);
 }
 
 .tools-group {
@@ -134,24 +137,54 @@ defineEmits([
 }
 
 .file-toolbar {
-  background-color: var(--toolbar-bg);
-  border-bottom: 1px solid var(--toolbar-border);
+  background-color: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .toolbar-button {
-  color: var(--toolbar-text);
+  color: var(--el-text-color-regular);
 
   .el-icon {
-    color: var(--toolbar-icon);
+    color: var(--el-text-color-regular);
   }
 
   &:hover {
-    background-color: var(--toolbar-button-hover);
+    background-color: var(--el-fill-color-light);
   }
 
   &.active {
-    background-color: var(--toolbar-button-active);
-    color: #ffffff;
+    background-color: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
   }
+}
+
+:deep(.el-button) {
+  background-color: var(--el-bg-color-overlay);
+  border-color: var(--el-border-color);
+  color: var(--el-text-color-regular);
+
+  &:hover {
+    background-color: var(--el-fill-color-light);
+    border-color: var(--el-border-color-hover);
+  }
+}
+
+/* 搜索框文字和图标颜色 */
+:deep(.el-input__inner) {
+  color: var(--el-text-color-regular);
+}
+
+:deep(.el-input__prefix-inner) {
+  color: var(--el-text-color-secondary);
+}
+
+/* 按钮图标颜色 */
+:deep(.el-button .el-icon) {
+  color: var(--el-text-color-regular);
+}
+
+/* 按钮组分隔线颜色 */
+:deep(.el-button-group .el-button + .el-button) {
+  border-left-color: var(--el-border-color-light);
 }
 </style> 

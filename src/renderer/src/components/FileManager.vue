@@ -537,7 +537,7 @@ const currentInstance = getCurrentInstance()
   display: flex;
   flex-direction: column;
   flex: 1;
-  background: #fff;
+  background: var(--el-bg-color);
   min-width: 0;
   width: 100%;
   overflow: hidden;
@@ -548,10 +548,32 @@ const currentInstance = getCurrentInstance()
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid var(--el-border-color-lighter);
+  background-color: var(--el-bg-color);
 }
 
 :deep(.el-pagination) {
-  justify-content: flex-end;
+  background-color: var(--el-bg-color);
+  
+  .el-pagination__total,
+  .el-pagination__jump {
+    color: var(--el-text-color-regular);
+  }
+  
+  .el-pager li,
+  .btn-prev,
+  .btn-next {
+    background-color: var(--el-bg-color);
+    color: var(--el-text-color-regular);
+    
+    &:hover {
+      color: var(--el-color-primary);
+    }
+    
+    &.is-active {
+      background-color: var(--el-color-primary);
+      color: #fff;
+    }
+  }
 }
 
 /* 删除确认对话框样式 */
@@ -562,6 +584,8 @@ const currentInstance = getCurrentInstance()
   }
 
   &.el-message-box {
+    background-color: var(--el-bg-color) !important;
+    border-color: var(--el-border-color) !important;
     margin: 15vh auto !important;
     position: fixed !important;
     top: 0;
