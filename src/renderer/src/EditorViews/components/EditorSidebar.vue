@@ -479,7 +479,8 @@ defineExpose({
   flex-direction: column;
   overflow: hidden;
   user-select: none;
-  background: var(--el-bg-color);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
 }
 
 .sidebar-header {
@@ -491,9 +492,9 @@ defineExpose({
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--el-text-color-secondary);
-  background: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  color: var(--sidebar-text);
+  background: var(--sidebar-header-bg);
+  border-bottom: 1px solid var(--sidebar-header-border);
   flex-shrink: 0;
 }
 
@@ -502,8 +503,9 @@ defineExpose({
   overflow: auto;
   padding: 8px 0;
   font-size: 13px;
-  background: transparent;
+  background: var(--sidebar-bg);
   height: 0;
+  color: var(--sidebar-text);
 
   /* 自定义滚动条样式 */
   &::-webkit-scrollbar {
@@ -527,6 +529,20 @@ defineExpose({
 
   &:hover::-webkit-scrollbar-thumb {
     visibility: visible;
+  }
+
+  .el-tree-node__content {
+    &:hover {
+      background-color: var(--sidebar-item-hover);
+    }
+    
+    &.is-current {
+      background-color: var(--sidebar-item-active);
+    }
+  }
+
+  .el-tree-node__expand-icon {
+    color: var(--sidebar-text);
   }
 }
 
@@ -697,5 +713,14 @@ defineExpose({
       font-size: 13px;
     }
   }
+}
+
+:deep(.el-button) {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: transparent;
+  --el-button-hover-bg-color: var(--sidebar-item-hover);
+  --el-button-hover-border-color: transparent;
+  --el-button-active-bg-color: var(--sidebar-item-active);
+  --el-button-active-border-color: transparent;
 }
 </style> 

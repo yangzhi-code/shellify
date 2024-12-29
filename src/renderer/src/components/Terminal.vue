@@ -221,7 +221,7 @@ const handleConnectionError = (error) => {
   if (error.message.includes('认证失败')) {
     errorMessage += '用户名或密码错误';
   } else if (error.message.includes('ETIMEDOUT')) {
-    errorMessage += '连接超���，请检查网络或服务器地址';
+    errorMessage += '连接超时，请检查网络或服务器地址';
   } else if (error.message.includes('ECONNREFUSED')) {
     errorMessage += '连接被拒绝，请检查服务器地址和端口';
   } else if (error.message.includes('ENOTFOUND')) {
@@ -325,6 +325,8 @@ onBeforeUnmount(() => {
   padding: 12px;
   box-sizing: border-box;
   flex: 1;
+  background-color: var(--terminal-bg);
+  transition: background-color 0.3s ease;
 }
 
 :deep(.xterm-viewport),
@@ -347,5 +349,26 @@ onBeforeUnmount(() => {
 /* 添加光标样式 */
 :deep(.xterm-cursor) {
   background-color: #fff;
+}
+
+:deep(.xterm) {
+  .xterm-viewport {
+    background-color: var(--terminal-bg) !important;
+    transition: background-color 0.3s ease;
+  }
+  
+  .xterm-screen {
+    background-color: var(--terminal-bg);
+    transition: background-color 0.3s ease;
+  }
+  
+  .xterm-cursor {
+    background-color: var(--terminal-cursor) !important;
+    border-color: var(--terminal-cursor) !important;
+  }
+  
+  .xterm-selection {
+    background-color: var(--terminal-selection) !important;
+  }
 }
 </style>

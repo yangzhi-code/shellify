@@ -129,76 +129,41 @@ const handleEdit = (row) => {
 </script>
 
 <style scoped>
-/* 表格基础样式设置 */
-:deep(.el-table) {
-  flex: 1;                                /* 允许表格伸展填充剩余空间 */
-  overflow: auto;                         /* 内容溢出时显示滚动条 */
-  width: 100% !important;                 /* 强制表格宽度100% */
-  min-width: 0;                          /* 防止表格溢出父容器 */
-  --el-table-header-cell-height: 20px;   /* 自定义表头高度 */
-  --el-table-row-height: 17px;           /* 自定义行高 */
-  font-size: 12px;                       /* 设置表格整体字体大小 */
+.el-table {
+  --el-table-header-bg-color: var(--file-list-header-bg);
+  --el-table-bg-color: var(--file-list-bg);
+  --el-table-border-color: var(--file-list-border);
+  --el-table-text-color: var(--file-item-text);
+  --el-table-header-text-color: var(--el-text-color-primary);
+  background-color: var(--file-list-bg);
 }
 
-/* 表头样式自定义 */
-:deep(.el-table th.el-table__cell) {
-  font-size: 12px;                       /* 表头字体大小 */
-  font-weight: normal;                   /* 表头字体粗细 */
+:deep(.el-table__row) {
+  &:hover td {
+    background-color: var(--file-item-hover) !important;
+  }
 }
 
-/* 文件名单元格布局 */
+:deep(.el-table__row.current-row) td {
+  background-color: var(--file-item-active) !important;
+}
+
 .file-name-cell {
-  display: flex;                         /* 弹性布局 */
-  align-items: center;                   /* 垂直居中对齐 */
-  gap: 2px;                             /* 子元素间距 */
-  height: 20px;                         /* 单元格高度 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .el-icon {
+    color: var(--file-item-icon);
+    font-size: 16px;
+  }
 }
 
-/* 文件名文本样式 */
 .file-name {
-  padding-left: 5px;                    /* 文本左侧内边距 */
-  cursor: pointer;                      /* 鼠标指针样式 */
-  font-size: 12px;                      /* 文件名字体大小 */
-}
-
-/* 文件名悬停效果 */
-.file-name:hover {
-  color: var(--el-color-primary);       /* 悬停时的文字颜色 */
-}
-
-/* 编辑输入框样式 */
-.edit-input :deep(.el-input__inner) {
-  display: flex;                        /* 弹性布局 */
-  align-items: center;                  /* 垂直居中对齐 */
-  height: 18px;                         /* 输入框高度 */
-  padding: 0 1px;                       /* 输入框内边距 */
-  margin: 0;                            /* 清除外边距 */
-  box-sizing: border-box;               /* 盒模型设置 */
-  font-size: 12px;                      /* 输入框字体大小 */
-}
-
-/* 表格单元格内边距设置 */
-:deep(.el-table td.el-table__cell),
-:deep(.el-table th.el-table__cell) {
-  padding: 0;                           /* 移除单元格默认内边距 */
-}
-
-/* 小型按钮样式 */
-:deep(.el-button--small) {
-  height: 18px;                         /* 按钮高度 */
-  padding: 3px 8px;                       /* 按钮内边距 */
-  font-size: 12px;                      /* 按钮字体大小 */
-}
-
-/* 图标样式 */
-:deep(.el-icon) {
-  display: flex;                        /* 弹性布局 */
-  align-items: center;                  /* 垂直居中对齐 */
-  font-size: 12px;                      /* 图标大小 */
-}
-
-/* 表格单元格文字大小 */
-:deep(.el-table td.el-table__cell) {
-  font-size: 12px;                      /* 单元格内容字体大小 */
+  color: var(--file-item-text);
+  cursor: pointer;
+  &:hover {
+    color: var(--el-color-primary);
+  }
 }
 </style>

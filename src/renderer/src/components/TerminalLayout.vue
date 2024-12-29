@@ -273,16 +273,17 @@
   
   /* 终端布局 */
   .content-area.split .terminal-area {
-    height: 50%;  /* 改用固定百分比高度 */
+    height: 50%;
     min-height: 100px;
-    max-height: calc(100% - 100px); /* 确保留出空间给文件区域 */
+    max-height: calc(100% - 100px);
     position: relative;
     display: flex;
     overflow: hidden;
+    border-bottom: 1px solid var(--split-line-color);
   }
   
   .content-area.split .file-area {
-    height: 50%;  /* 改用固定百分比高度 */
+    height: 50%;
     min-height: 100px;
     border-top: 1px solid #333;
     overflow: hidden;
@@ -311,12 +312,18 @@
   /* 分割线样式 */
   .resize-handle {
     height: 6px;
-    background-color: #333;
+    background-color: var(--split-line-color);
     cursor: row-resize;
     position: relative;
     margin: -3px 0;
     z-index: 10;
     flex-shrink: 0;
+    transition: background-color 0.3s ease;
+    
+    /* 悬停效果 */
+    &:hover {
+      background-color: var(--el-color-primary);
+    }
   }
   
   .terminal-area,
