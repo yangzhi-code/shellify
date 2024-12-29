@@ -14,7 +14,7 @@ function createEditorWindow(fileInfo) {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../../preload/index.js'),
+      preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: true,
       contextIsolation: false,
@@ -30,9 +30,9 @@ function createEditorWindow(fileInfo) {
 
   // 直接加载编辑器页面，不传递参数
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    editorWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/editor.html`)
+    editorWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    editorWindow.loadFile(join(__dirname, '../../../renderer/editor.html'))
+    editorWindow.loadFile(join(__dirname, '../renderer/editor.html'))
   }
 
   // 等待页面加载完成后发送文件信息
