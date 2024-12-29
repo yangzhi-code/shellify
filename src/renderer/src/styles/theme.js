@@ -47,13 +47,13 @@ export const themes = {
     '--status-bar-item-hover': '#e4e7ed',     // 状态栏项目悬停背景色
 
     // 标签栏相关
-    '--tab-bar-bg': '#ffffff',                // 标签栏背景色
-    '--tab-bar-border': '#dcdfe6',            // 标签栏边框颜色
-    '--tab-item-bg': '#f5f7fa',               // 标签项背景色
-    '--tab-item-text': '#606266',             // 标签项文字颜色
-    '--tab-item-active-bg': '#ffffff',        // 激活标签背景色
-    '--tab-item-active-text': '#409eff',      // 激活标签文字颜色
-    '--tab-item-hover-bg': '#ecf5ff',         // 标签项悬停背景色
+    '--tab-bar-bg': '#f5f7fa',                // 浅灰色背景
+    '--tab-bar-border': '#e4e7ed',            // 稍微浅一点的边框色
+    '--tab-item-bg': '#ffffff',               // 白色标签背景
+    '--tab-item-text': '#606266',             // 正常文字颜色
+    '--tab-item-active-bg': '#e8f4ff',        // 选中背景使用浅蓝灰色
+    '--tab-item-active-text': '#1890ff',      // 选中文字使用稍微柔和的蓝色
+    '--tab-item-hover-bg': '#f0f2f5',         // 悬停背景色
 
     // 工具栏相关
     '--toolbar-bg': '#f5f7fa',                // 工具栏背景色
@@ -119,13 +119,13 @@ export const themes = {
     '--status-bar-item-hover': '#2a2d2e',     // 状态栏项目悬停，中灰色
 
     // 标签栏相关
-    '--tab-bar-bg': '#1e1e1e',                // 标签栏背景，主背景色
-    '--tab-bar-border': '#2d2d2d',            // 标签栏边框，深灰色
-    '--tab-item-bg': '#252526',               // 标签项背景，略深色
-    '--tab-item-text': '#cccccc',             // 标签项文字，浅灰色
-    '--tab-item-active-bg': '#1e1e1e',        // 激活标签背景，主背景色
-    '--tab-item-active-text': '#409eff',      // 激活标签文字，主题蓝色
-    '--tab-item-hover-bg': '#2a2d2e',         // 标签项悬停，中灰色
+    '--tab-bar-bg': '#252526',                // 深色背景
+    '--tab-bar-border': '#3e3e3e',            // 稍亮的边框色
+    '--tab-item-bg': '#2d2d2d',               // 比背景稍亮的标签背景
+    '--tab-item-text': '#cccccc',             // 正常文字颜色
+    '--tab-item-active-bg': '#37373d',        // 选中背景使用稍亮的灰色
+    '--tab-item-active-text': '#89d1ff',      // 选中文字使用柔和的天蓝色
+    '--tab-item-hover-bg': '#323232',         // 悬停背景色
 
     // 工具栏相关
     '--toolbar-bg': '#252526',                // 工具栏背景，略深色

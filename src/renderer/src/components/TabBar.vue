@@ -52,7 +52,7 @@ const tabsStore = useTabsStore();
   align-items: center;
   justify-content: flex-start;
 
-  border: 1px solid #ccc;
+  border: 1px solid var(--tab-bar-border);
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -61,13 +61,13 @@ const tabsStore = useTabsStore();
 .tab-bar-item.active {
   background-color: var(--tab-item-active-bg);
   color: var(--tab-item-active-text);
-  border-color: #4caf50; /* 选中边框颜色 */
+  border-color: var(--el-color-primary);
 }
 
 .tab-bar-item-title {
   font-size: 11px;
   font-weight: bold;
-  color: #333;
+  color: var(--tab-item-text);
   padding-left: 2px;
   padding-right: 2px;
   text-align: center;
@@ -79,6 +79,17 @@ const tabsStore = useTabsStore();
 }
 .iconfont-del {
   padding-left: 5px;
+  color: var(--tab-item-text);
+}
+
+/* 激活状态的标签文字颜色 */
+.tab-bar-item.active .tab-bar-item-title {
+  color: var(--tab-item-active-text);
+}
+
+/* 添加按钮的颜色 */
+.tab-bar-add .iconfont {
+  color: var(--tab-item-text);
 }
 </style>
   
