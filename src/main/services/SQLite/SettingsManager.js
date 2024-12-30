@@ -12,8 +12,8 @@ class SettingsManager {
   async init() {
     try {
       const dbPath = process.env.NODE_ENV === 'development'
-        ? path.join(process.cwd(), 'data', 'settings.db')
-        : path.join(app.getPath('userData'), 'settings.db');
+        ? path.join(process.cwd(), 'data', 'shellify.db')
+        : path.join(app.getPath('userData'), 'shellify.db');
       
       console.log('[SettingsManager] 数据库路径:', dbPath);
       

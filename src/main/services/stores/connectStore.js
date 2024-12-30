@@ -1,4 +1,5 @@
 let Store;
+import path from 'path';
 
 (async () => {
   Store = (await import('electron-store')).default;
@@ -16,7 +17,13 @@ class ConnectionStore {
     if (!Store) {
       Store = (await import('electron-store')).default;
     }
-    this.store = new Store();
+    // 修改：添加配置选项
+    this.store = new Store({
+      name: 'connections',
+      cwd: process.env.NODE_ENV === 'development'
+        ? path.join(process.cwd(), 'data')  // 开发环境
+        : undefined  // 生产环境使用默认路径
+    });
   }
 
   // 获取所有连接信息

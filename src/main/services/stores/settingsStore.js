@@ -1,4 +1,5 @@
 let Store;
+import path from 'path';
 
 (async () => {
   Store = (await import('electron-store')).default;
@@ -16,7 +17,12 @@ class SettingsStore {
     if (!Store) {
       Store = (await import('electron-store')).default;
     }
-    this.store = new Store();
+    this.store = new Store({
+      name: 'settings',
+      cwd: process.env.NODE_ENV === 'development'
+        ? path.join(process.cwd(), 'data')  // 开发环境
+        : undefined  // 生产环境使用默认路径
+    });
   }
 
   // 获取所有设置
