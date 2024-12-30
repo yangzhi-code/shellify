@@ -16,7 +16,11 @@ class DownloadManager {
 
   async init() {
     try {
-      const dbPath = path.join(app.getPath('userData'), 'downloads1.db');
+      const dbPath = process.env.NODE_ENV === 'development'
+        ? path.join(process.cwd(), 'data', 'downloads.db')
+        : path.join(app.getPath('userData'), 'downloads.db');
+      
+      console.log('[DownloadManager] 数据库路径:', dbPath);
       
       this.db = await open({
         filename: dbPath,

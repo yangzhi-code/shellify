@@ -10,8 +10,10 @@ class UploadManager {
 
   async initDatabase() {
     const dbPath = process.env.NODE_ENV === 'development'
-      ? path.join(process.cwd(), 'uploads.db')
+      ? path.join(process.cwd(), 'data', 'uploads.db')
       : path.join(app.getPath('userData'), 'uploads.db')
+
+    console.log('[UploadManager] 数据库路径:', dbPath)
 
     const db = await open({
       filename: dbPath,

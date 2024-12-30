@@ -11,8 +11,11 @@ class SettingsManager {
 
   async init() {
     try {
-      const dbPath = path.join(app.getPath('userData'), 'settings.db');
-      //console.log('[SettingsManager] 数据库路径:', dbPath);
+      const dbPath = process.env.NODE_ENV === 'development'
+        ? path.join(process.cwd(), 'data', 'settings.db')
+        : path.join(app.getPath('userData'), 'settings.db');
+      
+      console.log('[SettingsManager] 数据库路径:', dbPath);
       
       this.db = await open({
         filename: dbPath,
