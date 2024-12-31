@@ -300,6 +300,11 @@ const deleteRecord = async (downloadId) => {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
+      customClass: 'custom-message-box',
+      lockScroll: false,
+      modalAppendToBody: false,
+      appendToBody: true,
+      showClose: false,
       beforeClose: (action, instance, done) => {
         // 阻止弹窗闭时触发的事件冒泡
         if (action === 'confirm') {

@@ -242,7 +242,12 @@ const deleteRecord = async (uploadId) => {
     await ElMessageBox.confirm('确定要删除这条上传记录吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      customClass: 'custom-message-box',
+      lockScroll: false,
+      modalAppendToBody: false,
+      appendToBody: true,
+      showClose: false
     })
 
     await window.electron.ipcRenderer.invoke('store:delete-upload', uploadId)
