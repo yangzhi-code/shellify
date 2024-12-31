@@ -29,6 +29,7 @@ import { history } from '@codemirror/commands'
 import { indentOnInput, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 import { bracketMatching } from '@codemirror/language'
 import { closeBrackets } from '@codemirror/autocomplete'
+import { search, openSearchPanel } from '@codemirror/search'
 
 const props = defineProps({
   tabs: {
@@ -138,7 +139,51 @@ const createEditor = (tab) => {
     bracketMatching(),
     closeBrackets(),
     syntaxHighlighting(defaultHighlightStyle),
-    oneDark
+    oneDark,
+    search({
+      top: true,
+      caseSensitive: false
+    }),
+    EditorView.domEventHandlers({
+      keydown: (event, view) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+          event.preventDefault()
+          openSearchPanel(view)
+          
+          // 在搜索面板打开后进行中文化
+          setTimeout(() => {
+            const searchPanel = view.dom.querySelector('.cm-panel.cm-search')
+            if (searchPanel) {
+              // 替换按钮文本
+              const buttons = searchPanel.querySelectorAll('button')
+              buttons.forEach(button => {
+                switch (button.textContent.toLowerCase()) {
+                  case 'next': button.textContent = '下一个'; break
+                  case 'previous': button.textContent = '上一个'; break
+                  case 'all': button.textContent = '全部'; break
+                  case 'replace': button.textContent = '替换'; break
+                  case 'replace all': button.textContent = '全部替换'; break
+                }
+              })
+
+              // 替换复选框标签文本
+              const labels = searchPanel.querySelectorAll('label')
+              labels.forEach(label => {
+                const text = label.textContent.toLowerCase()
+                if (text.includes('match case')) label.childNodes[1].textContent = '区分大小写'
+                if (text.includes('regexp')) label.childNodes[1].textContent = '正则表达式'
+                if (text.includes('by word')) label.childNodes[1].textContent = '全词匹配'
+              })
+
+              // 修改输入框占位符
+              const inputs = searchPanel.querySelectorAll('input[type="text"]')
+              inputs[0].placeholder = '查找...'
+              if (inputs[1]) inputs[1].placeholder = '替换为...'
+            }
+          }, 10)
+        }
+      }
+    })
   ]
 
   // 根据文件类型添加特定扩展
@@ -359,5 +404,84 @@ defineExpose({
 :deep(.cm-content) {
   min-height: 100%;
   padding: 0;
+}
+
+/* 搜索面板样式 */
+:deep(.cm-searchMatch) {
+  background-color: var(--el-color-primary-light-8);
+  border: 1px solid var(--el-color-primary-light-5);
+}
+
+:deep(.cm-searchMatch-selected) {
+  background-color: var(--el-color-primary-light-5);
+}
+
+:deep(.cm-panel.cm-search) {
+  background-color: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  font-family: var(--el-font-family);
+  padding: 8px;
+}
+
+:deep(.cm-search input[type="text"]) {
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-bg-color-overlay);
+  color: var(--el-text-color-primary);
+  height: 28px;
+  padding: 0 8px;
+  width: 200px;
+  font-size: 12px;
+}
+
+:deep(.cm-search input[type="text"]:focus) {
+  border-color: var(--el-color-primary);
+  outline: none;
+}
+
+:deep(.cm-search button) {
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-bg-color-overlay);
+  color: var(--el-text-color-primary);
+  padding: 4px 12px;
+  margin: 0 4px;
+  font-size: 12px;
+  height: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+:deep(.cm-search button:hover) {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
+}
+
+:deep(.cm-search label) {
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+  margin: 0 8px;
+  user-select: none;
+}
+
+:deep(.cm-search input[type="checkbox"]) {
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+:deep(.cm-search .cm-button[name="close"]) {
+  color: var(--el-text-color-secondary);
+  font-size: 16px;
+  padding: 4px;
+  border: none;
+}
+
+:deep(.cm-search .cm-button[name="close"]:hover) {
+  color: var(--el-text-color-primary);
+}
+
+:deep(.cm-panel.cm-search) {
+  gap: 8px;
+  align-items: center;
 }
 </style> 
