@@ -337,7 +337,12 @@ const clearDownloadRecords = async () => {
     await ElMessageBox.confirm('确定要清空所有下载记录吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      customClass: 'custom-message-box',
+      lockScroll: false,
+      modalAppendToBody: false,
+      appendToBody: true,
+      showClose: false
     })
 
     await window.electron.ipcRenderer.invoke('store:delete-all-downloads')
@@ -652,5 +657,34 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   color: var(--el-color-warning);
+}
+
+:deep(.custom-message-box) {
+  /* 防止弹窗出现时页面抖动 */
+  &.el-message-box {
+    margin: 15vh auto !important;
+    position: fixed !important;
+    top: 0;
+    left: 50% !important;
+    transform: translateX(-50%);
+  }
+
+  .el-message-box__header {
+    padding-right: 20px;
+  }
+
+  .el-message-box__content {
+    padding: 20px;
+  }
+
+  .el-message-box__btns {
+    padding: 10px 20px 20px;
+  }
+
+  /* 修复遮罩层问题 */
+  & + .el-overlay {
+    position: fixed !important;
+    padding-right: 0 !important;
+  }
 }
 </style> 

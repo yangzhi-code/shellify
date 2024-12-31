@@ -262,7 +262,12 @@ const clearUploadRecords = async () => {
     await ElMessageBox.confirm('确定要清空所有上传记录吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      customClass: 'custom-message-box',
+      lockScroll: false,
+      modalAppendToBody: false,
+      appendToBody: true,
+      showClose: false
     })
 
     await window.electron.ipcRenderer.invoke('store:delete-all-uploads')
