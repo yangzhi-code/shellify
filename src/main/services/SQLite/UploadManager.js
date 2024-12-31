@@ -41,7 +41,7 @@ class UploadManager {
 
   //保存上传记录
   async updateOrCreate(data) {
-    console.log('上传记录', data)
+   
     try {
       const db = await this.dbPromise
       const now = Date.now()
@@ -88,8 +88,6 @@ class UploadManager {
 
       // 使用 _notifyProgressUpdate 通知进度更新
       await this._notifyProgressUpdate(data.uploadId, data.progress)
-
-      console.log("测试", global.mainWindow)
 
       // 发送更新事件
       if (global.mainWindow) {

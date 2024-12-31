@@ -159,17 +159,15 @@ const downloadFile = async (file) => {
   
   try {
     file.loading = true;
+    // 调用下载方法
     await window.electron.ipcRenderer.invoke('ssh:download-file', {
       connectionId: props.connectionId,
       remotePath: file.path,
       fileName: file.name
     });
-
-    // 如果返回 null，说明用户取消了下载，不显示错误提示
-    if (result === null) {
-      return;
-    }
-    ElMessage.success('文件开始下载');
+    
+    // 直接显示成功消息，不需要检查 result
+    ElMessage.success('文件下载成功');
   } catch (error) {
     console.error('文件下载失败:', error);
     ElMessage.error('文件下载失败: ' + error.message);
@@ -489,7 +487,7 @@ const handleUpload = async () => {
           remotePath: currentFullPath.value
         });
       }
-      ElMessage.success('文件开始上传');
+      ElMessage.success('文件上传成功');
     }
   } catch (error) {
     console.error('文件上传失败:', error);
