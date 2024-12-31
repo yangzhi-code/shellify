@@ -348,7 +348,8 @@ onBeforeUnmount(() => {
 
 /* 添加光标样式 */
 :deep(.xterm-cursor) {
-  background-color: #fff;
+  background-color: var(--terminal-cursor)
+  
 }
 
 :deep(.xterm) {
@@ -362,10 +363,10 @@ onBeforeUnmount(() => {
     transition: background-color 0.3s ease;
   }
   
-  .xterm-cursor {
+  /* .xterm-cursor {
     background-color: var(--terminal-cursor) !important;
     border-color: var(--terminal-cursor) !important;
-  }
+  } */
   
   .xterm-selection {
     background-color: var(--terminal-selection) !important;

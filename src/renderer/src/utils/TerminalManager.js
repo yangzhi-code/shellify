@@ -13,14 +13,23 @@ export class TerminalManager {
    * @param {Object} options - 终端配置选项
    */
   constructor(options = {}) {
+    // 初始化终端
     this._terminal = null;
+    // 终端配置选项
     this.options = options;
+    // 终端适配器
     this._fitAddon = null;
+    // 终端链接插件
     this._webLinksAddon = null;
+    // 终端搜索插件
     this._searchAddon = null;
+    // 终端尺寸
     this._lastDimensions = { cols: 0, rows: 0 };
+    // 终端写入队列
     this.writeQueue = []
+    // 终端写入状态
     this.isWriting = false
+    // 已加载插件集合
     this._addons = new Set() // 用于跟踪所有已加载的插件
   }
 
