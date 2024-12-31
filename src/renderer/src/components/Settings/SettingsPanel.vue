@@ -16,7 +16,7 @@
 
     <div class="settings-content">
       <el-tabs type="border-card">
-        <!-- 常规设置 -->
+        <!-- 只保留常规设置 -->
         <el-tab-pane>
           <template #label>
             <el-icon><Setting /></el-icon>
@@ -30,111 +30,7 @@
                 <el-option label="跟随系统" value="system" />
               </el-select>
             </el-form-item>
-            <el-form-item label="界面缩放">
-              <el-select v-model="settings.zoom" class="full-width">
-                <el-option label="100%" value="100" />
-                <el-option label="125%" value="125" />
-                <el-option label="150%" value="150" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="语言">
-              <el-select v-model="settings.language" class="full-width">
-                <el-option label="简体中文" value="zh-CN" />
-                <el-option label="English" value="en-US" />
-              </el-select>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
-        <!-- 终端设置 -->
-        <el-tab-pane>
-          <template #label>
-            <el-icon><Monitor /></el-icon>
-            <span>终端</span>
-          </template>
-          <el-form label-position="top">
-            <el-form-item label="终端字体">
-              <el-select v-model="settings.terminalFont" class="full-width">
-                <el-option label="Menlo" value="Menlo" />
-                <el-option label="Monaco" value="Monaco" />
-                <el-option label="Consolas" value="Consolas" />
-                <el-option label="JetBrains Mono" value="JetBrains Mono" />
-                <el-option label="Fira Code" value="Fira Code" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="终端字体大小">
-              <el-input-number v-model="settings.terminalFontSize" :min="12" :max="20" class="full-width" />
-            </el-form-item>
-            <el-form-item label="光标样式">
-              <el-select v-model="settings.cursorStyle" class="full-width">
-                <el-option label="块状" value="block" />
-                <el-option label="下划线" value="underline" />
-                <el-option label="竖线" value="bar" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="终端透明度">
-              <el-slider v-model="settings.terminalOpacity" :min="0.3" :max="1" :step="0.1" />
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
-        <!-- 编辑器设置 -->
-        <el-tab-pane>
-          <template #label>
-            <el-icon><Edit /></el-icon>
-            <span>编辑器</span>
-          </template>
-          <el-form label-position="top">
-            <el-form-item label="Tab 大小">
-              <el-input-number v-model="settings.tabSize" :min="2" :max="8" class="full-width" />
-            </el-form-item>
-            <el-form-item label="自动保存">
-              <el-switch v-model="settings.autoSave" />
-            </el-form-item>
-            <el-form-item label="自动保存延迟(秒)">
-              <el-input-number 
-                v-model="settings.autoSaveDelay" 
-                :min="1" 
-                :max="60"
-                :disabled="!settings.autoSave"
-                class="full-width"
-              />
-            </el-form-item>
-            <el-form-item label="显示行号">
-              <el-switch v-model="settings.showLineNumbers" />
-            </el-form-item>
-            <el-form-item label="启用代码折叠">
-              <el-switch v-model="settings.codeFolding" />
-            </el-form-item>
-            <el-form-item label="文件编码">
-              <el-select v-model="settings.fileEncoding" class="full-width">
-                <el-option label="UTF-8" value="utf8" />
-                <el-option label="GBK" value="gbk" />
-                <el-option label="GB2312" value="gb2312" />
-              </el-select>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
-        <!-- 快捷键设置 -->
-        <el-tab-pane>
-          <template #label>
-            <el-icon><Operation /></el-icon>
-            <span>快捷键</span>
-          </template>
-          <el-form label-position="top" class="shortcut-form">
-            <el-form-item label="新建终端">
-              <el-input v-model="settings.shortcuts.newTerminal" readonly @click="startCapture($event, 'newTerminal')" />
-            </el-form-item>
-            <el-form-item label="关闭终端">
-              <el-input v-model="settings.shortcuts.closeTerminal" readonly @click="startCapture($event, 'closeTerminal')" />
-            </el-form-item>
-            <el-form-item label="分屏模式">
-              <el-input v-model="settings.shortcuts.splitMode" readonly @click="startCapture($event, 'splitMode')" />
-            </el-form-item>
-            <el-form-item label="文件模式">
-              <el-input v-model="settings.shortcuts.fileMode" readonly @click="startCapture($event, 'fileMode')" />
-            </el-form-item>
+            <!-- 其他设置暂时隐藏 -->
           </el-form>
         </el-tab-pane>
       </el-tabs>
@@ -174,26 +70,8 @@ defineEmits(['update:visible'])
 
 // 扩展设置数据
 const settings = ref({
-  theme: 'system',
-  zoom: '100',
-  language: 'zh-CN',
-  fontSize: 14,
-  terminalFont: 'Menlo',
-  terminalFontSize: 14,
-  cursorStyle: 'block',
-  terminalOpacity: 1,
-  tabSize: 4,
-  autoSave: true,
-  autoSaveDelay: 3,
-  showLineNumbers: true,
-  codeFolding: true,
-  fileEncoding: 'utf8',
-  shortcuts: {
-    newTerminal: 'Ctrl + T',
-    closeTerminal: 'Ctrl + W',
-    splitMode: 'Ctrl + S',
-    fileMode: 'Ctrl + F'
-  }
+  theme: 'system'
+  // 其他设置暂时移除
 })
 
 // 快捷键捕获
