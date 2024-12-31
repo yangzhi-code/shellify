@@ -50,7 +50,7 @@ class ServerMonitorService {
     try {
       const { stdout: publicIp } = await this.execCommand(
         connectionId, 
-        "curl -s https://api.ipify.org || wget -qO- https://api.ipify.org || curl -s https://ifconfig.me"
+        "curl -s http://checkip.amazonaws.com"
       );
 
       const { stdout: cpu } = await this.execCommand(
