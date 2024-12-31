@@ -311,4 +311,36 @@ watch(() => props.visible, (newValue) => {
   background-color: var(--el-bg-color-overlay) !important;
   border-color: var(--el-border-color) !important;
 }
+
+/* 调整按钮和表单元素大小 */
+:deep(.el-button) {
+  height: 28px;  /* 减小按钮高度 */
+  padding: 0 12px;  /* 减小按钮内边距 */
+  font-size: 13px;  /* 减小字号 */
+}
+
+:deep(.el-select) {
+  .el-input__wrapper {
+    height: 28px;  /* 减小选择器高度 */
+  }
+  .el-input__inner {
+    font-size: 13px;
+  }
+}
+
+:deep(.el-tabs__item) {
+  height: 32px;
+  line-height: 32px;
+  font-size: 13px;
+}
+
+:deep(.el-form-item__label) {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* 调整图标大小 */
+:deep(.el-icon) {
+  font-size: 14px;
+}
 </style> 
