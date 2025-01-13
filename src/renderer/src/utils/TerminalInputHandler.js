@@ -49,7 +49,7 @@ export class TerminalInputHandler {
       case '\r':  // 回车键
         window.electron.ipcRenderer.send('terminal-input', {
           id: context.connectionId,
-          data: '\n'
+          data: '\r\n'
         });
         this.currentInput = '';
         break;
@@ -65,6 +65,7 @@ export class TerminalInputHandler {
         break;
       
       default:  // 普通字符
+        // 移除自动换行检查，让终端自己处理换行
         this.currentInput += data;
         window.electron.ipcRenderer.send('terminal-input', {
           id: context.connectionId,

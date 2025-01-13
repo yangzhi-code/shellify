@@ -59,9 +59,20 @@ export class TerminalManager {
       inputMethod: {
         enableComposition: true,
         preeditBackgroundColor: 'rgba(255, 255, 255, 0.3)'
-      }
+      },
+      cols: 80,
+      rows: 24,
+      wordWrap: true,
+      windowsMode: true
     })
     
+    this._terminal.options.bellStyle = 'none'
+    this._terminal.options.drawBoldTextInBrightColors = true
+    this._terminal.options.letterSpacing = 0
+    this._terminal.options.lineHeight = 1
+    this._terminal.options.scrollback = 10000
+    this._terminal.options.tabStopWidth = 8
+
     try {
       // 创建并加载插件
       this._fitAddon = new FitAddon()
@@ -160,26 +171,33 @@ export class TerminalManager {
     try {
       if (!this._terminal || !this._fitAddon) return;
 
-      // 获取调整前的尺寸
-      const oldDimensions = {
-        cols: this._terminal.cols,
-        rows: this._terminal.rows
-      };
+      // 获取容器尺寸
+      const container = this._terminal.element.parentElement;
+      const computedStyle = window.getComputedStyle(container);
+      const width = parseInt(computedStyle.width);
+      const height = parseInt(computedStyle.height);
+      
+      // 计算可能的列数和行数
+      const charWidth = this._terminal._core._renderService.dimensions.actualCellWidth;
+      const charHeight = this._terminal._core._renderService.dimensions.actualCellHeight;
+      
+      const cols = Math.max(2, Math.floor((width - 20) / charWidth));
+      const rows = Math.max(2, Math.floor((height - 20) / charHeight));
 
-      // 调整终端大小
+      // 设置新的尺寸
+      this._terminal.resize(cols, rows);
       this._fitAddon.fit();
 
-      // 获新的尺寸
-      const newDimensions = {
-        cols: this._terminal.cols,
-        rows: this._terminal.rows
-      };
+      // 强制刷新显示
+      this._terminal.refresh(0, this._terminal.rows - 1);
+      
+      // 更新存储的尺寸
+      this._lastDimensions = { cols, rows };
 
-      // 只有当尺寸真正发生变化时才触发更新
-      if (oldDimensions.cols !== newDimensions.cols || 
-          oldDimensions.rows !== newDimensions.rows) {
-        this._lastDimensions = newDimensions;
-        this._terminal.refresh(0, this._terminal.rows - 1);
+      // 发送 SIGWINCH 信号
+      if (this._terminal.element) {
+        const event = new Event('resize');
+        this._terminal.element.dispatchEvent(event);
       }
     } catch (error) {
       console.error('Resize error:', error);
