@@ -47,14 +47,19 @@ export class TerminalManager {
       cursorBlink: true,
       cursorStyle: 'block',
       fontSize: this.options.fontSize || 14,
-      fontFamily: 'Consolas, "Courier New", monospace',
+      fontFamily: '"Consolas", "Microsoft YaHei", "微软雅黑", monospace',
       theme: {
         background: '#1e1e1e',
         foreground: '#d4d4d4'
       },
       allowTransparency: true,
       scrollback: 10000,
-      convertEol: true
+      convertEol: true,
+      allowProposedApi: true,
+      inputMethod: {
+        enableComposition: true,
+        preeditBackgroundColor: 'rgba(255, 255, 255, 0.3)'
+      }
     })
     
     try {

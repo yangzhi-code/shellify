@@ -131,12 +131,31 @@ const initTerminal = () => {
     commandHandler.value = new TerminalCommandHandler(terminalManager.value)
     inputHandler.value = new TerminalInputHandler(terminalManager.value, commandHandler.value)
 
-    // 使用单一的 onKey 监听处理所有键盘输入
+    // 添加输入法事件监听
+    terminal.element.addEventListener('compositionstart', (e) => {
+      // 输入法编辑开始
+      inputHandler.value?.setCompositionMode(true);
+    });
+
+    terminal.element.addEventListener('compositionend', (e) => {
+      // 输入法编辑结束，发送最终文本
+      inputHandler.value?.setCompositionMode(false);
+      if (e.data) {
+        inputHandler.value?.handleInput(e.data, {
+          connectionId: props.item.data?.id,
+          username: props.item.info.username,
+          host: props.item.info.host
+        });
+      }
+    });
+
+    // 修改原有的 onKey 处理
     const disposable = terminal.onKey(e => {
       if (e.key === '\r' && isConnectionBroken.value && currentServerInfo.value) {
         terminalManager.value.clear();
         connectToServer(currentServerInfo.value);
-      } else if (!isConnectionBroken.value) {
+      } else if (!isConnectionBroken.value && !inputHandler.value?.isComposing) {
+        // 只在非输入法编辑状态下处理键盘输入
         inputHandler.value?.handleInput(e.key, {
           connectionId: props.item.data?.id,
           username: props.item.info.username,
