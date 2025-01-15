@@ -12,7 +12,9 @@ export class TerminalInputHandler {
     this.terminalManager = terminalManager
     this.commandHandler = commandHandler
     this.currentInput = ''     // 当前输入的命令
-    this.isComposing = false; // 添加输入法状态标记
+    this.isComposing = false; // 输入法状态标记
+    this.commandHistory = [];   // 命令历史记录
+    this.historyIndex = -1;     // 历史记录索引
   }
 
   /**
@@ -26,10 +28,9 @@ export class TerminalInputHandler {
   /**
    * 处理键盘输入
    * @param {string} data - 输入的字符
-   * @param {Object} context - 终端上下文信息（用户名、主机等）
+   * @param {Object} context - 终端上下文信息
    */
   handleInput(data, context) {
-    // 如果是在输入法编辑状态，直接发送到终端
     if (this.isComposing) {
       if (context.connectionId) {
         window.electron.ipcRenderer.send('terminal-input', {
@@ -40,16 +41,26 @@ export class TerminalInputHandler {
       return;
     }
 
-    // 只有在有连接ID的情况下才处理输入
-    if (!context.connectionId) {
-      return;
-    }
+    if (!context.connectionId) return;
 
+    // 处理特殊键
     switch(data) {
+      case '\u001b[A': // 上箭头
+        this.handleUpArrow(context);
+        break;
+
+      case '\u001b[B': // 下箭头
+        this.handleDownArrow(context);
+        break;
+
       case '\r':  // 回车键
+        if (this.currentInput.trim()) {
+          this.commandHistory.push(this.currentInput);
+          this.historyIndex = this.commandHistory.length;
+        }
         window.electron.ipcRenderer.send('terminal-input', {
           id: context.connectionId,
-          data: '\r'  // 只发送 \r，让服务器决定如何处理换行
+          data: '\r'
         });
         this.currentInput = '';
         break;
@@ -71,6 +82,70 @@ export class TerminalInputHandler {
           data: data
         });
     }
+  }
+
+  /**
+   * 处理上箭头键
+   * @private
+   */
+  handleUpArrow(context) {
+    if (this.commandHistory.length === 0) return;
+
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+    }
+
+    // 清除当前行
+    this.clearCurrentLine(context);
+
+    // 设置新的命令
+    const command = this.commandHistory[this.historyIndex];
+    if (command) {
+      this.currentInput = command;
+      window.electron.ipcRenderer.send('terminal-input', {
+        id: context.connectionId,
+        data: command
+      });
+    }
+  }
+
+  /**
+   * 处理下箭头键
+   * @private
+   */
+  handleDownArrow(context) {
+    if (this.commandHistory.length === 0) return;
+
+    if (this.historyIndex < this.commandHistory.length) {
+      this.historyIndex++;
+    }
+
+    // 清除当前行
+    this.clearCurrentLine(context);
+
+    // 设置新的命令
+    const command = this.commandHistory[this.historyIndex] || '';
+    this.currentInput = command;
+    if (command) {
+      window.electron.ipcRenderer.send('terminal-input', {
+        id: context.connectionId,
+        data: command
+      });
+    }
+  }
+
+  /**
+   * 清除当前行
+   * @private
+   */
+  clearCurrentLine(context) {
+    // 发送足够的退格键来清除当前行
+    const backspaces = '\b'.repeat(this.currentInput.length);
+    const spaces = ' '.repeat(this.currentInput.length);
+    window.electron.ipcRenderer.send('terminal-input', {
+      id: context.connectionId,
+      data: backspaces + spaces + backspaces
+    });
   }
 
   /**
