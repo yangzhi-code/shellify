@@ -111,19 +111,22 @@ class ServerMonitorService {
     for (const iface of networkInterfaces.split('\n').filter(Boolean)) {
       const { stdout: stats } = await this.execCommand(
         connectionId,
-        `old_rx=$(cat /proc/net/dev | grep "${iface}" | awk '{print $2}');
-         old_tx=$(cat /proc/net/dev | grep "${iface}" | awk '{print $10}');
+        `rx1=$(cat /proc/net/dev | grep "${iface}:" | awk '{print $2}');
+         tx1=$(cat /proc/net/dev | grep "${iface}:" | awk '{print $10}');
          sleep 1;
-         new_rx=$(cat /proc/net/dev | grep "${iface}" | awk '{print $2}');
-         new_tx=$(cat /proc/net/dev | grep "${iface}" | awk '{print $10}');
-         echo "$old_rx $old_tx $new_rx $new_tx"`
+         rx2=$(cat /proc/net/dev | grep "${iface}:" | awk '{print $2}');
+         tx2=$(cat /proc/net/dev | grep "${iface}:" | awk '{print $10}');
+         rx_speed=$((rx2 - rx1));
+         tx_speed=$((tx2 - tx1));
+         echo "$rx_speed $tx_speed"`
       );
 
-      const [old_rx, old_tx, new_rx, new_tx] = stats.trim().split(/\s+/).map(Number);
+      const [rx_speed, tx_speed] = stats.trim().split(/\s+/).map(Number);
+      
       interfaces.push({
         name: iface,
-        download: MetricsFormatter.formatSpeed(new_rx - old_rx),
-        upload: MetricsFormatter.formatSpeed(new_tx - old_tx)
+        download: MetricsFormatter.formatSpeed(rx_speed),
+        upload: MetricsFormatter.formatSpeed(tx_speed)
       });
     }
 
