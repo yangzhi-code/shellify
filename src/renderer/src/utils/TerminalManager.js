@@ -169,36 +169,33 @@ export class TerminalManager {
    */
   resize() {
     try {
-      if (!this._terminal || !this._fitAddon) return;
+      if (!this._terminal || !this._fitAddon) {
+        console.log('终端或适配器未初始化，跳过大小调整');
+        return;
+      }
 
       // 获取容器尺寸
       const container = this._terminal.element.parentElement;
       const computedStyle = window.getComputedStyle(container);
-      const width = parseInt(computedStyle.width);
-      const height = parseInt(computedStyle.height);
+      const width = Math.floor(parseFloat(computedStyle.width));  // 确保是整数
+      const height = Math.floor(parseFloat(computedStyle.height)); // 确保是整数
       
-      // 计算可能的列数和行数
-      const charWidth = this._terminal._core._renderService.dimensions.actualCellWidth;
-      const charHeight = this._terminal._core._renderService.dimensions.actualCellHeight;
-      
-      const cols = Math.max(2, Math.floor((width - 20) / charWidth));
-      const rows = Math.max(2, Math.floor((height - 20) / charHeight));
+      console.log(`计算终端大小 - 容器宽度: ${width}, 容器高度: ${height}`);
 
-      // 设置新的尺寸
-      this._terminal.resize(cols, rows);
+      // 使用 fitAddon 自动调整大小
       this._fitAddon.fit();
 
-      // 强制刷新显示
-      this._terminal.refresh(0, this._terminal.rows - 1);
-      
-      // 更新存储的尺寸
-      this._lastDimensions = { cols, rows };
+      // 获取调整后的尺寸
+      const cols = Math.floor(this._terminal.cols); // 确保是整数
+      const rows = Math.floor(this._terminal.rows); // 确保是整数
 
-      // 发送 SIGWINCH 信号
-      if (this._terminal.element) {
-        const event = new Event('resize');
-        this._terminal.element.dispatchEvent(event);
+      console.log(`终端尺寸 - 列数: ${cols}, 行数: ${rows}`);
+
+      // 调整终端大小
+      if (cols > 0 && rows > 0) {
+        this._terminal.resize(cols, rows);
       }
+
     } catch (error) {
       console.error('Resize error:', error);
     }

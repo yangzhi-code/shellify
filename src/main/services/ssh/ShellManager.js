@@ -139,6 +139,7 @@ class ShellManager {
    * @param {number} rows - 新的行数
    */
   resizeShell(connectionId, cols, rows) {
+    console.log('调整窗口', connectionId, cols, rows);
     const shell = this.shells[connectionId];
     if (shell && !shell.destroyed) {
       if (cols > 0 && rows > 0 && 

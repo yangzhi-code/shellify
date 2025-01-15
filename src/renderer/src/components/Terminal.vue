@@ -21,7 +21,7 @@ import { TerminalManager } from '../utils/TerminalManager'
 import { TerminalInputHandler } from '../utils/TerminalInputHandler'
 import { TerminalCommandHandler } from '../utils/TerminalCommandHandler'
 import QuickConnect from './QuickConnect.vue'
-import { throttle } from 'lodash-es';  // 添加 throttle 导入
+import { throttle, debounce } from 'lodash-es';  // 添加 throttle 和 debounce 导入
 
 const tabsStore = useTabsStore()
 
@@ -96,27 +96,39 @@ const handleQuickConnect = async (connection) => {
   }
 }
 
-// 优化后的终端大小调整函数
+// 发送终端大小到服务器（使用 debounce）
+const sendTerminalSize = debounce((connectionId, cols, rows) => {
+  console.log('发送终端大小到服务器:', { connectionId, cols, rows });
+  window.electron.ipcRenderer.send('resize-terminal', {
+    connectionId,
+    cols: Math.floor(cols),
+    rows: Math.floor(rows)
+  });
+}, 300);  // 300ms 的防抖时间
+
+// 终端大小调整函数
 const handleTerminalResize = throttle(() => {
   if (terminalManager.value && terminalContainer.value) {
     const { height, width } = terminalContainer.value.getBoundingClientRect();
+    console.log('终端大小调整', height, width);
     if (height > 0 && width > 0) {
       terminalManager.value.resize();
       
       // 如果已连接，同步发送新的尺寸到服务器
-      if (props.item.data?.id && terminalManager.value.terminal) {
-        const { cols, rows } = terminalManager.value.terminal;
-        window.electron.ipcRenderer.send('resize-terminal', {
-          connectionId: props.item.data.id,
-          cols,
-          rows
-        });
+      if (props.item.data?.id) {
+        const terminal = terminalManager.value._terminal;
+        if (terminal) {
+          const cols = Math.floor(terminal.cols);
+          const rows = Math.floor(terminal.rows);
+          console.log('终端尺寸', cols, rows);
+          sendTerminalSize(props.item.data.id, cols, rows);
+        }
       }
     }
   }
-}, 100);  // 100ms 的节流时间
+}, 100);
 
-// 修改 initTerminal 函数中的 resize 相关代码
+// 初始化终端
 const initTerminal = () => {
   try {
     terminalManager.value = new TerminalManager({
@@ -175,7 +187,24 @@ const initTerminal = () => {
     })
 
     // 使用 ResizeObserver 监听容器大小变化
-    const resizeObserver = new ResizeObserver(handleTerminalResize);
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(() => {
+        if (terminalManager.value && terminalContainer.value) {
+          terminalManager.value.resize();
+          
+          // 如果已连接，同步发送新的尺寸到服务器
+          if (props.item.data?.id) {
+            const terminal = terminalManager.value._terminal;
+            if (terminal) {
+              const cols = Math.floor(terminal.cols);
+              const rows = Math.floor(terminal.rows);
+              sendTerminalSize(props.item.data.id, cols, rows);
+            }
+          }
+        }
+      });
+    });
+
     resizeObserver.observe(terminalContainer.value);
 
     // 监听窗口大小变化
@@ -222,6 +251,13 @@ const connectToServer = async (serverInfo) => {
     props.item.data = response;
     terminalManager.value.writeln('连接成功！');
     emit('connected', response.id);
+
+    // 连接成功后同步终端大小
+    if (terminalManager.value && terminalManager.value._terminal) {
+      const { cols, rows } = terminalManager.value._terminal;
+      console.log('连接成功，同步终端大小:', { cols, rows });
+      sendTerminalSize(response.id, cols, rows);
+    }
 
     // 设置连接状态检查
     setupConnectionCheck(response.id);
