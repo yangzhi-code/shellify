@@ -11,8 +11,8 @@ require('@electron/remote/main').initialize()
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 670,
+    width: 1400,
+    height: 870,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),

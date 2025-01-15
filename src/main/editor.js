@@ -8,8 +8,8 @@ function createEditorWindow(fileInfo) {
   console.log('创建编辑器窗口，文件信息:', fileInfo)
 
   const editorWindow = new BrowserWindow({
-    width: 1100,
-    height: 670,
+    width: 1400,
+    height: 870,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
