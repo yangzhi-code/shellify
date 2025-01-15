@@ -34,6 +34,14 @@ export class TerminalManager {
   }
 
   /**
+   * 添加最小尺寸常量
+   */
+  static MIN_COLS = 30;  // 最小列数
+  static MIN_ROWS = 10;  // 最小行数
+  static MIN_CHAR_WIDTH = 9;  // 最小字符宽度（像素）
+  static MIN_CHAR_HEIGHT = 17; // 最小字符高度（像素）
+
+  /**
    * 初始化终端
    * @param {HTMLElement} container - 终端容器DOM元素
    * @returns {Terminal} - 终端实例
@@ -60,10 +68,10 @@ export class TerminalManager {
         enableComposition: true,
         preeditBackgroundColor: 'rgba(255, 255, 255, 0.3)'
       },
-      cols: 80,
-      rows: 24,
-      wordWrap: true,
-      windowsMode: true
+      cols: TerminalManager.MIN_COLS,  // 使用最小列数
+      rows: TerminalManager.MIN_ROWS,  // 使用最小行数
+      minimumContrastRatio: 4.5,
+      wordWrap: true  // 启用自动换行
     })
     
     this._terminal.options.bellStyle = 'none'
@@ -177,23 +185,34 @@ export class TerminalManager {
       // 获取容器尺寸
       const container = this._terminal.element.parentElement;
       const computedStyle = window.getComputedStyle(container);
-      const width = Math.floor(parseFloat(computedStyle.width));  // 确保是整数
-      const height = Math.floor(parseFloat(computedStyle.height)); // 确保是整数
+      const width = Math.floor(parseFloat(computedStyle.width));
+      const height = Math.floor(parseFloat(computedStyle.height));
+
+      // 计算最小所需尺寸
+      const minWidth = TerminalManager.MIN_COLS * TerminalManager.MIN_CHAR_WIDTH;
+      const minHeight = TerminalManager.MIN_ROWS * TerminalManager.MIN_CHAR_HEIGHT;
+
+      // 如果容器尺寸小于最小所需尺寸，使用最小值
+      const effectiveWidth = Math.max(width, minWidth);
+      const effectiveHeight = Math.max(height, minHeight);
       
-      console.log(`计算终端大小 - 容器宽度: ${width}, 容器高度: ${height}`);
+      console.log(`终端调整 - 容器: ${width}x${height}, 有效: ${effectiveWidth}x${effectiveHeight}`);
 
       // 使用 fitAddon 自动调整大小
       this._fitAddon.fit();
 
-      // 获取调整后的尺寸
-      const cols = Math.floor(this._terminal.cols); // 确保是整数
-      const rows = Math.floor(this._terminal.rows); // 确保是整数
+      // 获取调整后的尺寸，并确保不小于最小值
+      const cols = Math.max(TerminalManager.MIN_COLS, Math.floor(this._terminal.cols));
+      const rows = Math.max(TerminalManager.MIN_ROWS, Math.floor(this._terminal.rows));
 
       console.log(`终端尺寸 - 列数: ${cols}, 行数: ${rows}`);
 
       // 调整终端大小
       if (cols > 0 && rows > 0) {
         this._terminal.resize(cols, rows);
+        
+        // 更新滚动区域
+        this._terminal.scrollToBottom();
       }
 
     } catch (error) {
