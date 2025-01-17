@@ -72,6 +72,7 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
 - SSH2
 - ECharts
 - SQLite3
+##截图
 
 
 ## 🤝 贡献指南
