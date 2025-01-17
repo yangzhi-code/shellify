@@ -29,19 +29,38 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
 
 ## 🚀 快速开始
 
-### 环境要求
+### 下载安装
 
-- Node.js >= 16
-- npm >= 8
+访问官方下载页面获取最新版本安装包：[https://shellify.xhdun.cn/download](https://shellify.xhdun.cn/download)
 
-### 安装
 
-### 使用方法
+### 开发安装
 
-1. 启动应用后，点击"新建连接"
-2. 输入服务器信息（主机、端口、用户名等）
-3. 选择认证方式（密码/密钥）
-4. 点击连接即可开始使用
+
+#### 环境要求
+
+- Node.js >= 22
+- Electron >= 31
+
+#### 安装
+1、克隆项目代码
+
+    git clone https://github.com/xhdun/shellify.git
+   
+2、进入项目目录
+
+    cd shellify
+
+3、安装依赖
+
+    npm install
+
+4、启动开发环境
+
+    windows:
+     npm run dev
+    mac:
+     npm run macdev
 
 ## 🛠️ 技术栈
 
@@ -54,14 +73,6 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
 - ECharts
 - SQLite3
 
-## 📝 开发计划
-
-- [ ] SFTP 文件传输进度显示
-- [ ] 会话管理
-- [ ] 终端分屏
-- [ ] 命令历史记录
-- [ ] 快捷命令管理
-- [ ] 代理支持
 
 ## 🤝 贡献指南
 
