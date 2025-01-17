@@ -1,0 +1,65 @@
+{
+  "id": "4781354",
+  "name": "shellify",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "39694308",
+      "name": "远程文件夹",
+      "font_class": "a-wangluowenjianjiayuanchengwenjianjia",
+      "unicode": "e7c4",
+      "unicode_decimal": 59332
+    },
+    {
+      "icon_id": "3542176",
+      "name": "添加",
+      "font_class": "tianjia",
+      "unicode": "e60e",
+      "unicode_decimal": 58894
+    },
+    {
+      "icon_id": "4438260",
+      "name": "菜单",
+      "font_class": "caidan",
+      "unicode": "e651",
+      "unicode_decimal": 58961
+    },
+    {
+      "icon_id": "11700360",
+      "name": "粘贴",
+      "font_class": "niantie-",
+      "unicode": "e724",
+      "unicode_decimal": 59172
+    },
+    {
+      "icon_id": "11839495",
+      "name": "复制",
+      "font_class": "fuzhi",
+      "unicode": "e656",
+      "unicode_decimal": 58966
+    },
+    {
+      "icon_id": "35381448",
+      "name": "删除",
+      "font_class": "shanchu",
+      "unicode": "e67e",
+      "unicode_decimal": 59006
+    },
+    {
+      "icon_id": "36762596",
+      "name": "设置",
+      "font_class": "shezhi",
+      "unicode": "e601",
+      "unicode_decimal": 58881
+    },
+    {
+      "icon_id": "9132012",
+      "name": "文件夹",
+      "font_class": "wenjianjia",
+      "unicode": "e627",
+      "unicode_decimal": 58919
+    }
+  ]
+}
