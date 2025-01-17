@@ -1,0 +1,95 @@
+<!-- 连接标签组件 -->
+<template>
+  <div class="tab-bar">
+    <!-- 标签列表 -->
+    <div
+      class="tab-bar-item"
+      v-for="item in tabsStore.editableTabs"
+      :class="{ active: item.id === tabsStore.editableTabsValue }"
+      :key="item.id"
+    >
+      <div class="tab-bar-item-title" @click="tabsStore.selectTab(item.id)">
+        {{ item.info.name }}
+      </div>
+      <i
+        class="iconfont icon-shanchu iconfont-del"
+        style="font-size: 10px"
+        @click="tabsStore.deleteTabById(item.id)" 
+        v-if="tabsStore.editableTabs.length>1"
+      ></i>
+    </div>
+    <!-- 添加连接 -->
+    <div class="tab-bar-add">
+      <i class="iconfont icon-tianjia" @click="tabsStore.openNewTerminal()"></i>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { useTabsStore } from '../stores/terminalStore'
+
+const tabsStore = useTabsStore();
+
+</script>
+  
+<style scoped>
+.tab-bar {
+  background-color: var(--tab-bar-bg);
+  border-bottom: 1px solid var(--tab-bar-border);
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+.tab-bar-item {
+  margin: 3px;
+  padding: 2px;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+
+  border: 1px solid var(--tab-bar-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+/* 标签选中样式 */
+.tab-bar-item.active {
+  background-color: var(--tab-item-active-bg);
+  color: var(--tab-item-active-text);
+  border-color: var(--el-color-primary);
+}
+
+.tab-bar-item-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--tab-item-text);
+  padding-left: 2px;
+  padding-right: 2px;
+  text-align: center;
+}
+.tab-bar-add {
+  margin: 3px;
+  padding: 2px;
+  border-radius: 2px;
+}
+.iconfont-del {
+  padding-left: 5px;
+  color: var(--tab-item-text);
+}
+
+/* 激活状态的标签文字颜色 */
+.tab-bar-item.active .tab-bar-item-title {
+  color: var(--tab-item-active-text);
+}
+
+/* 添加按钮的颜色 */
+.tab-bar-add .iconfont {
+  color: var(--tab-item-text);
+}
+</style>
+  
