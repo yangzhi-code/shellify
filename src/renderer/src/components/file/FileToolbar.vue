@@ -11,6 +11,15 @@
           {{ part }}
         </el-breadcrumb-item>
       </el-breadcrumb>
+      <el-button 
+        class="copy-path-btn"
+        size="small"
+        text
+        @click="handleCopyPath"
+        title="复制当前路径"
+      >
+        <el-icon><CopyDocument /></el-icon>
+      </el-button>
     </div>
     <div class="tools-group">
       <div class="tools">
@@ -36,9 +45,10 @@
 </template>
 
 <script setup>
-import { Refresh, Upload, FolderAdd } from '@element-plus/icons-vue';
+import { Refresh, Upload, FolderAdd, CopyDocument } from '@element-plus/icons-vue';
 import FileSearch from './FileSearch.vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { ElMessage } from 'element-plus';
 
 const searchModel = ref({
   keyword: '',
@@ -48,9 +58,32 @@ const searchModel = ref({
   }
 });
 
-defineProps({
-  currentPath: Array
+const props = defineProps({
+  currentPath: {
+    type: Array,
+    default: () => []
+  }
 });
+
+const fullPath = computed(() => {
+  const parts = props.currentPath || [];
+  if (!parts.length) return '/';
+  return '/' + parts.join('/');
+});
+
+const handleCopyPath = async () => {
+  try {
+    const text = `cd ${fullPath.value}`;
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      throw new Error('Clipboard API not available');
+    }
+    await navigator.clipboard.writeText(text);
+    ElMessage.success('路径已复制');
+  } catch (error) {
+    console.error('复制路径失败:', error);
+    ElMessage.error('复制路径失败');
+  }
+};
 
 defineEmits([
   'navigate-root',
@@ -87,6 +120,7 @@ defineEmits([
   align-items: center;
   background-color: var(--el-input-bg-color);
   transition: all 0.2s;
+  user-select: text;
 }
 
 .path-nav:hover {
@@ -112,6 +146,11 @@ defineEmits([
 :deep(.el-breadcrumb__separator) {
   margin: 0 4px;
   color: var(--el-text-color-secondary);
+}
+
+.copy-path-btn {
+  margin-left: auto;
+  padding: 0 4px;
 }
 
 .tools-group {
