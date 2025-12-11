@@ -30,7 +30,13 @@
                 <el-option label="跟随系统" value="system" />
               </el-select>
             </el-form-item>
-            <!-- 其他设置暂时隐藏 -->
+
+            <el-form-item label="SSH 连接配置">
+              <div class="connections-actions">
+                <el-button size="small" @click="exportConnections">导出连接配置</el-button>
+                <el-button size="small" @click="importConnections">导入连接配置</el-button>
+              </div>
+            </el-form-item>
           </el-form>
         </el-tab-pane>
       </el-tabs>
@@ -73,6 +79,32 @@ const settings = ref({
   theme: 'system'
   // 其他设置暂时移除
 })
+
+// 导出 SSH 连接配置
+const exportConnections = async () => {
+  try {
+    const result = await window.electron.ipcRenderer.invoke('connections:export')
+    if (!result?.canceled) {
+      ElMessage.success('连接配置已导出到: ' + result.filePath)
+    }
+  } catch (error) {
+    console.error('导出连接配置失败:', error)
+    ElMessage.error('导出连接配置失败：' + (error.message || '未知错误'))
+  }
+}
+
+// 导入 SSH 连接配置
+const importConnections = async () => {
+  try {
+    const result = await window.electron.ipcRenderer.invoke('connections:import')
+    if (!result?.canceled) {
+      ElMessage.success('导入连接配置成功，共导入 ' + (result.count || 0) + ' 条连接')
+    }
+  } catch (error) {
+    console.error('导入连接配置失败:', error)
+    ElMessage.error('导入连接配置失败：' + (error.message || '未知错误'))
+  }
+}
 
 // 快捷键捕获
 const startCapture = (event, shortcutKey) => {

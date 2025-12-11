@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { reactive, watch, toRaw } from 'vue'
+import { reactive, watch, toRaw, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import TreeNode from './TreeNode.vue'
 
@@ -55,7 +55,21 @@ const init = async () => {
     console.error('获取连接数据失败', error)
   }
 }
-init()
+
+// 初始化时加载一次数据，并监听连接更新事件
+onMounted(() => {
+  init()
+
+  if (window.electron?.ipcRenderer) {
+    window.electron.ipcRenderer.on('connections:updated', init)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (window.electron?.ipcRenderer) {
+    window.electron.ipcRenderer.removeListener('connections:updated', init)
+  }
+})
 // 保存数据到本地存储
 const saveTreeData = async () => {
   try {

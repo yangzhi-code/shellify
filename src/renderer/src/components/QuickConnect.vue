@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useTabsStore } from '../stores/terminalStore'
@@ -129,6 +129,16 @@ const handleConnect = (connection) => {
 
 onMounted(() => {
   loadConnections()
+
+  if (window.electron?.ipcRenderer) {
+    window.electron.ipcRenderer.on('connections:updated', loadConnections)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (window.electron?.ipcRenderer) {
+    window.electron.ipcRenderer.removeListener('connections:updated', loadConnections)
+  }
 })
 </script>
 
