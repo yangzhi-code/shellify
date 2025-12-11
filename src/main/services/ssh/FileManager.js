@@ -623,7 +623,7 @@ class FileManager {
                 });
               }
             },
-            concurrency: 1,
+            concurrency: 32,
             mode: 0o644
           }, async (err) => {
             if (err) {
