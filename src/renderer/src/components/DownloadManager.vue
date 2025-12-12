@@ -289,8 +289,17 @@ const openFolder = async (record) => {
 
 // 取消下载
 const cancelDownload = async (record) => {
-  await window.electron.ipcRenderer.invoke('download-cancel', record);
-  ElMessage.success('下载已取消');
+  try {
+    const downloadId = record?.id;
+    if (!downloadId) {
+      throw new Error('无效的下载记录');
+    }
+    await window.electron.ipcRenderer.invoke('download-cancel', downloadId);
+    ElMessage.success('下载已取消');
+  } catch (error) {
+    console.error('取消下载失败:', error);
+    ElMessage.error('取消下载失败: ' + (error?.message || '未知错误'));
+  }
 };
 
 // 删除单条记录

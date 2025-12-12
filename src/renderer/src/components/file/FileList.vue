@@ -28,9 +28,22 @@
               placement="top"
               :show-after="500"
             >
-              <span class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
+              <span
+                class="file-name"
+                @click="$emit('file-click', row)"
+                @dblclick="handleNameDblClick(row)"
+              >
+                {{ row.name }}
+              </span>
             </el-tooltip>
-            <span v-else class="file-name" @click="$emit('file-click', row)">{{ row.name }}</span>
+            <span
+              v-else
+              class="file-name"
+              @click="$emit('file-click', row)"
+              @dblclick="handleNameDblClick(row)"
+            >
+              {{ row.name }}
+            </span>
           </template>
         </div>
       </template>
@@ -106,6 +119,14 @@ const handleNameBlur = (row) => {
 const cancelEdit = (row) => {
   if (row.isNew) {
     emit('cancel-new-folder');
+  }
+};
+// 处理名称双击：文件夹双击还是导航，文件双击打开编辑器
+const handleNameDblClick = (row) => {
+  if (row.type === 'directory') {
+    emit('file-click', row);
+  } else if (row.type === 'file') {
+    handleEdit(row);
   }
 };
 // 打开编辑器

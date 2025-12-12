@@ -22,4 +22,18 @@ export function setupDownloadHandlers() {
   ipcMain.handle('download-retry', (event, record) => {
     return FileManager.retryDownload(record);
   });
-} 
+
+  // 取消下载
+  ipcMain.handle('download-cancel', async (event, downloadId) => {
+    try {
+      if (!downloadId) {
+        throw new Error('无效的下载记录');
+      }
+      await FileManager.cancelDownload(downloadId);
+      return { success: true };
+    } catch (error) {
+      console.error('取消下载失败:', error);
+      throw error;
+    }
+  });
+}

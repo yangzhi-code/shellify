@@ -8,6 +8,11 @@ import fs from 'fs';
 import UploadManager from '../SQLite/UploadManager';
 
 class FileManager {
+  constructor() {
+    // 记录每个下载任务使用的独立 SFTP 会话
+    this.activeDownloads = new Map();
+  }
+
   /**
    * 获取文件列表
    * @param {string} connectionId - SSH连接ID
@@ -176,9 +181,16 @@ class FileManager {
   async downloadFile(connectionId, remotePath, fileName) {
     try {
       await this._ensureConnection(connectionId);
-      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+      const client = SSHConnectionManager.getClient(connectionId);
+      const sftp = await new Promise((resolve, reject) => {
+        client.sftp((err, sftpSession) => {
+          if (err) reject(err);
+          else resolve(sftpSession);
+        });
+      });
       const { dialog } = require('electron');
       
+      // 获取文件信息
       const stats = await new Promise((resolve, reject) => {
         sftp.stat(remotePath, (err, stats) => {
           if (err) reject(err);
@@ -223,6 +235,39 @@ class FileManager {
       return new Promise((resolve, reject) => {
         const downloadId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         let lastProgress = -1;
+        let finished = false;
+
+        // 记录当前下载的独立 SFTP，会用于取消
+        this.activeDownloads.set(downloadId, { sftp, cancelled: false });
+
+        const handleError = async (err) => {
+          if (finished) return;
+          finished = true;
+          this.activeDownloads.delete(downloadId);
+          try {
+            sftp.end();
+          } catch (e) {
+            // ignore end error
+          }
+
+          const isCancelled = err && err.message === '用户取消下载';
+          const status = isCancelled ? 'interrupted' : 'error';
+          const message = isCancelled ? '用户取消下载' : (err?.message || '下载失败');
+
+          await DownloadManager.updateOrCreate({
+            downloadId,
+            connectionId,
+            serverInfo: connectionInfo,
+            fileName,
+            filePath,
+            remotePath,
+            progress: lastProgress,
+            total: totalSize,
+            status,
+            error: message
+          });
+          reject(new Error(message));
+        };
 
         try {
           sftp.fastGet(remotePath, filePath, {
@@ -232,8 +277,7 @@ class FileManager {
               // 只在进度变化时更新
               if (percent !== lastProgress) {
                 lastProgress = percent;
-                //console.log(`下载进度: ${percent}%`);
-
+                
                 await DownloadManager.updateOrCreate({
                   downloadId,
                   connectionId,
@@ -251,45 +295,29 @@ class FileManager {
             concurrency: 1,
             mode: 0o644
           }, async (err) => {
+            if (finished) return;
+            finished = true;
+            this.activeDownloads.delete(downloadId);
+            try {
+              sftp.end();
+            } catch (e) {
+              // ignore
+            }
+
             if (err) {
-              console.error('文件传输失败:', err);
-              await DownloadManager.updateOrCreate({
-                downloadId,
-                connectionId,
-                serverInfo: connectionInfo,
-                fileName,
-                filePath,
-                remotePath,
-                progress: lastProgress,
-                total: totalSize,
-                status: 'error',
-                error: err.message
-              });
-              reject(new Error(`文件传输失败: ${err.message}`));
+              await handleError(err);
             } else {
               console.log('文件下载完成');
               resolve(filePath);
             }
           });
 
-          sftp.once('error', async (err) => {
-            await DownloadManager.updateOrCreate({
-              downloadId,
-              connectionId,
-              serverInfo: connectionInfo,
-              fileName,
-              filePath,
-              remotePath,
-              progress: lastProgress,
-              total: totalSize,
-              status: 'error',
-              error: err.message
-            });
-            reject(new Error(`SFTP误: ${err.message}`));
+          sftp.once('error', (err) => {
+            handleError(err);
           });
 
         } catch (err) {
-          reject(new Error(`启动下载失败: ${err.message}`));
+          handleError(err);
         }
       });
     } catch (error) {
@@ -297,6 +325,7 @@ class FileManager {
       throw error;
     }
   }
+
   //重试下载
   async retryDownload(record) {
     console.log('[FileManager] 重试下载:', record);
@@ -342,7 +371,13 @@ class FileManager {
   async downloadFileToPath(connectionId, remotePath, fileName, targetPath, downloadId) {
     try {
       await this._ensureConnection(connectionId);
-      const sftp = await SSHConnectionManager.getSFTPSession(connectionId);
+      const client = SSHConnectionManager.getClient(connectionId);
+      const sftp = await new Promise((resolve, reject) => {
+        client.sftp((err, sftpSession) => {
+          if (err) reject(err);
+          else resolve(sftpSession);
+        });
+      });
       
       // 获取原有的下载记录
       const existingRecord = await DownloadManager.getDownload(downloadId);
@@ -418,6 +453,35 @@ class FileManager {
       return new Promise((resolve, reject) => {
         let lastProgress = -1;
         let lastProgressTime = Date.now();
+        let finished = false;
+
+        // 记录当前下载的独立 SFTP，会用于取消
+        this.activeDownloads.set(downloadId, { sftp, cancelled: false });
+
+        const handleError = async (err) => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timeout);
+          this.activeDownloads.delete(downloadId);
+          try {
+            sftp.end();
+          } catch (e) {
+            // ignore
+          }
+
+          const isCancelled = err && err.message === '用户取消下载';
+          const status = isCancelled ? 'interrupted' : 'error';
+          const message = isCancelled ? '用户取消下载' : (err?.message || '下载失败');
+
+          await DownloadManager.updateOrCreate({
+            downloadId,
+            progress: lastProgress,
+            status,
+            error: message,
+            serverInfo: existingRecord.server_info
+          });
+          reject(new Error(message));
+        };
 
         try {
           sftp.fastGet(remotePath, targetPath, {
@@ -437,59 +501,45 @@ class FileManager {
                   filePath: targetPath,
                   remotePath,
                   total: totalSize,
-                  serverInfo: existingRecord.server_info  // 保留原有的服务器信息
+                  serverInfo: existingRecord.server_info
                 });
               }
             },
             concurrency: 1,
             mode: 0o644
           }, async (err) => {
+            if (finished) return;
+            finished = true;
             clearTimeout(timeout);
+            this.activeDownloads.delete(downloadId);
+            try {
+              sftp.end();
+            } catch (e) {
+              // ignore
+            }
+
             if (err) {
-              await DownloadManager.updateOrCreate({
-                downloadId,
-                progress: lastProgress,
-                status: 'error',
-                error: err.message || '下载超时',
-                serverInfo: existingRecord.server_info  // 保留原有的服务器信息
-              });
-              reject(new Error(`文件传输失败: ${err.message || '下载超时'}`));
+              await handleError(err);
             } else {
               console.log('文件下载完成');
               resolve(targetPath);
             }
           });
 
-          sftp.once('error', async (err) => {
-            clearTimeout(timeout);
-            await DownloadManager.updateOrCreate({
-              downloadId,
-              progress: lastProgress,
-              status: 'error',
-              error: err.message,
-              serverInfo: existingRecord.server_info  // 保留原有的服务器信息
-            });
-            reject(new Error(`SFTP错误: ${err.message}`));
+          sftp.once('error', (err) => {
+            handleError(err);
           });
 
           // 添加中断处理
-          sftp.once('close', async () => {
-            clearTimeout(timeout);
+          sftp.once('close', () => {
+            if (finished) return;
             if (!isTimeout) {
-              await DownloadManager.updateOrCreate({
-                downloadId,
-                progress: lastProgress,
-                status: 'error',
-                error: '连接已关闭',
-                serverInfo: existingRecord.server_info  // 保留原有的服务器信息
-              });
-              reject(new Error('连接已关闭'));
+              handleError(new Error('连接已关闭'));
             }
           });
 
         } catch (err) {
-          clearTimeout(timeout);
-          reject(new Error(`启动下载失败: ${err.message}`));
+          handleError(err);
         }
       });
     } catch (error) {
@@ -623,7 +673,7 @@ class FileManager {
                 });
               }
             },
-            concurrency: 1,
+            concurrency: 16,
             mode: 0o644
           }, async (err) => {
             if (err) {
@@ -816,6 +866,51 @@ class FileManager {
       throw new Error(errorMessage)
     }
   }
+
+  /**
+   * 取消正在进行的下载
+   * @param {string} downloadId 下载记录ID
+   */
+  async cancelDownload(downloadId) {
+    try {
+      const transfer = this.activeDownloads.get(downloadId);
+
+      // 如果有独立的 SFTP 会话，先尝试结束它
+      if (transfer && transfer.sftp) {
+        transfer.cancelled = true;
+        try {
+          transfer.sftp.end();
+        } catch (error) {
+          console.error('结束 SFTP 会话时出错:', error);
+        }
+        this.activeDownloads.delete(downloadId);
+      }
+
+      // 主动把这条记录标记为中断，并通知渲染进程刷新状态
+      const record = await DownloadManager.getDownload(downloadId);
+      if (record) {
+        await DownloadManager.updateOrCreate({
+          downloadId,
+          connectionId: record.connection_id,
+          serverInfo: record.server_info,
+          fileName: record.file_name,
+          filePath: record.file_path,
+          remotePath: record.remote_path,
+          progress: typeof record.progress === 'number' ? record.progress : 0,
+          total: record.total_size,
+          chunk: record.chunk_size,
+          status: 'interrupted',
+          error: '用户取消下载'
+        });
+      } else {
+        // 兜底：如果查不到记录，至少在数据库里做一次中断标记
+        await DownloadManager.markInterrupted(downloadId);
+      }
+    } catch (error) {
+      console.error('[FileManager] 取消下载失败:', error);
+      throw error;
+    }
+  }
 }
 
-export default new FileManager(); 
+export default new FileManager();
