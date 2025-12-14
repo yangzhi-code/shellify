@@ -2,6 +2,19 @@
 
 Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具，提供了直观的图形界面和丰富的功能特性。
 
+---
+
+## 📥 下载安装
+
+### 方式一：官方下载页面
+访问官方下载页面获取最新版本安装包：[http://shellify.yangzhi.me](http://shellify.yangzhi.me)
+
+### 方式二：百度网盘下载
+
+> **🔗 下载链接**：[https://pan.baidu.com/s/1tpIMI0-4mA2e7_CSC0l4cw?pwd=8888](https://pan.baidu.com/s/1tpIMI0-4mA2e7_CSC0l4cw?pwd=8888)  
+> **🔑 提取码**：`8888`
+
+---
 ## ✨ 特性
 
 - 🖥️ **多标签终端管理**：支持多个 SSH 连接的标签式管理
@@ -28,11 +41,6 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
   - 流式文件传输
 
 ## 🚀 快速开始
-
-### 下载安装
-
-访问官方下载页面获取最新版本安装包：[http://shellify.yangzhi.me](http://shellify.yangzhi.me)
-
 
 ### 开发安装
 
