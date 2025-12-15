@@ -20,7 +20,7 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
 
 ![shellify](https://gitee.com/late_winter/shellify/raw/dev/file/imgs/0fba848fea73525a37b3028d716f52c.png)
 ![shellify](https://gitee.com/late_winter/shellify/raw/dev/file/imgs/faac02dbdc72ae19ab657a13810529d.jpg)
-![shellify](https://gitee.com/late_winter/shellify/raw/dev/file/imgs/b4da9b6628beb7e0a3117e9f5455e42b.png)
+![shellify](https://gitee.com/late_winter/shellify/raw/master/file/imgs/b4da9b6628beb7e0a3117e9f5455e42b.png)
 
 ## ✨ 特性
 
