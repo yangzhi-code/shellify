@@ -9,13 +9,45 @@ class MetricsFormatter {
    * @returns {Object} 格式化后的内存信息
    */
   static parseMemory(memoryStr) {
-    const [used, total] = memoryStr.split('/');
-    const percentage = (parseInt(used) / parseInt(total) * 100).toFixed(1);
-    return {
-      used: `${(parseInt(used)/1024).toFixed(1)}GB`,
-      total: `${(parseInt(total)/1024).toFixed(1)}GB`,
-      percentage: parseFloat(percentage)
-    };
+    try {
+      const raw = (memoryStr || '').trim();
+      const [usedStr, totalStr] = raw.split('/');
+      const used = parseInt(usedStr, 10);
+      const total = parseInt(totalStr, 10);
+
+      // 特殊情况：0/0，常见于无交换内存配置，认为是“容量为 0 的资源”，不打印警告
+      if (used === 0 && total === 0) {
+        return {
+          used: '0GB',
+          total: '0GB',
+          percentage: 0
+        };
+      }
+
+      // 当解析失败或 total 非法/为 0 时，返回安全默认值，避免 NaN
+      if (!Number.isFinite(used) || !Number.isFinite(total) || total <= 0) {
+        console.warn('parseMemory: invalid memory string, fallback to 0', memoryStr);
+        return {
+          used: '0GB',
+          total: '0GB',
+          percentage: 0
+        };
+      }
+
+      const percentage = (used / total * 100);
+      return {
+        used: `${(used / 1024).toFixed(1)}GB`,
+        total: `${(total / 1024).toFixed(1)}GB`,
+        percentage: parseFloat(percentage.toFixed(1))
+      };
+    } catch (error) {
+      console.error('Error parsing memory:', memoryStr, error);
+      return {
+        used: '0GB',
+        total: '0GB',
+        percentage: 0
+      };
+    }
   }
 
   /**
