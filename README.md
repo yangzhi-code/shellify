@@ -7,7 +7,7 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
 ## 📥 下载安装
 
 ### 方式一：官方下载页面
-访问官方下载页面获取最新版本安装包：[http://shellify.yangzhi.me](http://shellify.yangzhi.me)
+访问官方下载页面获取最新版本安装包：[https://shellify.yangzhi.me](https://shellify.yangzhi.me)
 
 ### 方式二：百度网盘下载
 
@@ -15,6 +15,13 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
 > **🔑 提取码**：`8888`
 
 ---
+
+## 效果图
+
+![shellify](https://gitee.com/late_winter/shellify/raw/dev/file/imgs/0fba848fea73525a37b3028d716f52c.png)
+![shellify](https://gitee.com/late_winter/shellify/raw/dev/file/imgs/faac02dbdc72ae19ab657a13810529d.jpg)
+![shellify](https://gitee.com/late_winter/shellify/raw/dev/file/imgs/b4da9b6628beb7e0a3117e9f5455e42b.png)
+
 ## ✨ 特性
 
 - 🖥️ **多标签终端管理**：支持多个 SSH 连接的标签式管理
@@ -80,11 +87,6 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
 - SSH2
 - ECharts
 - SQLite3
-
-## 效果图
-
-![shellify](https://gitee.com/late_winter/shellify/raw/dev/file/imgs/0fba848fea73525a37b3028d716f52c.png)
-![shellify](https://gitee.com/late_winter/shellify/raw/dev/file/imgs/faac02dbdc72ae19ab657a13810529d.jpg)
 
 ## 🤝 贡献指南
 
