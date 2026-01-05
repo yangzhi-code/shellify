@@ -68,7 +68,7 @@ export const useTabsStore = defineStore('tabs', {
     // 删除标签
     async deleteTabById(targetId) {
       const tab = this.editableTabs.find(tab => tab.id === targetId)
-      
+
       // 如果标签有连接数据，先断开连接
       if (tab?.data?.id) {
         try {
@@ -83,7 +83,7 @@ export const useTabsStore = defineStore('tabs', {
 
       const deleteIndex = this.editableTabs.findIndex(tab => tab.id === targetId)
       this.editableTabs = this.editableTabs.filter(tab => tab.id !== targetId)
-      
+
       // 更新选中的标签
       if (this.editableTabs.length > 0) {
         if (this.editableTabsValue === targetId) {
@@ -95,6 +95,14 @@ export const useTabsStore = defineStore('tabs', {
         this.editableTabsValue = ''
         this.activeConnectionId = null
       }
+    },
+
+    // 重新排序标签
+    reorderTabs(oldIndex, newIndex) {
+      const tabs = [...this.editableTabs]
+      const [movedTab] = tabs.splice(oldIndex, 1)
+      tabs.splice(newIndex, 0, movedTab)
+      this.editableTabs = tabs
     }
   }
 })
