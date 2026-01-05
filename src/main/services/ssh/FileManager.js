@@ -505,7 +505,7 @@ class FileManager {
                 });
               }
             },
-            concurrency: 1,
+            concurrency: 16,
             mode: 0o644
           }, async (err) => {
             if (finished) return;
