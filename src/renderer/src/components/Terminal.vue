@@ -84,8 +84,8 @@ const handleQuickConnect = async (connection) => {
     }
 
     // 初始化终端
-    initTerminal()
-    
+    await initTerminal()
+
     // 连接到服务器
     if (props.item.info.host && !props.item.data) {
       await connectToServer(props.item.info)
@@ -128,18 +128,59 @@ const handleTerminalResize = throttle(() => {
   }
 }, 100);
 
-// 初始化终端
-const initTerminal = () => {
+// 获取终端字体配置
+const getTerminalFontConfig = async () => {
   try {
-    terminalManager.value = new TerminalManager({
+    const settings = await window.electron.ipcRenderer.invoke('settings:load')
+    return {
+      fontSize: settings.terminalFontSize || 14,
+      fontFamily: settings.terminalFont ? `"${settings.terminalFont}", monospace` : '"Consolas", "Microsoft YaHei", "微软雅黑", monospace'
+    }
+  } catch (error) {
+    console.error('获取终端字体配置失败:', error)
+    return {
       fontSize: 14,
+      fontFamily: '"Consolas", "Microsoft YaHei", "微软雅黑", monospace'
+    }
+  }
+}
+
+// 更新终端字体
+// 待处理的字体配置（用于在终端初始化前收到的配置）
+let pendingFontConfig = null
+
+const updateTerminalFont = (fontConfig) => {
+  console.log('终端接收到字体更新事件:', fontConfig)
+  if (terminalManager.value && terminalManager.value._terminal) {
+    // 终端已初始化，直接更新字体
+    const success = terminalManager.value.updateFont(fontConfig.fontSize, fontConfig.fontFamily)
+    if (success) {
+      console.log('字体设置更新成功')
+    } else {
+      console.log('字体设置更新失败')
+    }
+  } else {
+    // 终端还没初始化，保存配置等待应用
+    console.log('终端未初始化，保存待处理配置:', fontConfig)
+    pendingFontConfig = fontConfig
+  }
+}
+
+// 初始化终端
+const initTerminal = async () => {
+  try {
+    const fontConfig = await getTerminalFontConfig()
+
+    terminalManager.value = new TerminalManager({
+      fontSize: fontConfig.fontSize,
+      fontFamily: fontConfig.fontFamily
     })
 
     const terminal = terminalManager.value.init(terminalContainer.value)
     if (!terminal) {
       throw new Error('Terminal initialization failed')
     }
-    
+
     commandHandler.value = new TerminalCommandHandler(terminalManager.value)
     inputHandler.value = new TerminalInputHandler(terminalManager.value, commandHandler.value)
 
@@ -327,12 +368,23 @@ watch(() => props.item.layoutMode, (newMode, oldMode) => {
 }, { immediate: true });
 
 // 生命周期钩子
-onMounted(() => {
+// 字体更新事件监听器
+let fontUpdateHandler = null
+
+// 在组件创建时立即设置自定义事件监听器
+fontUpdateHandler = (event) => {
+  console.log('自定义事件监听器被触发，接收到字体配置:', event.detail)
+  updateTerminalFont(event.detail)
+}
+console.log('设置自定义字体更新事件监听器')
+window.addEventListener('terminal-font-changed', fontUpdateHandler)
+
+onMounted(async () => {
   // 只有当有完的连接信息时才初始化终端
   if (!showQuickConnect.value) {
-    initTerminal()
+    await initTerminal()
     if (props.item.info.host && !props.item.data) {
-      connectToServer(props.item.info)
+      await connectToServer(props.item.info)
     }
     // 给一个短暂的延时确保终端完全初始化
     setTimeout(() => {
@@ -343,6 +395,12 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   try {
+    // 移除自定义字体更新监听器
+    if (fontUpdateHandler) {
+      window.removeEventListener('terminal-font-changed', fontUpdateHandler)
+      fontUpdateHandler = null
+    }
+
     // 先移除所有事件监听器
     if (terminalManager.value?.terminal) {
       terminalManager.value.terminal._cleanup?.()

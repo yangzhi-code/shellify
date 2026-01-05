@@ -28,7 +28,6 @@ export function setupSettingsHandlers() {
 
     // 保存设置
     ipcMain.handle('settings:save', async (event, settings) => {
-        //console.log('保存设置', settings);
         try {
             await settingsStore.saveSettings(settings);
             return true;

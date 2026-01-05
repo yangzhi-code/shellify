@@ -16,7 +16,7 @@
 
     <div class="settings-content">
       <el-tabs type="border-card">
-        <!-- 只保留常规设置 -->
+        <!-- 常规设置 -->
         <el-tab-pane>
           <template #label>
             <el-icon><Setting /></el-icon>
@@ -39,14 +39,51 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
+
+        <!-- 字体设置 -->
+        <el-tab-pane>
+          <template #label>
+            <el-icon><Edit /></el-icon>
+            <span>字体</span>
+          </template>
+          <el-form label-position="top">
+            <el-form-item label="终端字体大小">
+              <el-select v-model="settings.terminalFontSize" class="full-width" @change="updateTerminalFont" @input="updateTerminalFont">
+                <el-option
+                  v-for="size in fontSizeOptions"
+                  :key="size"
+                  :label="`${size}px`"
+                  :value="size"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="终端字体">
+              <el-select
+                v-model="settings.terminalFont"
+                class="full-width"
+                filterable
+                @change="updateTerminalFont"
+                @input="updateTerminalFont"
+                :loading="fontListLoading"
+              >
+                <el-option
+                  v-for="font in systemFonts"
+                  :key="font"
+                  :label="font"
+                  :value="font"
+                />
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
     </div>
 
     <div class="settings-footer">
       <el-button @click="resetSettings">恢复默认</el-button>
       <div class="footer-right">
-        <el-button @click="$emit('update:visible', false)">取消</el-button>
-        <el-button type="primary" @click="saveSettings">保存设置</el-button>
+        <el-button @click="$emit('update:visible', false)">关闭</el-button>
       </div>
     </div>
   </div>
@@ -76,8 +113,44 @@ defineEmits(['update:visible'])
 
 // 扩展设置数据
 const settings = ref({
-  theme: 'system'
-  // 其他设置暂时移除
+  theme: 'system',
+  terminalFontSize: 14,
+  terminalFont: 'Consolas'
+})
+
+// 字体大小选项
+const fontSizeOptions = ref([])
+for (let i = 8; i <= 36; i++) {
+  fontSizeOptions.value.push(i)
+}
+
+// 系统字体列表
+const systemFonts = ref([])
+const fontListLoading = ref(false)
+
+// 自动保存设置
+const saveSettings = async (newSettings) => {
+  try {
+    await window.electron.ipcRenderer.invoke('settings:save', toRaw(newSettings))
+    console.log('设置已自动保存')
+  } catch (error) {
+    console.error('设置保存失败:', error.message)
+  }
+}
+
+// 监听设置变化并自动保存
+watch(settings, (newSettings) => {
+  console.log('检测到设置变化，自动保存:', newSettings)
+  saveSettings(newSettings)
+
+  // 立即应用字体设置（字体设置每次变化都应用）
+  updateTerminalFont()
+}, { deep: true })
+
+// 单独监听主题变化
+watch(() => settings.value.theme, (newTheme) => {
+  console.log('主题变化:', newTheme)
+  themeManager.applyTheme(newTheme)
 })
 
 // 导出 SSH 连接配置
@@ -143,23 +216,6 @@ const resetSettings = async () => {
   }
 }
 
-// 监听主题变化
-watch(() => settings.value.theme, (newTheme) => {
-  themeManager.applyTheme(newTheme)
-})
-
-// 保存设置
-const saveSettings = async () => {
-  try {
-    const settingsValue = toRaw(settings.value)
-    await window.electron.ipcRenderer.invoke('settings:save', settingsValue)
-    ElMessage.success('设置保存成功')
-    // 应用主题
-    themeManager.applyTheme(settingsValue.theme)
-  } catch (error) {
-    ElMessage.error('设置保存失败：' + error.message)
-  }
-}
 
 // 加载设置
 const loadSettings = async () => {
@@ -168,9 +224,56 @@ const loadSettings = async () => {
     if (savedSettings) {
       settings.value = { ...settings.value, ...savedSettings }
     }
+    // 加载系统字体列表
+    await loadSystemFonts()
   } catch (error) {
     console.error('加载设置失败：', error)
   }
+}
+
+// 加载系统字体列表
+const loadSystemFonts = async () => {
+  try {
+    fontListLoading.value = true
+    const fonts = await window.electron.ipcRenderer.invoke('system:get-fonts')
+    systemFonts.value = fonts
+  } catch (error) {
+    console.error('加载系统字体失败:', error)
+    // 如果获取失败，提供一些常见的字体作为fallback
+    systemFonts.value = [
+      'Consolas', 'Menlo', 'Monaco', 'Fira Code', 'JetBrains Mono',
+      'Cascadia Code', 'Source Code Pro', 'Courier New', 'Monospace'
+    ]
+  } finally {
+    fontListLoading.value = false
+  }
+}
+
+// 更新终端字体 - 直接调用，不通过事件
+const updateTerminalFont = () => {
+  const fontFamily = settings.value.terminalFont
+    ? `"${settings.value.terminalFont}", monospace`
+    : '"Consolas", "Microsoft YaHei", "微软雅黑", monospace'
+
+  console.log('直接更新所有终端字体:', {
+    fontSize: settings.value.terminalFontSize,
+    fontFamily: fontFamily
+  })
+
+  // 通过 localStorage 传递字体配置，让所有终端组件读取
+  localStorage.setItem('terminal-font-config', JSON.stringify({
+    fontSize: settings.value.terminalFontSize,
+    fontFamily: fontFamily,
+    timestamp: Date.now()
+  }))
+
+  // 触发自定义事件，让所有终端组件更新
+  window.dispatchEvent(new CustomEvent('terminal-font-changed', {
+    detail: {
+      fontSize: settings.value.terminalFontSize,
+      fontFamily: fontFamily
+    }
+  }))
 }
 
 // 监听可见性变化，当面板打开时加载设置
@@ -375,4 +478,5 @@ watch(() => props.visible, (newValue) => {
 :deep(.el-icon) {
   font-size: 14px;
 }
+
 </style> 

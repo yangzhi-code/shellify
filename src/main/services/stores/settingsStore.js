@@ -57,7 +57,7 @@ class SettingsStore {
       theme: settings.theme || defaultSettings.theme,
       fontSize: this.validateNumber(settings.fontSize, defaultSettings.fontSize, 12, 20),
       terminalFont: settings.terminalFont || defaultSettings.terminalFont,
-      terminalFontSize: this.validateNumber(settings.terminalFontSize, defaultSettings.terminalFontSize, 12, 20),
+      terminalFontSize: this.validateNumber(settings.terminalFontSize, defaultSettings.terminalFontSize, 8, 36),
       tabSize: this.validateNumber(settings.tabSize, defaultSettings.tabSize, 2, 8),
       autoSave: settings.autoSave ?? defaultSettings.autoSave,
       shortcuts: {
