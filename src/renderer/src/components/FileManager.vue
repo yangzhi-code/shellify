@@ -19,6 +19,8 @@
       @delete="deleteFile"
       @save-new-folder="saveNewFolder"
       @cancel-new-folder="cancelNewFolder"
+      @compress="compressFile"
+      @extract="extractFile"
     />
 
     <div class="pagination-container">
@@ -40,7 +42,7 @@
 import { ref, computed, onMounted, watch, onUnmounted, onBeforeUnmount, getCurrentInstance, h } from 'vue';
 import FileToolbar from './file/FileToolbar.vue';
 import FileList from './file/FileList.vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus';
 
 const props = defineProps({
   connectionId: {
@@ -478,7 +480,7 @@ const handleUpload = async () => {
     const result = await window.electron.ipcRenderer.invoke('dialog:select-multiple-files', {
       multiple: true
     });
-    
+
     if (result.filePaths && result.filePaths.length > 0) {
       // 开始上传每个文件
       for (const filePath of result.filePaths) {
@@ -493,6 +495,64 @@ const handleUpload = async () => {
   } catch (error) {
     console.error('文件上传失败:', error);
     ElMessage.error('文件上传失败: ' + error.message);
+  }
+};
+
+// 处理压缩文件
+const compressFile = async (file) => {
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: '正在压缩，请稍候...',
+    background: 'rgba(0, 0, 0, 0.4)'
+  });
+
+  try {
+    await window.electron.ipcRenderer.invoke('ssh:compress-file', {
+      connectionId: props.connectionId,
+      path: file.path,
+      isDirectory: file.type === 'directory',
+      currentPath: currentFullPath.value
+    });
+
+    ElMessage.success('压缩完成');
+    await loadFileList(); // 刷新文件列表
+  } catch (error) {
+    console.error('压缩失败:', error);
+    ElMessage.error('压缩失败: ' + (error.message || '未知错误'));
+  } finally {
+    try {
+      loadingInstance.close();
+    } catch (e) {
+      // ignore
+    }
+  }
+};
+
+// 处理解压文件
+const extractFile = async (file) => {
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: '正在解压，请稍候...',
+    background: 'rgba(0, 0, 0, 0.4)'
+  });
+
+  try {
+    await window.electron.ipcRenderer.invoke('ssh:extract-file', {
+      connectionId: props.connectionId,
+      path: file.path,
+      currentPath: currentFullPath.value
+    });
+    ElMessage.success('解压完成');
+    await loadFileList(); // 刷新文件列表
+  } catch (error) {
+    console.error('解压失败:', error);
+    ElMessage.error('解压失败: ' + (error.message || '未知错误'));
+  } finally {
+    try {
+      loadingInstance.close();
+    } catch (e) {
+      // ignore
+    }
   }
 };
 

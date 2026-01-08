@@ -1,18 +1,48 @@
 <template>
-  <el-table 
-    :data="files" 
+  <el-table
+    :data="files"
     style="width: 100%"
     v-loading="loading"
+    @row-contextmenu="handleRowContextMenu"
+    @row-dblclick="handleRowDblClick"
   >
     <el-table-column prop="name" label="文件名" min-width="200">
       <template #default="{ row }">
-        <div class="file-name-cell">
+        <div class="file-name-cell" :data-row-id="row.path">
           <el-icon v-if="row.type === 'directory'"><Folder /></el-icon>
           <el-icon v-else><Document /></el-icon>
-          
+
+          <el-tooltip
+            v-if="row.path"
+            :content="row.path"
+            placement="top"
+            :show-after="500"
+          >
+            <span
+              class="file-name"
+              @click="$emit('file-click', row)"
+              @dblclick="handleNameDblClick(row)"
+            >
+              {{ row.name }}
+            </span>
+          </el-tooltip>
+          <span
+            v-else
+            class="file-name"
+            @click="$emit('file-click', row)"
+            @dblclick="handleNameDblClick(row)"
+          >
+            {{ row.name }}
+          </span>
+        </div>
+
+        <!-- 编辑状态 -->
+        <div v-if="row.isEditing" class="file-name-cell">
+          <el-icon v-if="row.type === 'directory'"><Folder /></el-icon>
+          <el-icon v-else><Document /></el-icon>
+
           <el-input
             class="edit-input"
-            v-if="row.isEditing"
             v-model="row.editingName"
             size="small"
             @blur="handleNameBlur(row)"
@@ -20,31 +50,6 @@
             @keyup.esc="cancelEdit(row)"
             v-focus
           />
-          
-          <template v-else>
-            <el-tooltip
-              v-if="row.path"
-              :content="row.path"
-              placement="top"
-              :show-after="500"
-            >
-              <span
-                class="file-name"
-                @click="$emit('file-click', row)"
-                @dblclick="handleNameDblClick(row)"
-              >
-                {{ row.name }}
-              </span>
-            </el-tooltip>
-            <span
-              v-else
-              class="file-name"
-              @click="$emit('file-click', row)"
-              @dblclick="handleNameDblClick(row)"
-            >
-              {{ row.name }}
-            </span>
-          </template>
         </div>
       </template>
     </el-table-column>
@@ -82,14 +87,25 @@
       </template>
     </el-table-column>
   </el-table>
+
+  <!-- 全局右键菜单组件 -->
+  <ContextMenu
+    :selected-file="selectedFile"
+    :context-menu-visible="contextMenuVisible"
+    :context-menu-position="contextMenuPosition"
+    @menu-command="handleContextMenuCommand"
+    @hide-context-menu="handleContextMenuHide"
+    @update:context-menu-visible="handleContextMenuVisible"
+  />
 </template>
 
 <script setup>
-import { Document, Folder, Download, Edit, Delete } from '@element-plus/icons-vue';
+import { ref } from 'vue';
+import { Document, Folder, Download, Edit, Delete, Plus, Minus } from '@element-plus/icons-vue';
 import { formatFileSize } from '../../utils/format';
 import { useTabsStore } from '../../stores/terminalStore';
-import { Row } from 'ant-design-vue';
 import { toRaw } from 'vue';
+import ContextMenu from './ContextMenu.vue';
 const tabsStore = useTabsStore()
 
 const props = defineProps({
@@ -98,13 +114,106 @@ const props = defineProps({
   currentPath: String
 });
 
-const emit = defineEmits(['file-click', 'download', 'delete', 'save-new-folder', 'cancel-new-folder']);
+const emit = defineEmits(['file-click', 'download', 'delete', 'save-new-folder', 'cancel-new-folder', 'compress', 'extract']);
+
+// 右键菜单相关的响应式变量
+const contextMenuVisible = ref(false);
+const selectedFile = ref(null);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+
 
 const canDownload = (file) => {
+  if (!file) return false;
   if (file.type === 'file') return true;
   const compressedFormats = ['.zip', '.tar', '.gz', '.tgz', '.rar', '.7z'];
-  return compressedFormats.some(format => file.name.toLowerCase().endsWith(format));
+  return compressedFormats.some(format => file.name?.toLowerCase().endsWith(format));
 };
+
+const canCompress = (file) => {
+  if (!file) return false;
+  // allow compressing both files and folders
+  return true;
+};
+
+const canExtract = (file) => {
+  if (!file) return false;
+  if (file.type === 'directory') return false;
+  const compressedFormats = ['.zip', '.tar', '.gz', '.tgz', '.rar', '.7z', '.tar.gz', '.tar.bz2', '.tar.xz'];
+  return compressedFormats.some(format => file.name?.toLowerCase().endsWith(format));
+};
+const handleRowContextMenu = (row, column, event) => {
+  // 阻止默认的右键菜单
+  event.preventDefault();
+
+  // 只有当不是在编辑状态时才显示右键菜单
+  if (!row.isEditing) {
+    // 记录选中的文件和菜单位置
+    selectedFile.value = row;
+    contextMenuPosition.value = {
+      x: event.clientX,
+      y: event.clientY
+    };
+
+    // 显示右键菜单
+    contextMenuVisible.value = true;
+  }
+};
+
+// 行双击处理：在非编辑状态下双击任意行（除按钮等交互元素）打开文件/进入目录
+const handleRowDblClick = (row, column, event) => {
+  // 如果正在编辑，忽略双击
+  if (row.isEditing) return;
+
+  // 防止在操作按钮、输入框等元素上触发双击打开
+  try {
+    const target = event?.target;
+    if (target) {
+      if (target.closest('.el-button') || target.closest('.el-button-group') || target.closest('.edit-input')) {
+        return;
+      }
+    }
+  } catch (e) {
+    // ignore errors from closest in some environments
+  }
+
+  // 调用现有的双击处理逻辑
+  handleNameDblClick(row);
+};
+
+const handleContextMenuCommand = (command) => {
+  const { action, file } = command;
+  switch (action) {
+    case 'compress':
+      emit('compress', file);
+      break;
+    case 'extract':
+      emit('extract', file);
+      break;
+    case 'download':
+      emit('download', file);
+      break;
+    case 'edit':
+      handleEdit(file);
+      break;
+    case 'delete':
+      emit('delete', file);
+      break;
+  }
+  // ContextMenu 组件会自动隐藏菜单
+};
+
+const handleContextMenuHide = () => {
+  contextMenuVisible.value = false;
+  selectedFile.value = null;
+};
+
+const handleContextMenuVisible = (visible) => {
+  contextMenuVisible.value = visible;
+  if (!visible) {
+    selectedFile.value = null;
+  }
+};
+
 
 const vFocus = {
   mounted: (el) => el.querySelector('input').focus()
