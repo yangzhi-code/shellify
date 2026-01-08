@@ -327,11 +327,33 @@ const onFullscreenChange = () => {
   }, 120)
 }
 
+// 连接状态检查函数
+const checkConnectionStatus = async () => {
+  if (props.item.data?.id && !isConnectionBroken.value) {
+    try {
+      await window.electron.ipcRenderer.invoke('get-server-status', props.item.data.id)
+    } catch (error) {
+      if (error.message?.includes('找不到连接')) {
+        isConnectionBroken.value = true
+        terminalManager.value?.writeln('\r\n\x1b[31m连接已断开\x1b[0m')
+        terminalManager.value?.writeln('\r\n按回车键重新连接...\r\n')
+      }
+    }
+  }
+}
+
 onMounted(() => {
   window.addEventListener('fullscreenchange', onFullscreenChange)
+  // 添加窗口激活时的连接检查
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkConnectionStatus()
+    }
+  })
 })
 onBeforeUnmount(() => {
   window.removeEventListener('fullscreenchange', onFullscreenChange)
+  document.removeEventListener('visibilitychange', checkConnectionStatus)
 })
 
 // 优化 adjustTerminalSize 函数
