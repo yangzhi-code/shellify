@@ -1,5 +1,5 @@
 <template>
-  <div class="terminal-wrapper">
+  <div class="terminal-wrapper" ref="terminalWrapper">
     <QuickConnect 
       v-show="showQuickConnect" 
       :item="props.item"
@@ -9,11 +9,21 @@
       v-show="!showQuickConnect" 
       ref="terminalContainer" 
       class="terminal-container"
-    ></div>
+    >
+      <div ref="xtermHost" class="xterm-host" style="flex:1; min-height:0;"></div>
+      <TerminalControls
+        v-show="!showQuickConnect"
+        @send="handleControlsSend"
+        @toggle-fullscreen="toggleFullscreen"
+        @clear-terminal="handleClearTerminal"
+        :is-fullscreen="isFullscreen"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
+import TerminalControls from './TerminalControls.vue'
 import { onMounted, onBeforeUnmount, ref, computed, watch, nextTick } from 'vue'
 import 'xterm/css/xterm.css'
 import { useTabsStore } from '../stores/terminalStore'
@@ -44,6 +54,7 @@ const showQuickConnect = computed(() => {
 
 // 引用和状态
 const terminalContainer = ref(null)
+const xtermHost = ref(null)
 const terminalManager = ref(null)
 const inputHandler = ref(null)
 const commandHandler = ref(null)
@@ -84,8 +95,8 @@ const handleQuickConnect = async (connection) => {
     }
 
     // 初始化终端
-    initTerminal()
-    
+    await initTerminal()
+
     // 连接到服务器
     if (props.item.info.host && !props.item.data) {
       await connectToServer(props.item.info)
@@ -128,18 +139,59 @@ const handleTerminalResize = throttle(() => {
   }
 }, 100);
 
-// 初始化终端
-const initTerminal = () => {
+// 获取终端字体配置
+const getTerminalFontConfig = async () => {
   try {
-    terminalManager.value = new TerminalManager({
+    const settings = await window.electron.ipcRenderer.invoke('settings:load')
+    return {
+      fontSize: settings.terminalFontSize || 14,
+      fontFamily: settings.terminalFont ? `"${settings.terminalFont}", monospace` : '"Consolas", "Microsoft YaHei", "微软雅黑", monospace'
+    }
+  } catch (error) {
+    console.error('获取终端字体配置失败:', error)
+    return {
       fontSize: 14,
-    })
+      fontFamily: '"Consolas", "Microsoft YaHei", "微软雅黑", monospace'
+    }
+  }
+}
 
-    const terminal = terminalManager.value.init(terminalContainer.value)
+// 更新终端字体
+// 待处理的字体配置（用于在终端初始化前收到的配置）
+let pendingFontConfig = null
+
+const updateTerminalFont = (fontConfig) => {
+  console.log('终端接收到字体更新事件:', fontConfig)
+  if (terminalManager.value && terminalManager.value._terminal) {
+    // 终端已初始化，直接更新字体
+    const success = terminalManager.value.updateFont(fontConfig.fontSize, fontConfig.fontFamily)
+    if (success) {
+      console.log('字体设置更新成功')
+    } else {
+      console.log('字体设置更新失败')
+    }
+  } else {
+    // 终端还没初始化，保存配置等待应用
+    console.log('终端未初始化，保存待处理配置:', fontConfig)
+    pendingFontConfig = fontConfig
+  }
+}
+
+// 初始化终端
+const initTerminal = async () => {
+  try {
+    const fontConfig = await getTerminalFontConfig()
+
+    terminalManager.value = new TerminalManager({
+      fontSize: fontConfig.fontSize,
+      fontFamily: fontConfig.fontFamily,
+      scrollBottomOffset: 2
+    })
+    const terminal = terminalManager.value.init(xtermHost.value || terminalContainer.value)
     if (!terminal) {
       throw new Error('Terminal initialization failed')
     }
-    
+
     commandHandler.value = new TerminalCommandHandler(terminalManager.value)
     inputHandler.value = new TerminalInputHandler(terminalManager.value, commandHandler.value)
 
@@ -220,6 +272,97 @@ const initTerminal = () => {
     console.error('Terminal initialization error:', error);
   }
 };
+
+// 处理从控制组件发送的命令
+const handleControlsSend = async (text) => {
+  if (!inputHandler.value || !props.item.data?.id) return
+  // send each character then enter
+  for (const ch of text) {
+    inputHandler.value.handleInput(ch, {
+      connectionId: props.item.data.id,
+      username: props.item.info.username,
+      host: props.item.info.host
+    })
+  }
+  // send enter
+  inputHandler.value.handleInput('\r', {
+    connectionId: props.item.data.id,
+    username: props.item.info.username,
+    host: props.item.info.host
+  })
+}
+
+// 处理清屏事件
+const handleClearTerminal = () => {
+  if (terminalManager.value) {
+    terminalManager.value.clear()
+  }
+}
+
+// Fullscreen handling: request fullscreen on the terminal wrapper element
+const terminalWrapper = ref(null)
+const isFullscreen = ref(false)
+
+const toggleFullscreen = async () => {
+  try {
+    if (!isFullscreen.value) {
+      const el = terminalWrapper.value || document.documentElement
+      if (el.requestFullscreen) {
+        await el.requestFullscreen()
+      } else if (el.webkitRequestFullscreen) {
+        await el.webkitRequestFullscreen()
+      }
+      // isFullscreen will be updated by the fullscreenchange event
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen()
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen()
+      }
+    }
+  } catch (e) {
+    console.warn('切换全屏失败', e)
+  }
+}
+
+// listen to fullscreenchange to adjust terminal and update state
+const onFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement
+  // small delay to allow layout to settle
+  setTimeout(() => {
+    adjustTerminalSize()
+    terminalManager.value?.resize()
+  }, 120)
+}
+
+// 连接状态检查函数
+const checkConnectionStatus = async () => {
+  if (props.item.data?.id && !isConnectionBroken.value) {
+    try {
+      await window.electron.ipcRenderer.invoke('get-server-status', props.item.data.id)
+    } catch (error) {
+      if (error.message?.includes('找不到连接')) {
+        isConnectionBroken.value = true
+        terminalManager.value?.writeln('\r\n\x1b[31m连接已断开\x1b[0m')
+        terminalManager.value?.writeln('\r\n按回车键重新连接...\r\n')
+      }
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('fullscreenchange', onFullscreenChange)
+  // 添加窗口激活时的连接检查
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkConnectionStatus()
+    }
+  })
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('fullscreenchange', onFullscreenChange)
+  document.removeEventListener('visibilitychange', checkConnectionStatus)
+})
 
 // 优化 adjustTerminalSize 函数
 const adjustTerminalSize = () => {
@@ -327,12 +470,23 @@ watch(() => props.item.layoutMode, (newMode, oldMode) => {
 }, { immediate: true });
 
 // 生命周期钩子
-onMounted(() => {
+// 字体更新事件监听器
+let fontUpdateHandler = null
+
+// 在组件创建时立即设置自定义事件监听器
+fontUpdateHandler = (event) => {
+  console.log('自定义事件监听器被触发，接收到字体配置:', event.detail)
+  updateTerminalFont(event.detail)
+}
+console.log('设置自定义字体更新事件监听器')
+window.addEventListener('terminal-font-changed', fontUpdateHandler)
+
+onMounted(async () => {
   // 只有当有完的连接信息时才初始化终端
   if (!showQuickConnect.value) {
-    initTerminal()
+    await initTerminal()
     if (props.item.info.host && !props.item.data) {
-      connectToServer(props.item.info)
+      await connectToServer(props.item.info)
     }
     // 给一个短暂的延时确保终端完全初始化
     setTimeout(() => {
@@ -343,6 +497,12 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   try {
+    // 移除自定义字体更新监听器
+    if (fontUpdateHandler) {
+      window.removeEventListener('terminal-font-changed', fontUpdateHandler)
+      fontUpdateHandler = null
+    }
+
     // 先移除所有事件监听器
     if (terminalManager.value?.terminal) {
       terminalManager.value.terminal._cleanup?.()
@@ -363,6 +523,9 @@ onBeforeUnmount(() => {
     console.warn('Terminal cleanup error:', error)
   }
 })
+
+// NOTE: layout is simplified — TerminalControls is in the container flow (flex column);
+// xtermHost is flex:1 so FitAddon will compute available rows automatically.
 </script>
 
 <style scoped>
@@ -380,6 +543,8 @@ onBeforeUnmount(() => {
   padding: 12px;
   box-sizing: border-box;
   flex: 1;
+  display: flex;
+  flex-direction: column;
   background-color: var(--terminal-bg);
   transition: background-color 0.3s ease;
 }

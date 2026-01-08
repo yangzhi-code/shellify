@@ -55,7 +55,7 @@ export class TerminalManager {
       cursorBlink: true,
       cursorStyle: 'block',
       fontSize: this.options.fontSize || 14,
-      fontFamily: '"Consolas", "Microsoft YaHei", "微软雅黑", monospace',
+      fontFamily: this.options.fontFamily || '"Consolas", "Microsoft YaHei", "微软雅黑", monospace',
       theme: {
         background: '#1e1e1e',
         foreground: '#d4d4d4'
@@ -347,6 +347,36 @@ export class TerminalManager {
     } catch (error) {
       console.warn('Terminal cleanup warning:', error)
     }
+  }
+
+  /**
+   * 更新终端字体设置
+   * @param {number} fontSize - 字体大小
+   * @param {string} fontFamily - 字体族
+   * @returns {boolean} - 更新是否成功
+   */
+  updateFont(fontSize, fontFamily) {
+    if (this._terminal) {
+      try {
+        // 直接设置字体选项
+        this._terminal.options.fontSize = fontSize
+        this._terminal.options.fontFamily = fontFamily
+
+        // 刷新终端显示
+        this._terminal.refresh(0, this._terminal.rows - 1)
+
+        // 重新调整终端大小以适应新字体
+        this.resize()
+
+        console.log(`Terminal字体更新成功: ${fontSize}px, ${fontFamily}`)
+        return true
+      } catch (error) {
+        console.error('Terminal字体更新失败:', error)
+        return false
+      }
+    }
+    console.log('Terminal实例不存在，无法更新字体')
+    return false
   }
 
   // 添加统一的粘贴处理方法

@@ -9,6 +9,7 @@ import { setupDownloadHandlers } from './download'
 import { setupSettingsHandlers } from './settings'
 import { setupDialogHandlers } from './dialog'
 import { setupUploadHandlers } from './upload'
+import { setupSystemHandlers } from './system'
 
 // 注册所有 IPC 处理器
 export function setupIpcHandlers() {
@@ -31,4 +32,5 @@ export function setupIpcHandlers() {
   setupUploadHandlers()
   setupSettingsHandlers()
   setupDialogHandlers()
+  setupSystemHandlers()
 } 

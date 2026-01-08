@@ -37,7 +37,10 @@
         <div class="resource-bar">
           <span class="resource-label">CPU</span>
           <div class="progress-bar">
-            <div class="progress" :style="{ width: `${status.cpu}%`, backgroundColor: getCpuColor(status.cpu) }"></div>
+            <div
+              class="progress"
+              :style="{ width: `${status.cpu}%`, backgroundColor: getCpuColor(status.cpu) }"
+            ></div>
             <span class="progress-text">{{ status.cpu.toFixed(1) }}%</span>
           </div>
         </div>
@@ -48,9 +51,31 @@
         <div class="resource-bar">
           <span class="resource-label">内存</span>
           <div class="progress-bar">
-            <div class="progress" :style="{ width: `${status.memory.percentage}%`, backgroundColor: getMemoryColor(status.memory.percentage) }"></div>
+            <div
+              class="progress"
+              :style="{ width: `${status.memory.percentage}%`, backgroundColor: getMemoryColor(status.memory.percentage) }"
+            ></div>
             <span class="progress-text">
               {{ status.memory.percentage }}% ({{ status.memory.used }}/{{ status.memory.total }})
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 交换内存 -->
+      <div
+        v-if="status.swap"
+        class="resource-item"
+      >
+        <div class="resource-bar">
+          <span class="resource-label">交换</span>
+          <div class="progress-bar">
+            <div
+              class="progress"
+              :style="{ width: `${status.swap.percentage}%`, backgroundColor: getMemoryColor(status.swap.percentage) }"
+            ></div>
+            <span class="progress-text">
+              {{ status.swap.percentage }}% ({{ status.swap.used }}/{{ status.swap.total }})
             </span>
           </div>
         </div>
@@ -133,6 +158,11 @@ const status = ref({
     used: '0GB',
     total: '0GB'
   },
+  swap: {
+    percentage: 0,
+    used: '0GB',
+    total: '0GB'
+  },
   network: {
     upload: '0 KB/s',
     download: '0 KB/s'
@@ -164,6 +194,11 @@ const resetStatus = () => {
       used: '0GB',
       total: '0GB'
     },
+    swap: {
+      percentage: 0,
+      used: '0GB',
+      total: '0GB'
+    },
     network: {
       upload: '0 KB/s',
       download: '0 KB/s',
@@ -188,13 +223,21 @@ const fetchServerStatus = async () => {
     )
     // 只有当 shouldUpdate 为 true 时才更新状态
     if (shouldUpdate) {
-      status.value = response
+      // 确保在后端未返回 swap 时，前端仍保持默认的 swap 结构
+      const hasSwap = response && typeof response.swap === 'object'
+      status.value = {
+        ...status.value,
+        ...response,
+        swap: hasSwap ? response.swap : status.value.swap
+      }
     }
   } catch (error) {
     console.warn('获取服务器状态失败:', error)
-    // 如果是连接不存在的错误，重置状态
-    if (error.message?.includes('找不到连接')) {
+    // 如果是连接不存在的错误，重置状态并停止定时器
+    if (error.message?.includes('找不到连接') || error.message?.includes('Connection not found')) {
       resetStatus()
+      // 清理定时器，防止继续请求无效连接
+      clearStatusTimer()
     }
   }
 }
@@ -271,13 +314,34 @@ watch(
   }
 )
 
+// 连接状态检查函数
+const checkConnectionHealth = async () => {
+  if (currentTab.value?.data?.id && shouldShowStats.value) {
+    try {
+      await window.electron.ipcRenderer.invoke('get-server-status', currentTab.value.data.id)
+    } catch (error) {
+      if (error.message?.includes('找不到连接') || error.message?.includes('Connection not found')) {
+        resetStatus()
+        clearStatusTimer()
+      }
+    }
+  }
+}
+
 onMounted(() => {
   clearStatusTimer()
+  // 添加窗口激活时的连接检查
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkConnectionHealth()
+    }
+  })
 })
 
 onUnmounted(() => {
   clearStatusTimer()
   shouldUpdate = false  // 确保组件卸载时不会更新
+  document.removeEventListener('visibilitychange', checkConnectionHealth)
 })
 
 // 处理网卡切换

@@ -505,7 +505,7 @@ class FileManager {
                 });
               }
             },
-            concurrency: 1,
+            concurrency: 16,
             mode: 0o644
           }, async (err) => {
             if (finished) return;
@@ -908,6 +908,162 @@ class FileManager {
       }
     } catch (error) {
       console.error('[FileManager] 取消下载失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 检查压缩工具可用性
+   * @param {string} connectionId - SSH连接ID
+   * @returns {Object} 包含工具可用性的对象
+   */
+  async checkCompressionTools(connectionId) {
+    try {
+      const tools = {};
+
+      // 检查 tar 工具
+      try {
+        await SSHConnectionManager.execCommand(connectionId, 'which tar');
+        tools.tar = true;
+      } catch (error) {
+        tools.tar = false;
+      }
+
+      // 检查 gzip 工具
+      try {
+        await SSHConnectionManager.execCommand(connectionId, 'which gzip');
+        tools.gzip = true;
+      } catch (error) {
+        tools.gzip = false;
+      }
+
+      // 检查 zip 工具
+      try {
+        await SSHConnectionManager.execCommand(connectionId, 'which zip');
+        tools.zip = true;
+      } catch (error) {
+        tools.zip = false;
+      }
+
+      // 检查 unzip 工具
+      try {
+        await SSHConnectionManager.execCommand(connectionId, 'which unzip');
+        tools.unzip = true;
+      } catch (error) {
+        tools.unzip = false;
+      }
+
+      return tools;
+    } catch (error) {
+      console.error('[FileManager] 检查压缩工具失败:', error);
+      return { tar: false, gzip: false, zip: false, unzip: false };
+    }
+  }
+
+  /**
+   * 压缩文件或文件夹
+   * @param {string} connectionId - SSH连接ID
+   * @param {string} path - 要压缩的文件/文件夹路径
+   * @param {boolean} isDirectory - 是否是文件夹
+   * @param {string} currentPath - 当前工作目录
+   */
+  async compressFile(connectionId, path, isDirectory, currentPath) {
+    try {
+      // 检查压缩工具可用性
+      const tools = await this.checkCompressionTools(connectionId);
+
+      if (!tools.tar) {
+        throw new Error('服务器上未安装 tar 工具，无法进行压缩操作');
+      }
+
+      // 获取文件名（不含路径）
+      const fileName = path.split('/').pop();
+      // 生成压缩文件名
+      const archiveName = `${fileName}.tar.gz`;
+
+      let command;
+      if (isDirectory) {
+        // 压缩文件夹：tar -czf archiveName -C parentDir folderName
+        const parentDir = path.substring(0, path.lastIndexOf('/')) || '/';
+        const folderName = fileName;
+        command = `cd "${parentDir}" && tar -czf "${archiveName}" "${folderName}"`;
+      } else {
+        // 压缩文件：tar -czf archiveName fileName
+        const parentDir = path.substring(0, path.lastIndexOf('/')) || '/';
+        command = `cd "${parentDir}" && tar -czf "${archiveName}" "${fileName}"`;
+      }
+
+      console.log('[FileManager] 执行压缩命令:', command);
+      const result = await SSHConnectionManager.execCommand(connectionId, command);
+
+      if (result) {
+        console.log('[FileManager] 压缩完成');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[FileManager] 压缩文件失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 解压文件
+   * @param {string} connectionId - SSH连接ID
+   * @param {string} path - 要解压的文件路径
+   * @param {string} currentPath - 当前工作目录
+   */
+  async extractFile(connectionId, path, currentPath) {
+    try {
+      // 检查压缩工具可用性
+      const tools = await this.checkCompressionTools(connectionId);
+
+      // 获取文件扩展名
+      const fileName = path.split('/').pop();
+      const fileExt = fileName.toLowerCase();
+
+      let command;
+      const parentDir = path.substring(0, path.lastIndexOf('/')) || '/';
+
+      if (fileExt.endsWith('.tar.gz') || fileExt.endsWith('.tgz')) {
+        // tar.gz 文件
+        if (!tools.tar) {
+          throw new Error('服务器上未安装 tar 工具，无法进行解压操作');
+        }
+        command = `cd "${parentDir}" && tar -xzf "${fileName}"`;
+      } else if (fileExt.endsWith('.tar')) {
+        // tar 文件
+        if (!tools.tar) {
+          throw new Error('服务器上未安装 tar 工具，无法进行解压操作');
+        }
+        command = `cd "${parentDir}" && tar -xf "${fileName}"`;
+      } else if (fileExt.endsWith('.gz')) {
+        // gz 文件
+        if (!tools.gzip) {
+          throw new Error('服务器上未安装 gzip 工具，无法进行解压操作');
+        }
+        const decompressedName = fileName.replace(/\.gz$/, '');
+        command = `cd "${parentDir}" && gzip -d "${fileName}"`;
+      } else if (fileExt.endsWith('.zip')) {
+        // zip 文件
+        if (!tools.unzip) {
+          throw new Error('服务器上未安装 unzip 工具，无法进行解压操作');
+        }
+        command = `cd "${parentDir}" && unzip "${fileName}"`;
+      } else {
+        throw new Error(`不支持的文件格式: ${fileExt}`);
+      }
+
+      console.log('[FileManager] 执行解压命令:', command);
+      const result = await SSHConnectionManager.execCommand(connectionId, command);
+
+      if (result) {
+        console.log('[FileManager] 解压完成');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[FileManager] 解压文件失败:', error);
       throw error;
     }
   }

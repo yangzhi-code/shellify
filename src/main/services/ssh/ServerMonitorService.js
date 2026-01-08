@@ -63,6 +63,12 @@ class ServerMonitorService {
         "free -m | awk 'NR==2{printf \"%s/%s\", $3,$2}'"
       );
 
+      // 获取交换内存使用情况（Swap）
+      const { stdout: swap } = await this.execCommand(
+        connectionId,
+        "free -m | awk 'NR==3{printf \"%s/%s\", $3,$2}'"
+      );
+
       const { stdout: uptimeSeconds } = await this.execCommand(
         connectionId, 
         "cat /proc/uptime | awk '{print $1}'"
@@ -80,10 +86,14 @@ class ServerMonitorService {
 
       const networkInfo = await this.getNetworkInfo(connectionId);
 
+      const memoryInfo = MetricsFormatter.parseMemory(memory);
+      const swapInfo = MetricsFormatter.parseMemory(swap);
+
       return {
         publicIp: publicIp.trim(),
         cpu: parseFloat(cpu),
-        memory: MetricsFormatter.parseMemory(memory),
+        memory: memoryInfo,
+        swap: swapInfo,
         load: MetricsFormatter.parseLoad(load),
         uptime: MetricsFormatter.formatUptime(parseFloat(uptimeSeconds)),
         disks: MetricsFormatter.parseDiskInfo(disks),

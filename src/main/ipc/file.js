@@ -99,4 +99,26 @@ export function setupFileHandlers() {
       throw new Error(`删除失败: ${error.message}`)
     }
   })
+
+  // 压缩文件或文件夹
+  ipcMain.handle('ssh:compress-file', async (event, { connectionId, path, isDirectory, currentPath }) => {
+    try {
+      await FileManager.compressFile(connectionId, path, isDirectory, currentPath)
+      return true
+    } catch (error) {
+      console.error('压缩文件失败:', error)
+      throw new Error(`压缩失败: ${error.message}`)
+    }
+  })
+
+  // 解压文件
+  ipcMain.handle('ssh:extract-file', async (event, { connectionId, path, currentPath }) => {
+    try {
+      await FileManager.extractFile(connectionId, path, currentPath)
+      return true
+    } catch (error) {
+      console.error('解压文件失败:', error)
+      throw new Error(`解压失败: ${error.message}`)
+    }
+  })
 }
