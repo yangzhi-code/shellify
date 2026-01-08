@@ -1,5 +1,5 @@
 <template>
-  <div class="terminal-wrapper">
+  <div class="terminal-wrapper" ref="terminalWrapper">
     <QuickConnect 
       v-show="showQuickConnect" 
       :item="props.item"
@@ -9,11 +9,20 @@
       v-show="!showQuickConnect" 
       ref="terminalContainer" 
       class="terminal-container"
-    ></div>
+    >
+      <div ref="xtermHost" class="xterm-host" style="flex:1; min-height:0;"></div>
+      <TerminalControls
+        v-show="!showQuickConnect"
+        @send="handleControlsSend"
+        @toggle-fullscreen="toggleFullscreen"
+        :is-fullscreen="isFullscreen"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
+import TerminalControls from './TerminalControls.vue'
 import { onMounted, onBeforeUnmount, ref, computed, watch, nextTick } from 'vue'
 import 'xterm/css/xterm.css'
 import { useTabsStore } from '../stores/terminalStore'
@@ -44,6 +53,7 @@ const showQuickConnect = computed(() => {
 
 // 引用和状态
 const terminalContainer = ref(null)
+const xtermHost = ref(null)
 const terminalManager = ref(null)
 const inputHandler = ref(null)
 const commandHandler = ref(null)
@@ -173,10 +183,10 @@ const initTerminal = async () => {
 
     terminalManager.value = new TerminalManager({
       fontSize: fontConfig.fontSize,
-      fontFamily: fontConfig.fontFamily
+      fontFamily: fontConfig.fontFamily,
+      scrollBottomOffset: 2
     })
-
-    const terminal = terminalManager.value.init(terminalContainer.value)
+    const terminal = terminalManager.value.init(xtermHost.value || terminalContainer.value)
     if (!terminal) {
       throw new Error('Terminal initialization failed')
     }
@@ -261,6 +271,68 @@ const initTerminal = async () => {
     console.error('Terminal initialization error:', error);
   }
 };
+
+// 处理从控制组件发送的命令
+const handleControlsSend = async (text) => {
+  if (!inputHandler.value || !props.item.data?.id) return
+  // send each character then enter
+  for (const ch of text) {
+    inputHandler.value.handleInput(ch, {
+      connectionId: props.item.data.id,
+      username: props.item.info.username,
+      host: props.item.info.host
+    })
+  }
+  // send enter
+  inputHandler.value.handleInput('\r', {
+    connectionId: props.item.data.id,
+    username: props.item.info.username,
+    host: props.item.info.host
+  })
+}
+
+// Fullscreen handling: request fullscreen on the terminal wrapper element
+const terminalWrapper = ref(null)
+const isFullscreen = ref(false)
+
+const toggleFullscreen = async () => {
+  try {
+    if (!isFullscreen.value) {
+      const el = terminalWrapper.value || document.documentElement
+      if (el.requestFullscreen) {
+        await el.requestFullscreen()
+      } else if (el.webkitRequestFullscreen) {
+        await el.webkitRequestFullscreen()
+      }
+      // isFullscreen will be updated by the fullscreenchange event
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen()
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen()
+      }
+    }
+  } catch (e) {
+    console.warn('切换全屏失败', e)
+  }
+}
+
+// listen to fullscreenchange to adjust terminal and update state
+const onFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement
+  // small delay to allow layout to settle
+  setTimeout(() => {
+    adjustTerminalSize()
+    terminalManager.value?.resize()
+  }, 120)
+}
+
+onMounted(() => {
+  window.addEventListener('fullscreenchange', onFullscreenChange)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('fullscreenchange', onFullscreenChange)
+})
 
 // 优化 adjustTerminalSize 函数
 const adjustTerminalSize = () => {
@@ -421,6 +493,9 @@ onBeforeUnmount(() => {
     console.warn('Terminal cleanup error:', error)
   }
 })
+
+// NOTE: layout is simplified — TerminalControls is in the container flow (flex column);
+// xtermHost is flex:1 so FitAddon will compute available rows automatically.
 </script>
 
 <style scoped>
@@ -438,6 +513,8 @@ onBeforeUnmount(() => {
   padding: 12px;
   box-sizing: border-box;
   flex: 1;
+  display: flex;
+  flex-direction: column;
   background-color: var(--terminal-bg);
   transition: background-color 0.3s ease;
 }
