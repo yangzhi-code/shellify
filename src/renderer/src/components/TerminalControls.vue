@@ -15,6 +15,9 @@
             <el-icon v-if="!props.isFullscreen"><Monitor /></el-icon>
             <el-icon v-else><Fold /></el-icon>
           </el-button>
+          <el-button class="btn-inside" size="small" @click="onClearTerminal" title="清屏">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
         </div>
       </div>
     </div>
@@ -23,8 +26,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Monitor, Fold } from '@element-plus/icons-vue'
-const emit = defineEmits(['send', 'toggle-fullscreen'])
+import { Monitor, Fold, Refresh } from '@element-plus/icons-vue'
+const emit = defineEmits(['send', 'toggle-fullscreen', 'clear-terminal'])
 
 const props = defineProps({
   isFullscreen: {
@@ -47,6 +50,10 @@ const onClear = () => {
 
 const toggleFullscreen = () => {
   emit('toggle-fullscreen')
+}
+
+const onClearTerminal = () => {
+  emit('clear-terminal')
 }
 </script>
 

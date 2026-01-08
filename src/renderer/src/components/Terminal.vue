@@ -15,6 +15,7 @@
         v-show="!showQuickConnect"
         @send="handleControlsSend"
         @toggle-fullscreen="toggleFullscreen"
+        @clear-terminal="handleClearTerminal"
         :is-fullscreen="isFullscreen"
       />
     </div>
@@ -289,6 +290,13 @@ const handleControlsSend = async (text) => {
     username: props.item.info.username,
     host: props.item.info.host
   })
+}
+
+// 处理清屏事件
+const handleClearTerminal = () => {
+  if (terminalManager.value) {
+    terminalManager.value.clear()
+  }
 }
 
 // Fullscreen handling: request fullscreen on the terminal wrapper element
