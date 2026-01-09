@@ -31,6 +31,8 @@ export class TerminalManager {
     this.isWriting = false
     // 已加载插件集合
     this._addons = new Set() // 用于跟踪所有已加载的插件
+    // 当前配色方案
+    this._currentColorScheme = null;
   }
 
   /**
@@ -377,6 +379,40 @@ export class TerminalManager {
     }
     console.log('Terminal实例不存在，无法更新字体')
     return false
+  }
+
+  /**
+   * 更新终端配色方案
+   * @param {Object} colorScheme - 配色方案配置
+   * @returns {boolean} - 更新是否成功
+   */
+  updateColorScheme(colorScheme) {
+    if (this._terminal && colorScheme) {
+      try {
+        // 更新终端主题 - 使用正确的xterm.js API，保持背景透明以显示CSS背景图片
+        this._terminal.options.theme = { ...colorScheme, background: 'transparent' }
+        this._currentColorScheme = colorScheme
+
+        // 刷新终端显示以应用新主题
+        this._terminal.refresh(0, this._terminal.rows - 1)
+
+        console.log('Terminal配色方案更新成功:', colorScheme)
+        return true
+      } catch (error) {
+        console.error('Terminal配色方案更新失败:', error)
+        return false
+      }
+    }
+    console.log('Terminal实例不存在或配色方案无效，无法更新配色方案')
+    return false
+  }
+
+  /**
+   * 获取当前配色方案
+   * @returns {Object|null} - 当前配色方案
+   */
+  getCurrentColorScheme() {
+    return this._currentColorScheme
   }
 
   // 添加统一的粘贴处理方法

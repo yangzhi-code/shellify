@@ -76,6 +76,22 @@
               </el-select>
             </el-form-item>
 
+            <el-form-item label="终端配色方案">
+              <el-select
+                v-model="settings.terminalColorScheme"
+                class="full-width"
+                @change="updateTerminalColorScheme"
+                @input="updateTerminalColorScheme"
+              >
+                <el-option
+                  v-for="scheme in colorSchemeOptions"
+                  :key="scheme.value"
+                  :label="scheme.label"
+                  :value="scheme.value"
+                />
+              </el-select>
+            </el-form-item>
+
             <el-form-item label="终端背景图片">
               <div class="background-image-section">
 
@@ -126,6 +142,7 @@ import { ref, watch, toRaw } from 'vue'
 import { Close, Setting, Monitor, Edit, Operation } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { themeManager } from '../../styles/theme'
+import { getColorSchemeOptions, getColorScheme, convertToXtermTheme } from '../../utils/terminalColorSchemes'
 
 const props = defineProps({
   visible: {
@@ -144,6 +161,8 @@ const settings = ref({
   terminalFontSize: 14,
   // 终端字体
   terminalFont: 'Consolas',
+  // 终端配色方案
+  terminalColorScheme: 'vscode-深色',
   // 终端背景设置
   terminalBackgroundType: 'none', // none, preset
   // 终端背景图片
@@ -159,6 +178,9 @@ for (let i = 8; i <= 36; i++) {
 // 系统字体列表
 const systemFonts = ref([])
 const fontListLoading = ref(false)
+
+// 配色方案选项
+const colorSchemeOptions = ref([])
 
 // 图库图片列表（动态）
 const imagesList = ref([])
@@ -244,6 +266,9 @@ watch(settings, (newSettings) => {
 
   // 立即应用字体设置（字体设置每次变化都应用）
   updateTerminalFont()
+
+  // 立即应用配色方案（配色方案每次变化都应用）
+  updateTerminalColorScheme()
 
   // 立即应用背景设置（背景设置每次变化都应用）
   updateTerminalBackground()
@@ -386,6 +411,8 @@ const loadSettings = async () => {
     }
     // 加载系统字体列表
     await loadSystemFonts()
+    // 加载配色方案选项
+    loadColorSchemeOptions()
     // 加载预设图片
     await loadPresetImages()
   } catch (error) {
@@ -409,6 +436,34 @@ const loadSystemFonts = async () => {
   } finally {
     fontListLoading.value = false
   }
+}
+
+// 加载配色方案选项
+const loadColorSchemeOptions = () => {
+  colorSchemeOptions.value = getColorSchemeOptions()
+}
+
+// 更新终端配色方案
+const updateTerminalColorScheme = () => {
+  const colorScheme = getColorScheme(settings.value.terminalColorScheme)
+  const xtermTheme = convertToXtermTheme(colorScheme)
+
+  console.log('更新终端配色方案:', settings.value.terminalColorScheme, xtermTheme)
+
+  // 通过 localStorage 传递配色方案配置，让所有终端组件读取
+  localStorage.setItem('terminal-color-scheme-config', JSON.stringify({
+    schemeKey: settings.value.terminalColorScheme,
+    theme: xtermTheme,
+    timestamp: Date.now()
+  }))
+
+  // 触发自定义事件，让所有终端组件更新配色方案
+  window.dispatchEvent(new CustomEvent('terminal-color-scheme-changed', {
+    detail: {
+      schemeKey: settings.value.terminalColorScheme,
+      theme: xtermTheme
+    }
+  }))
 }
 
 // 更新终端字体 - 直接调用，不通过事件

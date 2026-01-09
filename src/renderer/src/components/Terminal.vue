@@ -156,6 +156,28 @@ const getTerminalFontConfig = async () => {
   }
 }
 
+// 获取终端配色方案配置
+const getTerminalColorSchemeConfig = async () => {
+  try {
+    const settings = await window.electron.ipcRenderer.invoke('settings:load')
+    const { getColorScheme, convertToXtermTheme } = await import('../utils/terminalColorSchemes')
+    const colorScheme = getColorScheme(settings.terminalColorScheme || 'vscode-dark')
+    return {
+      schemeKey: settings.terminalColorScheme || 'vscode-dark',
+      theme: convertToXtermTheme(colorScheme)
+    }
+  } catch (error) {
+    console.error('获取终端配色方案配置失败:', error)
+    // 返回默认配色方案
+    const { getColorScheme, convertToXtermTheme } = await import('../utils/terminalColorSchemes')
+    const colorScheme = getColorScheme('vscode-深色')
+    return {
+      schemeKey: 'vscode-深色',
+      theme: convertToXtermTheme(colorScheme)
+    }
+  }
+}
+
 // 更新终端字体
 // 待处理的字体配置（用于在终端初始化前收到的配置）
 let pendingFontConfig = null
@@ -177,10 +199,32 @@ const updateTerminalFont = (fontConfig) => {
   }
 }
 
+// 更新终端配色方案
+// 待处理的配色方案配置（用于在终端初始化前收到的配置）
+let pendingColorSchemeConfig = null
+
+const updateTerminalColorScheme = (colorSchemeConfig) => {
+  console.log('终端接收到配色方案更新事件:', colorSchemeConfig)
+  if (terminalManager.value && terminalManager.value._terminal) {
+    // 终端已初始化，直接更新配色方案
+    const success = terminalManager.value.updateColorScheme(colorSchemeConfig.theme)
+    if (success) {
+      console.log('配色方案设置更新成功')
+    } else {
+      console.log('配色方案设置更新失败')
+    }
+  } else {
+    // 终端还没初始化，保存配置等待应用
+    console.log('终端未初始化，保存待处理配色方案配置:', colorSchemeConfig)
+    pendingColorSchemeConfig = colorSchemeConfig
+  }
+}
+
 // 初始化终端
 const initTerminal = async () => {
   try {
     const fontConfig = await getTerminalFontConfig()
+    const colorSchemeConfig = await getTerminalColorSchemeConfig()
     const backgroundConfig = await getTerminalBackgroundConfig()
 
     terminalManager.value = new TerminalManager({
@@ -193,15 +237,16 @@ const initTerminal = async () => {
       throw new Error('Terminal initialization failed')
     }
 
-    // 确保 xterm 渲染背景为透明（让容器的 CSS 背景可见）
+    // 应用配色方案（确保背景为透明，让容器的 CSS 背景可见）
+    const themeWithTransparency = { ...colorSchemeConfig.theme, background: 'transparent' }
     try {
       if (typeof terminal.setOption === 'function') {
-        terminal.setOption('theme', { ...(terminal.getOption ? terminal.getOption('theme') : {}), background: 'transparent' })
+        terminal.setOption('theme', themeWithTransparency)
       } else if (terminal.options) {
-        terminal.options.theme = { ...(terminal.options.theme || {}), background: 'transparent' }
+        terminal.options.theme = themeWithTransparency
       }
     } catch (e) {
-      console.warn('设置 xterm 主题透明失败:', e)
+      console.warn('设置 xterm 主题失败:', e)
     }
 
     commandHandler.value = new TerminalCommandHandler(terminalManager.value)
@@ -487,6 +532,8 @@ watch(() => props.item.layoutMode, (newMode, oldMode) => {
 // 生命周期钩子
 // 字体更新事件监听器
 let fontUpdateHandler = null
+// 配色方案更新事件监听器
+let colorSchemeUpdateHandler = null
 // 背景图片更新事件监听器
 let backgroundUpdateHandler = null
 
@@ -576,14 +623,21 @@ fontUpdateHandler = (event) => {
   updateTerminalFont(event.detail)
 }
 
+// 配色方案更新事件监听器
+colorSchemeUpdateHandler = (event) => {
+  console.log('自定义事件监听器被触发，接收到配色方案配置:', event.detail)
+  updateTerminalColorScheme(event.detail)
+}
+
 // 背景图片更新事件监听器
 backgroundUpdateHandler = (event) => {
   console.log('自定义事件监听器被触发，接收到背景配置:', event.detail)
   updateTerminalBackground(event.detail)
 }
 
-console.log('设置自定义字体和背景更新事件监听器')
+console.log('设置自定义字体、配色方案和背景更新事件监听器')
 window.addEventListener('terminal-font-changed', fontUpdateHandler)
+window.addEventListener('terminal-color-scheme-changed', colorSchemeUpdateHandler)
 window.addEventListener('terminal-background-changed', backgroundUpdateHandler)
 
 onMounted(async () => {
@@ -606,6 +660,12 @@ onBeforeUnmount(() => {
     if (fontUpdateHandler) {
       window.removeEventListener('terminal-font-changed', fontUpdateHandler)
       fontUpdateHandler = null
+    }
+
+    // 移除自定义配色方案更新监听器
+    if (colorSchemeUpdateHandler) {
+      window.removeEventListener('terminal-color-scheme-changed', colorSchemeUpdateHandler)
+      colorSchemeUpdateHandler = null
     }
 
     // 移除自定义背景更新监听器
