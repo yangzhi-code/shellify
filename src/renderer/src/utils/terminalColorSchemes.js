@@ -1349,7 +1349,9 @@ export const getColorSchemeOptions = () => {
 
 // 获取配色方案（通过key）
 export const getColorScheme = (schemeKey) => {
-  return terminalColorSchemes[schemeKey] || terminalColorSchemes['vscode-dark']
+  // 使用传入的 key，若不存在则回退到内置默认 'vscode-深色'
+  const key = schemeKey || 'vscode-深色'
+  return terminalColorSchemes[key] || terminalColorSchemes['vscode-深色']
 }
 
 // 将配色方案转换为xterm主题格式
