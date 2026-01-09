@@ -49,10 +49,24 @@ export function setupDialogHandlers() {
       ],
       title: '选择私钥文件'
     });
-    
+
     return {
       canceled: result.canceled,
       filePath: result.filePaths[0]
     };
+  });
+
+  // 添加图片文件选择处理器
+  ipcMain.handle('dialog:select-image', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'] },
+        { name: '所有文件', extensions: ['*'] }
+      ],
+      title: '选择背景图片'
+    });
+
+    return result;
   });
 } 

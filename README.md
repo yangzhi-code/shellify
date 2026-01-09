@@ -77,6 +77,48 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
     mac:
      npm run macdev
 
+## 📁 数据保存路径
+
+Shellify 的数据文件（连接信息、设置、数据库等）在不同操作系统和环境下的保存路径如下：
+
+### 开发环境
+数据文件保存在项目根目录的 `data/` 文件夹中：
+- 数据库文件：`data/shellify.db`
+- 连接信息：`data/connections.json`
+- 设置信息：`data/settings.json`
+- 终端背景图片：`data/backgrounds/`
+
+### 生产环境
+数据文件保存在系统用户数据目录中：
+
+#### Windows
+```
+%APPDATA%/shellify/
+├── shellify.db          # SQLite 数据库
+├── connections.json     # 连接信息
+├── settings.json        # 应用设置
+└── backgrounds/         # 终端背景图片目录
+```
+实际路径通常为：`C:\Users\<用户名>\AppData\Roaming\shellify\`
+
+#### macOS
+```
+~/Library/Application Support/shellify/
+├── shellify.db          # SQLite 数据库
+├── connections.json     # 连接信息
+├── settings.json        # 应用设置
+└── backgrounds/         # 终端背景图片目录
+```
+
+#### Linux
+```
+~/.config/shellify/
+├── shellify.db          # SQLite 数据库
+├── connections.json     # 连接信息
+├── settings.json        # 应用设置
+└── backgrounds/         # 终端背景图片目录
+```
+
 ## 🛠️ 技术栈
 
 - Electron

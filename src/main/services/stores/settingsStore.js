@@ -59,6 +59,9 @@ class SettingsStore {
       terminalFont: settings.terminalFont || defaultSettings.terminalFont,
       terminalFontSize: this.validateNumber(settings.terminalFontSize, defaultSettings.terminalFontSize, 8, 36),
       tabSize: this.validateNumber(settings.tabSize, defaultSettings.tabSize, 2, 8),
+      // 新增：终端背景设置（允许保存图片路径）
+      terminalBackgroundType: settings.terminalBackgroundType || 'none',
+      terminalBackgroundImage: settings.terminalBackgroundImage || '',
       autoSave: settings.autoSave ?? defaultSettings.autoSave,
       shortcuts: {
         newTerminal: settings.shortcuts?.newTerminal || defaultSettings.shortcuts.newTerminal,

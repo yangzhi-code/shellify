@@ -1,7 +1,8 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, app } from 'electron'
 import * as os from 'os'
 import * as fs from 'fs'
 import * as path from 'path'
+import { createReadStream } from 'fs'
 
 // 获取系统字体列表
 function getSystemFonts() {
@@ -172,6 +173,103 @@ export function setupSystemHandlers() {
   // 获取系统字体列表
   ipcMain.handle('system:get-fonts', async () => {
     return getSystemFonts()
+  })
+
+  // 获取资源路径
+  ipcMain.handle('system:get-resource-path', async (event, resourceType) => {
+    try {
+      if (resourceType === 'imgs') {
+        // 在开发环境中，从项目根目录的data/backgrounds获取
+        // 在生产环境中，从用户数据目录的backgrounds获取
+        const isDev = process.env.NODE_ENV === 'development'
+        if (isDev) {
+          return path.join(process.cwd(), 'data', 'backgrounds').replace(/\\/g, '/')
+        } else {
+          return path.join(app.getPath('userData'), 'backgrounds').replace(/\\/g, '/')
+        }
+      }
+      return ''
+    } catch (error) {
+      console.error('获取资源路径失败:', error)
+      return ''
+    }
+  })
+
+  // 获取图片的base64数据
+  ipcMain.handle('system:get-image-base64', async (event, imagePath) => {
+    try {
+      // 检查文件是否存在
+      if (!fs.existsSync(imagePath)) {
+        console.error('图片文件不存在:', imagePath)
+        return null
+      }
+
+      // 读取图片文件并转换为base64
+      const imageBuffer = fs.readFileSync(imagePath)
+      return imageBuffer.toString('base64')
+    } catch (error) {
+      console.error('读取图片文件失败:', error)
+      return null
+    }
+  })
+
+  // 列出背景图片目录下的图片文件（返回文件名数组）
+  ipcMain.handle('system:list-images', async () => {
+    try {
+      const isDev = process.env.NODE_ENV === 'development'
+      const backgroundsDir = isDev
+        ? path.join(process.cwd(), 'data', 'backgrounds')  // 开发环境：data/backgrounds
+        : path.join(app.getPath('userData'), 'backgrounds')  // 生产环境：用户数据目录/backgrounds
+
+      if (!fs.existsSync(backgroundsDir)) {
+        return []
+      }
+
+      const files = fs.readdirSync(backgroundsDir)
+      // 只返回常见图片扩展名
+      const images = files.filter(f => {
+        const ext = path.extname(f).toLowerCase()
+        return ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(ext)
+      })
+      return images
+    } catch (error) {
+      console.error('列出背景图片失败:', error)
+      return []
+    }
+  })
+
+  // 导入图片到应用数据目录，避免直接引用本地任意路径
+  // 返回导入后的文件名（不带路径），或 null 表示失败
+  ipcMain.handle('system:import-image', async (event, srcPath) => {
+    try {
+      if (!srcPath || !fs.existsSync(srcPath)) {
+        console.error('要导入的图片不存在:', srcPath)
+        return null
+      }
+
+      const isDev = process.env.NODE_ENV === 'development'
+      const backgroundsDir = isDev
+        ? path.join(process.cwd(), 'data', 'backgrounds')  // 开发环境：data/backgrounds
+        : path.join(app.getPath('userData'), 'backgrounds')  // 生产环境：用户数据目录/backgrounds
+
+      if (!fs.existsSync(backgroundsDir)) {
+        fs.mkdirSync(backgroundsDir, { recursive: true })
+      }
+
+      const ext = path.extname(srcPath)
+      const baseName = path.basename(srcPath, ext)
+      // 使用时间戳避免冲突
+      const destName = `${baseName.replace(/[^a-zA-Z0-9-_]/g, '_')}_${Date.now()}${ext}`
+      const destPath = path.join(backgroundsDir, destName)
+
+      // 复制文件
+      fs.copyFileSync(srcPath, destPath)
+
+      return destName
+    } catch (error) {
+      console.error('导入图片失败:', error)
+      return null
+    }
   })
 
   // 终端字体更新
