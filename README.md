@@ -4,6 +4,13 @@ Shellify 是一个基于 Electron 和 Vue 3 开发的现代化 SSH 终端工具�
 
 ---
 
+## 💬 加入微信交流群
+
+扫描下方二维码加入 Shellify 微信交流群，获取最新版本通知、使用交流和社区支持：  
+
+[![加入微信交流群](https://shellify.yangzhi.me/prod-api/q/wnTmYv)](https://shellify.yangzhi.me/prod-api/q/wnTmYv)
+
+
 ## 📥 下载安装
 
 ### 方式一：官方下载页面
@@ -133,6 +140,14 @@ Shellify 的数据文件（连接信息、设置、数据库等）在不同操�
 ## 🤝 贡献指南
 
 欢迎提交 Issue 和 Pull Request！
+ 
+## 💬 加入微信交流群
+
+扫描下方二维码加入 Shellify 微信交流群，获取最新版本通知、使用交流和社区支持：  
+
+[![加入微信交流群](https://shellify.yangzhi.me/prod-api/q/wnTmYv)](https://shellify.yangzhi.me/prod-api/q/wnTmYv)
+
+或直接打开链接：`https://shellify.yangzhi.me/prod-api/q/wnTmYv`
 
 ## 📜 许可证
 
