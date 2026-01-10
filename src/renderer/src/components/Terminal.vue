@@ -156,6 +156,28 @@ const getTerminalFontConfig = async () => {
   }
 }
 
+// 获取终端配色方案配置
+const getTerminalColorSchemeConfig = async () => {
+  try {
+    const settings = await window.electron.ipcRenderer.invoke('settings:load')
+    const { getColorScheme, convertToXtermTheme } = await import('../utils/terminalColorSchemes')
+    const colorScheme = getColorScheme(settings.terminalColorScheme || 'vscode-dark')
+    return {
+      schemeKey: settings.terminalColorScheme || 'vscode-dark',
+      theme: convertToXtermTheme(colorScheme)
+    }
+  } catch (error) {
+    console.error('获取终端配色方案配置失败:', error)
+    // 返回默认配色方案
+    const { getColorScheme, convertToXtermTheme } = await import('../utils/terminalColorSchemes')
+    const colorScheme = getColorScheme('vscode-深色')
+    return {
+      schemeKey: 'vscode-深色',
+      theme: convertToXtermTheme(colorScheme)
+    }
+  }
+}
+
 // 更新终端字体
 // 待处理的字体配置（用于在终端初始化前收到的配置）
 let pendingFontConfig = null
@@ -177,10 +199,33 @@ const updateTerminalFont = (fontConfig) => {
   }
 }
 
+// 更新终端配色方案
+// 待处理的配色方案配置（用于在终端初始化前收到的配置）
+let pendingColorSchemeConfig = null
+
+const updateTerminalColorScheme = (colorSchemeConfig) => {
+  console.log('终端接收到配色方案更新事件:', colorSchemeConfig)
+  if (terminalManager.value && terminalManager.value._terminal) {
+    // 终端已初始化，直接更新配色方案
+    const success = terminalManager.value.updateColorScheme(colorSchemeConfig.theme)
+    if (success) {
+      console.log('配色方案设置更新成功')
+    } else {
+      console.log('配色方案设置更新失败')
+    }
+  } else {
+    // 终端还没初始化，保存配置等待应用
+    console.log('终端未初始化，保存待处理配色方案配置:', colorSchemeConfig)
+    pendingColorSchemeConfig = colorSchemeConfig
+  }
+}
+
 // 初始化终端
 const initTerminal = async () => {
   try {
     const fontConfig = await getTerminalFontConfig()
+    const colorSchemeConfig = await getTerminalColorSchemeConfig()
+    const backgroundConfig = await getTerminalBackgroundConfig()
 
     terminalManager.value = new TerminalManager({
       fontSize: fontConfig.fontSize,
@@ -192,8 +237,23 @@ const initTerminal = async () => {
       throw new Error('Terminal initialization failed')
     }
 
+    // 应用配色方案（确保背景为透明，让容器的 CSS 背景可见）
+    const themeWithTransparency = { ...colorSchemeConfig.theme, background: 'transparent' }
+    try {
+      if (typeof terminal.setOption === 'function') {
+        terminal.setOption('theme', themeWithTransparency)
+      } else if (terminal.options) {
+        terminal.options.theme = themeWithTransparency
+      }
+    } catch (e) {
+      console.warn('设置 xterm 主题失败:', e)
+    }
+
     commandHandler.value = new TerminalCommandHandler(terminalManager.value)
     inputHandler.value = new TerminalInputHandler(terminalManager.value, commandHandler.value)
+
+    // 应用背景图片设置
+    await updateTerminalBackground(backgroundConfig)
 
     // 添加输入法事件监听
     terminal.element.addEventListener('compositionstart', (e) => {
@@ -472,14 +532,113 @@ watch(() => props.item.layoutMode, (newMode, oldMode) => {
 // 生命周期钩子
 // 字体更新事件监听器
 let fontUpdateHandler = null
+// 配色方案更新事件监听器
+let colorSchemeUpdateHandler = null
+// 背景图片更新事件监听器
+let backgroundUpdateHandler = null
+
+// 获取终端背景图片配置
+const getTerminalBackgroundConfig = async () => {
+  try {
+    const settings = await window.electron.ipcRenderer.invoke('settings:load')
+    return {
+      backgroundType: settings.terminalBackgroundType || 'none',
+      backgroundImage: settings.terminalBackgroundImage || ''
+    }
+  } catch (error) {
+    console.error('获取终端背景配置失败:', error)
+    return {
+      backgroundType: 'none',
+      backgroundImage: ''
+    }
+  }
+}
+
+// 更新终端背景图片
+const updateTerminalBackground = async (backgroundConfig) => {
+  console.log('终端接收到背景更新配置:', backgroundConfig)
+
+  if (!terminalContainer.value) {
+    console.log('终端容器未初始化，跳过背景更新')
+    return
+  }
+
+  const container = terminalContainer.value
+
+  // 移除之前的背景图片样式
+  container.style.backgroundImage = ''
+  container.style.backgroundSize = ''
+  container.style.backgroundPosition = ''
+  container.style.backgroundRepeat = ''
+
+  if (backgroundConfig.backgroundType !== 'none' && backgroundConfig.backgroundImage) {
+    try {
+      let imageUrl = backgroundConfig.backgroundImage
+
+      // 处理图片路径并转换为base64以避免CORS问题
+      if (imageUrl.startsWith('preset://')) {
+        // 预设图片
+        const basePath = await window.electron.ipcRenderer.invoke('system:get-resource-path', 'imgs')
+        const fileName = imageUrl.replace('preset://', '')
+        const fullPath = `${basePath}/${fileName}`.replace(/\\/g, '/')
+
+        const base64Data = await window.electron.ipcRenderer.invoke('system:get-image-base64', fullPath)
+        if (base64Data) {
+          const ext = fileName.split('.').pop().toLowerCase()
+          const mimeType = ext === 'jpg' ? 'jpeg' : ext
+          imageUrl = `data:image/${mimeType};base64,${base64Data}`
+        } else {
+          console.error('加载预设图片失败')
+          return
+        }
+      } else {
+        // 自定义图片
+        const base64Data = await window.electron.ipcRenderer.invoke('system:get-image-base64', imageUrl)
+        if (base64Data) {
+          const ext = imageUrl.split('.').pop().toLowerCase()
+          const mimeType = ext === 'jpg' ? 'jpeg' : ext
+          imageUrl = `data:image/${mimeType};base64,${base64Data}`
+        } else {
+          console.error('转换自定义图片为base64失败')
+          return
+        }
+      }
+
+      console.log('应用背景图片完成')
+
+      // 简洁方案：直接把背景交给 container 的 CSS（xterm 主题已设置为透明）
+      container.style.backgroundImage = `url('${imageUrl}')`
+      container.style.backgroundSize = 'cover'
+      container.style.backgroundPosition = 'center'
+      container.style.backgroundRepeat = 'no-repeat'
+    } catch (error) {
+      console.error('应用背景图片失败:', error)
+    }
+  }
+}
 
 // 在组件创建时立即设置自定义事件监听器
 fontUpdateHandler = (event) => {
   console.log('自定义事件监听器被触发，接收到字体配置:', event.detail)
   updateTerminalFont(event.detail)
 }
-console.log('设置自定义字体更新事件监听器')
+
+// 配色方案更新事件监听器
+colorSchemeUpdateHandler = (event) => {
+  console.log('自定义事件监听器被触发，接收到配色方案配置:', event.detail)
+  updateTerminalColorScheme(event.detail)
+}
+
+// 背景图片更新事件监听器
+backgroundUpdateHandler = (event) => {
+  console.log('自定义事件监听器被触发，接收到背景配置:', event.detail)
+  updateTerminalBackground(event.detail)
+}
+
+console.log('设置自定义字体、配色方案和背景更新事件监听器')
 window.addEventListener('terminal-font-changed', fontUpdateHandler)
+window.addEventListener('terminal-color-scheme-changed', colorSchemeUpdateHandler)
+window.addEventListener('terminal-background-changed', backgroundUpdateHandler)
 
 onMounted(async () => {
   // 只有当有完的连接信息时才初始化终端
@@ -501,6 +660,18 @@ onBeforeUnmount(() => {
     if (fontUpdateHandler) {
       window.removeEventListener('terminal-font-changed', fontUpdateHandler)
       fontUpdateHandler = null
+    }
+
+    // 移除自定义配色方案更新监听器
+    if (colorSchemeUpdateHandler) {
+      window.removeEventListener('terminal-color-scheme-changed', colorSchemeUpdateHandler)
+      colorSchemeUpdateHandler = null
+    }
+
+    // 移除自定义背景更新监听器
+    if (backgroundUpdateHandler) {
+      window.removeEventListener('terminal-background-changed', backgroundUpdateHandler)
+      backgroundUpdateHandler = null
     }
 
     // 先移除所有事件监听器
@@ -545,7 +716,7 @@ onBeforeUnmount(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: var(--terminal-bg);
+  background-color: transparent;
   transition: background-color 0.3s ease;
 }
 
@@ -574,12 +745,12 @@ onBeforeUnmount(() => {
 
 :deep(.xterm) {
   .xterm-viewport {
-    background-color: var(--terminal-bg) !important;
+    background-color: transparent !important;
     transition: background-color 0.3s ease;
   }
   
   .xterm-screen {
-    background-color: var(--terminal-bg);
+    background-color: transparent;
     transition: background-color 0.3s ease;
   }
   
