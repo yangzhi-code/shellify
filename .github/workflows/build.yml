@@ -43,8 +43,21 @@ jobs:
       run: npm ci
 
     # 获取版本号
-    - name: Get version
+    - name: Get version (Linux/macOS)
       id: get_version
+      if: matrix.os != 'windows-latest'
+      run: |
+        if [ "${{ github.event_name }}" = "release" ]; then
+          echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+        else
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Get version (Windows)
+      id: get_version
+      shell: bash
+      if: matrix.os == 'windows-latest'
       run: |
         if [ "${{ github.event_name }}" = "release" ]; then
           echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
