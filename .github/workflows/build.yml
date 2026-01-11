@@ -40,9 +40,25 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Get version
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" = "release" ]; then
+          echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+        else
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+        fi
+
     - name: Rebuild native modules
       run: npm rebuild better-sqlite3
 
+
+    - name: Install snapcraft (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo snap install snapcraft --classic
+        sudo snap install multipass --classic
 
     - name: Build for Linux
       if: matrix.os == 'ubuntu-latest'
@@ -66,7 +82,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: shellify-linux-${{ github.run_number }}
+        name: shellify-linux-${{ steps.get_version.outputs.version }}
         path: |
           dist/*.AppImage
           dist/*.deb
@@ -76,7 +92,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: shellify-windows-${{ github.run_number }}
+        name: shellify-windows-${{ steps.get_version.outputs.version }}
         path: |
           dist/*.exe
           dist/*.exe.blockmap
@@ -85,7 +101,7 @@ jobs:
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: shellify-macos-${{ github.run_number }}
+        name: shellify-macos-${{ steps.get_version.outputs.version }}
         path: |
           dist/*.dmg
           dist/*.pkg
