@@ -122,6 +122,7 @@ jobs:
           dist/*.dmg
           dist/*.pkg
         if-no-files-found: warn
+        
 
   release:
     needs: build
