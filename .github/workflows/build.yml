@@ -5,6 +5,9 @@ on:
     types: [ published ]  # Release发布时触发
   workflow_dispatch:     # 手动触发
 
+permissions:
+  contents: write  # 允许写入内容（上传 release assets）
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
