@@ -42,10 +42,11 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    # 修复：根据系统选择脚本解释器，兼容Windows PowerShell
-    - name: Get version
+    # 获取版本号
+    - name: Get version (Windows)
       id: get_version
-      shell: ${{ matrix.shell }}
+      shell: pwsh
+      if: matrix.os == 'windows-latest'
       run: |
         if ("${{ github.event_name }}" -eq "release") {
           $version = "${{ github.event.release.tag_name }}"
@@ -54,8 +55,7 @@ jobs:
           $version = "v$version"
         }
         echo "version=$version" >> $env:GITHUB_OUTPUT
-      # 兼容Linux/macOS的Shell语法
-      if: matrix.os == 'windows-latest'
+
     - name: Get version (Linux/macOS)
       id: get_version
       if: matrix.os != 'windows-latest'
