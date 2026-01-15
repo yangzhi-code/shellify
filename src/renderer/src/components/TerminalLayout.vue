@@ -20,7 +20,7 @@
               :title="!isConnected ? '请先连接到服务器' : ''"
               class="layout-button"
             >
-              <el-icon><CopyDocument /></el-icon>
+              <el-icon><Folder /></el-icon>
             </el-button>
             <el-button
               :type="layoutMode === 'file' ? 'primary' : 'default'"
@@ -30,7 +30,7 @@
               :title="!isConnected ? '请先连接到服务器' : ''"
               class="layout-button"
             >
-              <el-icon><Folder /></el-icon>
+              <el-icon><ChatLineSquare /></el-icon>
             </el-button>
           </template>
         </el-button-group>
@@ -42,13 +42,18 @@
           <Terminal :item="item" @connected="handleConnected" ref="terminal" />
         </div>
         <div
-          v-show="layoutMode === 'split'"
+          v-show="layoutMode === 'split' || layoutMode === 'file'"
           class="resize-handle"
           @mousedown="startResize"
         ></div>
         <div class="file-area" ref="fileArea">
+          <!-- In split mode show FileManager; in file mode show CommandPanel (command-send UI) -->
           <FileManager
-            v-if="item.data?.id"
+            v-if="layoutMode === 'split' && item.data?.id"
+            :connectionId="item.data.id"
+          />
+          <CommandPanel
+            v-if="layoutMode === 'file' && item.data?.id"
             :connectionId="item.data.id"
           />
         </div>
@@ -58,9 +63,10 @@
   
   <script setup>
   import { ref, watch, nextTick, computed, onMounted, onBeforeUnmount } from 'vue'
-  import { Monitor, CopyDocument, Folder } from '@element-plus/icons-vue'
+  import { Monitor, Folder, ChatLineSquare } from '@element-plus/icons-vue'
   import Terminal from './Terminal.vue'
   import FileManager from './FileManager.vue'
+  import CommandPanel from './file/CommandPanel.vue'
   
   const props = defineProps({
     item: {
@@ -187,7 +193,7 @@
   // 窗口大小调整监听
   const onResize = () => {
     forceRedraw()
-    if (layoutMode.value === 'split') {
+    if (layoutMode.value === 'split' || layoutMode.value === 'file') {
       terminal.value?.terminalManager?.value?.resize()
     }
   }
@@ -300,13 +306,23 @@
     display: none;
   }
   
-  /* 仅文件模式 */
-  .content-area.file .terminal-area {
-    display: none;
+/* 文件(命令)模式：与 split 模式保持一致（上下 50%），并支持拖动调整 */
+.content-area.file .terminal-area {
+    height: 50%;
+    min-height: 100px;
+    max-height: calc(100% - 100px);
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    border-bottom: 1px solid var(--split-line-color);
   }
-  
+
   .content-area.file .file-area {
-    flex: 1;
+    height: 50%;
+    min-height: 100px;
+    border-top: 1px solid #333;
+    overflow: hidden;
+    position: relative;
   }
   
   /* 分割线样式 */

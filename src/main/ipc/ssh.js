@@ -107,6 +107,36 @@ export function setupSSHHandlers() {
   });
 
   /**
+   * 发送命令到多个会话
+   * 参数: { ids?: string[], data: string }
+   * 如果 ids 为空或未提供，则发送到所有活动会话
+   */
+  ipcMain.handle('ssh:send-commands', async (event, { ids, data }) => {
+    try {
+      const shellManager = sshService.ShellManager || sshService.ShellManager;
+      // 获取所有 active shell id
+      const availableIds = Object.keys(shellManager.shells || {});
+      const targetIds = (ids && ids.length > 0) ? ids : availableIds;
+
+      let sent = 0;
+      const errors = [];
+      for (const id of targetIds) {
+        try {
+          shellManager.writeToShell(id, data);
+          sent++;
+        } catch (err) {
+          errors.push({ id, message: err.message || String(err) });
+        }
+      }
+
+      return { sent, errors };
+    } catch (error) {
+      console.error('ssh:send-commands 处理失败:', error);
+      throw error;
+    }
+  });
+
+  /**
    * 断开 SSH 连接
    * 清理相关资源
    */
