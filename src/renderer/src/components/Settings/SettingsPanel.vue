@@ -118,11 +118,84 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
+
+        <!-- 关于 -->
+        <el-tab-pane>
+          <template #label>
+            <el-icon><InfoFilled /></el-icon>
+            <span>关于</span>
+          </template>
+          <div class="about-section">
+            <!-- 应用信息卡片 -->
+            <div class="app-info-card">
+              <div class="app-header">
+                <div class="app-icon">
+                  <el-icon size="48"><Monitor /></el-icon>
+                </div>
+                <div class="app-title">
+                  <h3>Shellify</h3>
+                  <span v-if="appVersion" class="app-version">v{{ appVersion }}</span>
+                </div>
+              </div>
+
+              <div class="app-details">
+                <div class="detail-row">
+                  <el-icon><Message /></el-icon>
+                  <span class="detail-label">邮箱：</span>
+                  <span class="detail-value">1265728251@qq.com</span>
+                </div>
+                <div class="detail-row">
+                  <el-icon><Link /></el-icon>
+                  <span class="detail-label">官网：</span>
+                  <a href="#" @click.prevent="openWebsite" class="detail-link">shellify.yangzhi.me</a>
+                </div>
+                <div class="detail-row">
+                  <el-icon><Document /></el-icon>
+                  <span class="detail-label">功能：</span>
+                  <span class="detail-value">现代化的 SSH 终端管理工具</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 功能特性 -->
+            <div class="features-section">
+              <h4>主要特性</h4>
+              <div class="features-grid">
+                <div class="feature-item">
+                  <el-icon><Monitor /></el-icon>
+                  <span>多终端管理</span>
+                </div>
+                <div class="feature-item">
+                  <el-icon><Setting /></el-icon>
+                  <span>个性化配置</span>
+                </div>
+                <div class="feature-item">
+                  <el-icon><Edit /></el-icon>
+                  <span>代码编辑器集成</span>
+                </div>
+                <div class="feature-item">
+                  <el-icon><Operation /></el-icon>
+                  <span>文件传输</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="action-section">
+              <el-button type="primary" @click="openWebsite" icon="Link" class="action-button">
+                访问官网
+              </el-button>
+              <el-button @click="openFeedback" icon="Message" class="action-button">
+                意见反馈
+              </el-button>
+            </div>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </div>
 
     <div class="settings-footer">
-      <el-button @click="resetSettings">恢复默认</el-button>
+      <el-button @click="resetSettings">恢复默认设置</el-button>
       <div class="footer-right">
         <el-button @click="$emit('update:visible', false)">关闭</el-button>
       </div>
@@ -139,7 +212,7 @@
 
 <script setup>
 import { ref, watch, toRaw } from 'vue'
-import { Close, Setting, Monitor, Edit, Operation } from '@element-plus/icons-vue'
+import { Close, Setting, Monitor, Edit, Operation, InfoFilled, User, Message, Link, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { themeManager } from '../../styles/theme'
 import { getColorSchemeOptions, getColorScheme, convertToXtermTheme } from '../../utils/terminalColorSchemes'
@@ -185,6 +258,16 @@ const colorSchemeOptions = ref([])
 // 图库图片列表（动态）
 const imagesList = ref([])
 const selectedPreview = ref('')
+
+// 关于页面相关
+const appVersion = ref('')
+
+// 组件挂载时加载应用信息
+import { onMounted } from 'vue'
+
+onMounted(async () => {
+  await loadAppInfo()
+})
 
 // 加载图库图片（从主进程列出并转换为 base64 以便预览）
 const loadPresetImages = async () => {
@@ -401,6 +484,29 @@ const resetSettings = async () => {
   }
 }
 
+// 打开官网
+const openWebsite = () => {
+  // 直接用前端方式打开外部链接
+  window.open('https://shellify.yangzhi.me', '_blank')
+}
+
+// 打开反馈页面
+const openFeedback = () => {
+  // 打开意见反馈页面
+  window.open('https://shellify.yangzhi.me/prod-api/q/wnTmYv', '_blank')
+}
+
+
+// 获取应用版本信息
+const loadAppInfo = async () => {
+  try {
+    const version = await window.electron.ipcRenderer.invoke('system:get-app-version')
+    appVersion.value = version || ''
+  } catch (error) {
+    console.error('获取应用版本失败:', error)
+    appVersion.value = ''
+  }
+}
 
 // 加载设置
 const loadSettings = async () => {
@@ -415,6 +521,8 @@ const loadSettings = async () => {
     loadColorSchemeOptions()
     // 加载预设图片
     await loadPresetImages()
+    // 加载应用信息
+    await loadAppInfo()
   } catch (error) {
     console.error('加载设置失败：', error)
   }
@@ -834,6 +942,184 @@ watch(() => props.visible, (newValue) => {
 
 :deep(.background-opacity .el-slider__input) {
   width: 60px;
+}
+
+/* 关于页面样式 */
+.about-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 600px;
+  margin: 0 auto;
+  user-select: text;
+}
+
+/* 应用信息卡片 */
+.app-info-card {
+  background: var(--el-bg-color-page);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  user-select: text;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.app-icon {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-title h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  user-select: text;
+}
+
+.app-version {
+  color: var(--el-text-color-regular);
+  font-size: 14px;
+  background: var(--el-fill-color-lighter);
+  padding: 2px 8px;
+  border-radius: 12px;
+  user-select: text;
+}
+
+.app-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.detail-row .el-icon {
+  color: var(--el-text-color-regular);
+  font-size: 16px;
+  min-width: 16px;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: var(--el-text-color-regular);
+  min-width: 60px;
+}
+
+.detail-value {
+  color: var(--el-text-color-primary);
+  flex: 1;
+  user-select: text;
+}
+
+.detail-link {
+  color: var(--el-color-primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  user-select: text;
+}
+
+.detail-link:hover {
+  color: var(--el-color-primary-dark-2);
+  text-decoration: underline;
+}
+
+/* 功能特性 */
+.features-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  user-select: text;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--el-bg-color-page);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  user-select: text;
+}
+
+.feature-item:hover {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.feature-item .el-icon {
+  color: var(--el-color-primary);
+  font-size: 18px;
+}
+
+.feature-item span {
+  color: var(--el-text-color-regular);
+  font-size: 14px;
+}
+
+/* 操作按钮 */
+.action-section {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 0;
+  margin-top: 8px;
+}
+
+.action-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center !important;
+  text-align: center;
+  min-width: 100px;
+  padding-left: 44px; /* reserve space for absolute-positioned icon */
+  padding-right: 16px;
+}
+
+.action-button .el-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button span {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
 }
 
 </style> 
