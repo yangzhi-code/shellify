@@ -1,0 +1,28 @@
+@use './light.scss' as *;
+@use './dark.scss' as *;
+@use './custom.scss' as *;
+
+/* 为 Element 组件提供兼容的 CSS 变量（回退用） */
+:root {
+  /* Element 组件的回退变量，优先使用 SCSS 生成的变量 */
+  --el-component-bg: var(--el-bg-color);
+  --el-component-text: var(--el-text-color-regular);
+  --el-component-border: var(--el-border-color);
+}
+
+/* 确保表单控件使用 token（全局选择器，适用于全局样式表） */
+.el-input .el-input__wrapper,
+.el-select .el-input__wrapper,
+.el-input-number .el-input__wrapper {
+  background: var(--el-component-bg) !important;
+  border-color: var(--el-component-border) !important;
+}
+
+.el-input .el-input__inner,
+.el-select .el-input__inner,
+.el-input-number .el-input__inner {
+  color: var(--el-component-text) !important;
+  background: transparent !important;
+}
+
+

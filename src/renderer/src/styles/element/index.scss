@@ -1,0 +1,15 @@
+/* element/index.scss
+   用于覆盖 Element Plus 的 SCSS 变量（按需覆盖需要的项）
+   使用 @forward 将自定义变量注入到 element-plus 的 scss 模块中。
+   示例中只示范了如何覆盖 $colors 的 primary 基色（可按需扩展）。
+*/
+
+@forward 'element-plus/theme-chalk/src/common/var.scss' with (
+  $colors: (
+    'primary': (
+      'base': #409eff, // 保持默认蓝色；改为你需要的颜色即可，例如 #ff9800
+    ),
+  )
+);
+
+

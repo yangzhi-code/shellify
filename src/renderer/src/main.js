@@ -1,9 +1,12 @@
 import './assets/main.css'
+import './styles/index.scss'
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+// 直接导入 Element Plus 的深色 css-vars，确保深色变量在运行时可用
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import './assets/fonts/iconfont.css'
 import { createPinia } from 'pinia'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -36,3 +39,6 @@ const initTheme = async () => {
 initTheme()
 
 app.mount('#app')
+
+// 尽早根据系统首选项设置 html.dark，减少闪烁（如果用户有保存偏好，initTheme 会覆盖）
+document.documentElement.classList.toggle('dark', window.matchMedia('(prefers-color-scheme: dark)').matches)

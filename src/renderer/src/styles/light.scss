@@ -1,0 +1,15 @@
+@use './_vars.scss' as vars;
+
+/* 浅色主题：在 :root 中导出 CSS 变量 */
+:root {
+  @include vars.export-css-vars(vars.$colors-light);
+  @include vars.export-css-vars(vars.$core-colors-light);
+}
+
+/* 基础样式，使用上面导出的变量 */
+body {
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+}
+
+

@@ -1,0 +1,9 @@
+@use './_vars.scss' as vars;
+
+/* 深色主题：在 .dark 类上导出深色变量，运行时通过 body.class 切换生效 */
+.dark {
+  @include vars.export-css-vars(vars.$colors-dark);
+  @include vars.export-css-vars(vars.$core-colors-dark);
+}
+
+
