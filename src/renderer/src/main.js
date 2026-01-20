@@ -1,5 +1,5 @@
 import './assets/main.css'
-import './styles/themes/index.scss'
+import './styles/index.scss'; // 引入自定义样式（先覆盖 Element 变量）
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'

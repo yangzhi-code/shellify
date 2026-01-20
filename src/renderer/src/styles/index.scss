@@ -1,6 +1,7 @@
-// 项目样式总入口：先覆盖 Element 变量，再引入主题
-@use './element/index.scss'; // 注入 Element Plus 自定义变量
-@use './themes/index.scss';  // 加载全局主题变量
+// 主题入口：仅引入所有主题定义，不写具体样式
+// 显式指定命名空间：elementVars / themeStyles（名称可自定义，唯一即可）
+@use './element/index.scss' as elementVars; 
+@use './themes/index.scss' as themeStyles;
 
 // 可选：全局通用样式（如重置样式、全局字体等）
 * {
