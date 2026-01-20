@@ -82,7 +82,6 @@ const startResize = (e) => {
 }
 /* 标签栏 */
 .top-bar {
-  background: #dfcece;
   height: 30px;
   width: 100%;
   display: flex;

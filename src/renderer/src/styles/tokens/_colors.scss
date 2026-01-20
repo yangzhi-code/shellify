@@ -1,0 +1,30 @@
+// 全局样式 Token，定义浅色/深色的基础变量
+// 下划线开头表示私有模块，仅通过 @use 引入，不单独编译
+$light: (
+  bg: #ffffff,
+  bg-overlay: #ffffff,
+  text-primary: #303133,
+  text-regular: #606266,
+  component-bg: #ffffff,
+  component-border: #dcdfe6,
+  // 新增：和 Element Plus 对齐的主色（可选）
+  primary: #409eff,
+);
+
+$dark: (
+  bg: #141414,
+  bg-overlay: #1d1e1f,
+  text-primary: #ffffff,
+  text-regular: #d0d0d0,
+  component-bg: #1d1d1d,
+  component-border: #2d2d2d,
+  // 新增：深色主题下的主色（可选）
+  primary: #66b1ff,
+);
+
+// 导出 CSS 变量的混入（将 SCSS map 转为 --app-* 变量）
+@mixin export-css-vars($map) {
+  @each $k, $v in $map {
+    --app-#{$k}: #{$v};
+  }
+}

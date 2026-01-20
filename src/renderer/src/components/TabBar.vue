@@ -107,6 +107,7 @@ onMounted(() => {
   scrollbar-width: thin;
   scrollbar-color: rgba(0,0,0,0.12) transparent;
 }
+/* 标签未选中状态 */
 .tab-bar-item {
   margin: 3px;
   padding: 2px;
@@ -115,7 +116,6 @@ onMounted(() => {
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-
   border: 1px solid var(--tab-bar-border);
   border-radius: 4px;
   cursor: pointer;

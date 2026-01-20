@@ -1,0 +1,3 @@
+// 主题入口：仅引入所有主题定义，不写具体样式
+@use './light.scss';
+@use './dark.scss';
