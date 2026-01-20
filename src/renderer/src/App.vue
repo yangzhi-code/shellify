@@ -77,7 +77,7 @@ const startResize = (e) => {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background: #fff;
+  background: var(--app-bg);
   overflow: hidden;
 }
 /* 标签栏 */

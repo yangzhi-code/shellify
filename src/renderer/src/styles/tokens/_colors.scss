@@ -7,8 +7,15 @@ $light: (
   text-regular: #606266,
   component-bg: #ffffff,
   component-border: #dcdfe6,
-  // 新增：和 Element Plus 对齐的主色（可选）
   primary: #409eff,
+  tab-bar-bg: #f5f7fa,          // 标签栏背景（和页面背景区分）
+  tab-bar-border: #e4e7ed,      // 标签栏边框
+  tab-item-text: #000000,       // 标签默认文字色
+  tab-item-bg: #ffffff,         // 标签默认背景
+  // 调整：浅色主题hover背景（透明度从~20%降到8%，更淡）
+  tab-item-hover-bg: rgba(64, 158, 255, 0.08),   
+  tab-item-active-bg: rgba(64, 158, 255, 0.1),  // 选中背景（10%透明度）
+  tab-item-active-text: #606266,                 // 选中文字色（默认色）
 );
 
 $dark: (
@@ -18,8 +25,15 @@ $dark: (
   text-regular: #d0d0d0,
   component-bg: #1d1d1d,
   component-border: #2d2d2d,
-  // 新增：深色主题下的主色（可选）
   primary: #66b1ff,
+  tab-bar-bg: #1f1f1f,          // 标签栏背景（和页面背景区分）
+  tab-bar-border: #333333,      // 标签栏边框
+  tab-item-text: #d0d0d0,       // 标签默认文字色
+  tab-item-bg: #252525,         // 标签默认背景
+  // 调整：深色主题hover背景（透明度从~10%降到8%，更淡）
+  tab-item-hover-bg: rgba(102, 177, 255, 0.08),  
+  tab-item-active-bg: rgba(102, 177, 255, 0.15), // 选中背景（15%透明度）
+  tab-item-active-text: #d0d0d0,                 // 选中文字色（默认色）
 );
 
 // 导出 CSS 变量的混入（将 SCSS map 转为 --app-* 变量）
