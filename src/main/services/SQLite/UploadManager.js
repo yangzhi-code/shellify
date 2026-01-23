@@ -1,26 +1,24 @@
-import sqlite3 from 'sqlite3'
-import { open } from 'sqlite'
+import Database from 'better-sqlite3'
 import path from 'path'
 import { app, BrowserWindow } from 'electron'
 
 class UploadManager {
   constructor() {
-    this.dbPromise = this.initDatabase()
+    this.db = null
+    this.statements = {}
+    this.initDatabase()
   }
 
-  async initDatabase() {
+  initDatabase() {
     const dbPath = process.env.NODE_ENV === 'development'
       ? path.join(process.cwd(), 'data', 'shellify.db')
       : path.join(app.getPath('userData'), 'shellify.db');
 
     console.log('[UploadManager] 数据库路径:', dbPath)
 
-    const db = await open({
-      filename: dbPath,
-      driver: sqlite3.Database
-    })
+    this.db = new Database(dbPath)
 
-    await db.exec(`
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS uploads (
         id TEXT PRIMARY KEY,
         connection_id TEXT NOT NULL,
@@ -36,42 +34,57 @@ class UploadManager {
       )
     `)
 
-    return db
+    // 预编译常用语句
+    this.statements.getUpload = this.db.prepare('SELECT * FROM uploads WHERE id = ?')
+    this.statements.updateUpload = this.db.prepare(`
+      UPDATE uploads
+      SET progress = ?, status = ?, error = ?, updated_at = ?
+      WHERE id = ?
+    `)
+    this.statements.insertUpload = this.db.prepare(`
+      INSERT INTO uploads (
+        id, connection_id, file_name, file_path, remote_path,
+        total_size, progress, status, error, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    this.statements.getAllUploads = this.db.prepare('SELECT * FROM uploads ORDER BY updated_at DESC')
+    this.statements.deleteUpload = this.db.prepare('DELETE FROM uploads WHERE id = ?')
+    this.statements.deleteAllUploads = this.db.prepare('DELETE FROM uploads')
+    this.statements.markInterrupted = this.db.prepare(`
+      UPDATE uploads
+      SET status = 'interrupted', updated_at = ?
+      WHERE connection_id = ? AND status = 'uploading'
+    `)
+    this.statements.getInterrupted = this.db.prepare(`
+      SELECT * FROM uploads
+      WHERE connection_id = ? AND status = 'interrupted'
+    `)
+    this.statements.cleanupOld = this.db.prepare(`
+      DELETE FROM uploads
+      WHERE updated_at < ? AND status IN ('completed', 'error')
+    `)
   }
 
   //保存上传记录
-  async updateOrCreate(data) {
-   
+  updateOrCreate(data) {
+
     try {
-      const db = await this.dbPromise
       const now = Date.now()
 
-      const existing = await db.get('SELECT * FROM uploads WHERE id = ?', data.uploadId)
+      const existing = this.statements.getUpload.get(data.uploadId)
 
       if (existing) {
         // 更新现有记录
-        await db.run(`
-          UPDATE uploads 
-          SET progress = ?,
-              status = ?,
-              error = ?,
-              updated_at = ?
-          WHERE id = ?
-        `, [
+        this.statements.updateUpload.run(
           data.progress,
           data.status,
           data.error || null,
           now,
           data.uploadId
-        ])
+        )
       } else {
         // 创建新记录
-        await db.run(`
-          INSERT INTO uploads (
-            id, connection_id, file_name, file_path, remote_path,
-            total_size, progress, status, error, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
+        this.statements.insertUpload.run(
           data.uploadId,
           data.connectionId,
           data.fileName,
@@ -83,11 +96,11 @@ class UploadManager {
           data.error || null,
           now,
           now
-        ])
+        )
       }
 
       // 使用 _notifyProgressUpdate 通知进度更新
-      await this._notifyProgressUpdate(data.uploadId, data.progress)
+      this._notifyProgressUpdate(data.uploadId, data.progress)
 
       // 发送更新事件
       if (global.mainWindow) {
@@ -112,20 +125,18 @@ class UploadManager {
     }
   }
 
-  async getAll() {
+  getAll() {
     try {
-      const db = await this.dbPromise
-      return await db.all('SELECT * FROM uploads ORDER BY updated_at DESC')
+      return this.statements.getAllUploads.all()
     } catch (error) {
       console.error('获取上传记录失败:', error)
       throw error
     }
   }
 
-  async delete(id) {
+  delete(id) {
     try {
-      const db = await this.dbPromise
-      await db.run('DELETE FROM uploads WHERE id = ?', id)
+      this.statements.deleteUpload.run(id)
       return true
     } catch (error) {
       console.error('删除上传记录失败:', error)
@@ -133,10 +144,9 @@ class UploadManager {
     }
   }
 
-  async deleteAll() {
+  deleteAll() {
     try {
-      const db = await this.dbPromise
-      await db.run('DELETE FROM uploads')
+      this.statements.deleteAllUploads.run()
       return true
     } catch (error) {
       console.error('删除所有上传记录失败:', error)
@@ -144,26 +154,15 @@ class UploadManager {
     }
   }
 
-  async markInterrupted(connectionId) {
+  markInterrupted(connectionId) {
     try {
-      const db = await this.dbPromise
       const now = Date.now()
 
       // 标记中断的上传
-      await db.run(`
-        UPDATE uploads 
-        SET status = 'interrupted',
-            updated_at = ?
-        WHERE connection_id = ?
-        AND status = 'uploading'
-      `, [now, connectionId])
+      this.statements.markInterrupted.run(now, connectionId)
 
       // 获取被标记为中断的记录
-      const interruptedUploads = await db.all(`
-        SELECT * FROM uploads 
-        WHERE connection_id = ?
-        AND status = 'interrupted'
-      `, connectionId)
+      const interruptedUploads = this.statements.getInterrupted.all(connectionId)
 
       // 通知前端
       if (global.mainWindow && interruptedUploads.length > 0) {
@@ -179,17 +178,12 @@ class UploadManager {
     }
   }
 
-  async cleanupOldRecords(days = 7) {
+  cleanupOldRecords(days = 7) {
     try {
-      const db = await this.dbPromise
       const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000)
-      
-      await db.run(`
-        DELETE FROM uploads 
-        WHERE updated_at < ? 
-        AND status IN ('completed', 'error')
-      `, cutoff)
-      
+
+      this.statements.cleanupOld.run(cutoff)
+
       return true
     } catch (error) {
       console.error('清理过期上传记录失败:', error)
@@ -198,10 +192,9 @@ class UploadManager {
   }
 
   // 获取单个上传记录
-  async getUpload(id) {
+  getUpload(id) {
     try {
-      const db = await this.dbPromise
-      return await db.get('SELECT * FROM uploads WHERE id = ?', id)
+      return this.statements.getUpload.get(id)
     } catch (error) {
       console.error('获取上传记录失败:', error)
       return null
@@ -209,11 +202,11 @@ class UploadManager {
   }
 
   // 通知渲染进程上传进度更新
-  async _notifyProgressUpdate(uploadId, progress) {
+  _notifyProgressUpdate(uploadId, progress) {
     const windows = BrowserWindow.getAllWindows()
-    windows.forEach(async (win) => {
+    windows.forEach((win) => {
       if (!win.isDestroyed()) {
-        const upload = await this.getUpload(uploadId)
+        const upload = this.getUpload(uploadId)
         if (upload) {
           win.webContents.send('upload-updated', {
             id: upload.id,

@@ -118,11 +118,20 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
+
+        <!-- 关于 -->
+        <el-tab-pane>
+          <template #label>
+            <el-icon><InfoFilled /></el-icon>
+            <span>关于</span>
+          </template>
+          <AboutPanel :appVersion="appVersion" />
+        </el-tab-pane>
       </el-tabs>
     </div>
 
     <div class="settings-footer">
-      <el-button @click="resetSettings">恢复默认</el-button>
+      <el-button @click="resetSettings">恢复默认设置</el-button>
       <div class="footer-right">
         <el-button @click="$emit('update:visible', false)">关闭</el-button>
       </div>
@@ -139,7 +148,8 @@
 
 <script setup>
 import { ref, watch, toRaw } from 'vue'
-import { Close, Setting, Monitor, Edit, Operation } from '@element-plus/icons-vue'
+import { Close, Setting, Edit, InfoFilled } from '@element-plus/icons-vue'
+import AboutPanel from './AboutPanel.vue'
 import { ElMessage } from 'element-plus'
 import { themeManager } from '../../styles/theme'
 import { getColorSchemeOptions, getColorScheme, convertToXtermTheme } from '../../utils/terminalColorSchemes'
@@ -185,6 +195,10 @@ const colorSchemeOptions = ref([])
 // 图库图片列表（动态）
 const imagesList = ref([])
 const selectedPreview = ref('')
+
+// 关于页面相关已迁移到 AboutPanel
+
+// 组件挂载时无需加载关于信息（已移至 AboutPanel）
 
 // 加载图库图片（从主进程列出并转换为 base64 以便预览）
 const loadPresetImages = async () => {
@@ -401,7 +415,6 @@ const resetSettings = async () => {
   }
 }
 
-
 // 加载设置
 const loadSettings = async () => {
   try {
@@ -415,6 +428,8 @@ const loadSettings = async () => {
     loadColorSchemeOptions()
     // 加载预设图片
     await loadPresetImages()
+    // 加载应用信息
+    await loadAppInfo()
   } catch (error) {
     console.error('加载设置失败：', error)
   }
@@ -836,4 +851,5 @@ watch(() => props.visible, (newValue) => {
   width: 60px;
 }
 
+/* 关于页面样式 已迁移到 AboutPanel.vue */
 </style> 

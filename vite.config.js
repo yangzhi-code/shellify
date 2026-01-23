@@ -11,6 +11,13 @@ export default defineConfig({
     electron({
       main: {
         entry: 'src/main/index.js',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['better-sqlite3']
+            }
+          }
+        }
       },
     }),
   ],
@@ -22,7 +29,8 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `@import "@/styles/variables.scss";`
+        // 在所有 scss 文件编译前注入 element 覆盖与项目变量（使用 @use 风格）
+        additionalData: `@use "@/styles/element/index.scss" as *;\n@use \"@/styles/variables.scss\" as *;`
       }
     }
   }

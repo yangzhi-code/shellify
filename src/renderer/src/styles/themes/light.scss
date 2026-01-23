@@ -1,0 +1,12 @@
+// 浅色主题：引入 Token 并导出 CSS 变量
+@use '../tokens/_colors' as colors;
+
+html.light {
+  // 导出全局 CSS 变量
+  @include colors.export-css-vars(colors.$light);
+  
+  // 可选：覆盖 Element Plus 浅色模式的局部样式
+  :root {
+    --el-color-primary: var(--app-primary);
+  }
+}

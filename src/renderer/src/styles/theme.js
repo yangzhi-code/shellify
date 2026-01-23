@@ -1,191 +1,86 @@
-// 定义主题变量
-export const themes = {
-  light: {
-    // 基础颜色
-    '--el-bg-color': '#ffffff',              // 主要背景色，用于主体内容区域
-    '--el-bg-color-page': '#f2f3f5',         // 页面背景色，用于整体页面背景
-    '--el-bg-color-overlay': '#ffffff',       // 浮层背景色，用于下拉菜单、弹窗等
-    '--el-text-color-primary': '#303133',     // 主要文字颜色，用于标题、重要文本
-    '--el-text-color-regular': '#606266',     // 常规文字颜色，用于正文内容
-    '--el-border-color': '#dcdfe6',           // 主要边框颜色
-    '--el-border-color-light': '#e4e7ed',     // 浅色边框，用于分割线
-    '--el-border-color-lighter': '#ebeef5',   // 更浅的边框，用于内部分割
-    '--el-fill-color-light': '#f5f7fa',       // 填充色，用于禁用状态背景
-    '--el-color-primary-light-9': '#ecf5ff',  // 主色浅色变体，用于hover效果
-    
-    // 终端相关
-    '--terminal-bg': '#1e1e1e',               // 终端背景色
-    '--terminal-text': '#333333',             // 终端文字颜色
-    '--terminal-cursor': '#333333',           // 终端光标颜色
-    '--terminal-selection': '#b2d7fd',        // 终端选中文本背景色
-    
-    // 分割线颜色
-    '--split-line-color': '#e4e7ed',          // 分隔线颜色，用于面板分割
-    
-    // 侧边栏相关
-    '--sidebar-bg': '#f2f3f5',                // 侧边栏背景色
-    '--sidebar-text': '#303133',              // 侧边栏文字颜色
-    '--sidebar-border': '#e4e7ed',            // 侧边栏边框颜色
-    '--sidebar-item-hover': '#e6e8eb',        // 侧边栏项目悬停背景色
-    '--sidebar-item-active': '#e2e5e9',       // 侧边栏项目激活背景色
-    '--sidebar-header-bg': '#ffffff',         // 侧边栏头部背景色
-    '--sidebar-header-border': '#e4e7ed',     // 侧边栏头部边框颜色
-    
-    // 文件列表相关
-    '--file-list-bg': '#ffffff',              // 文件列表背景色
-    '--file-list-header-bg': '#f5f7fa',       // 文件列表头部背景色
-    '--file-list-border': '#ebeef5',          // 文件列表边框颜色
-    '--file-item-hover': '#f5f7fa',           // 文件项悬停背景色
-    '--file-item-active': '#ecf5ff',          // 文件项选中背景色
-    '--file-item-text': '#606266',            // 文件项文字颜色
-    '--file-item-icon': '#909399',            // 文件项图标颜色
-    
-    // 状态栏相关
-    '--status-bar-bg': '#f0f0f0',             // 状态栏背景色
-    '--status-bar-text': '#606266',           // 状态栏文字颜色
-    '--status-bar-border': '#dcdfe6',         // 状态栏边框颜色
-    '--status-bar-item-hover': '#e4e7ed',     // 状态栏项目悬停背景色
-
-    // 标签栏相关
-    '--tab-bar-bg': '#f5f7fa',                // 浅灰色背景
-    '--tab-bar-border': '#e4e7ed',            // 稍微浅一点的边框色
-    '--tab-item-bg': '#ffffff',               // 白色标签背景
-    '--tab-item-text': '#606266',             // 正常文字颜色
-    '--tab-item-active-bg': '#e8f4ff',        // 选中背景使用浅蓝灰色
-    '--tab-item-active-text': '#1890ff',      // 选中文字使用稍微柔和的蓝色
-    '--tab-item-hover-bg': '#f0f2f5',         // 悬停背景色
-
-    // 工具栏相关
-    '--toolbar-bg': '#f5f7fa',                // 工具栏背景色
-    '--toolbar-border': '#e4e7ed',            // 工具栏边框颜色
-    '--toolbar-button-hover': '#ecf5ff',      // 工具栏按钮悬停背景色
-    '--toolbar-button-active': '#409eff',     // 工具栏按钮激活背景色
-    '--toolbar-text': '#606266',              // 工具栏文字颜色
-    '--toolbar-icon': '#909399',              // 工具栏图标颜色
-
-    // 设置面板相关
-    '--settings-input-bg': '#ffffff',         // 设置输入框背景色
-    '--settings-input-text': '#606266',       // 设置输入框文字颜色
-    '--settings-input-border': '#dcdfe6',     // 设置输入框边框颜色
-    '--settings-input-hover-border': '#c0c4cc', // 设置输入框悬停边框颜色
-    '--settings-input-focus-border': '#409eff', // 设置输入框焦点边框颜色
-    '--settings-label-text': '#606266',       // 设置标签文字颜色
-  },
-  
-  dark: {
-    // 基础颜色
-    '--el-bg-color': '#1e1e1e',              // 深色主题主背景色，VSCode风格
-    '--el-bg-color-page': '#141414',         // 深色页面背景，比主背景更暗
-    '--el-bg-color-overlay': '#1d1e1f',      // 深色浮层背景，用于弹出层
-    '--el-text-color-primary': '#ffffff',     // 深色主要文字，纯白色
-    '--el-text-color-regular': '#d0d0d0',     // 深色常规文字，浅灰色
-    '--el-border-color': '#4c4c4c',           // 深色主边框，中灰色
-    '--el-border-color-light': '#363636',     // 深色次要边框，深灰色
-    '--el-border-color-lighter': '#2c2c2c',   // 深色最浅边框，最深灰色
-    '--el-fill-color-light': '#262727',       // 深色填充色，用于表格等
-    '--el-color-primary-light-9': '#1c1c1c',  // 深色主题下的hover背景色
-    
-    // 终端相关
-    '--terminal-bg': '#1e1e1e',               // 终端背景色，与VSCode终端一致
-    '--terminal-text': '#d4d4d4',             // 终端文字颜色，浅灰色易读
-    '--terminal-cursor': '#ffffff',           // 终端光标颜色，醒目的白色
-    '--terminal-selection': '#264f78',        // 终端选中背景，深蓝色
-    
-    // 分割线颜色
-    '--split-line-color': '#2d2d2d',          // 深色分隔线，较深的灰色
-    
-    // 侧边栏相关
-    '--sidebar-bg': '#252526',                // 侧边栏背景，比主背景略深
-    '--sidebar-text': '#cccccc',              // 侧边栏文字，浅灰色
-    '--sidebar-border': '#2d2d2d',            // 侧边栏边框，深灰色
-    '--sidebar-item-hover': '#2a2d2e',        // 侧边栏项目悬停，稍亮的灰色
-    '--sidebar-item-active': '#37373d',       // 侧边栏项目激活，更亮的灰色
-    '--sidebar-header-bg': '#252526',         // 侧边栏头部背景，与侧边栏同色
-    '--sidebar-header-border': '#2d2d2d',     // 侧边栏头部边框，深灰色
-    
-    // 文件列表相关
-    '--file-list-bg': '#1e1e1e',              // 文件列表背景，主背景色
-    '--file-list-header-bg': '#252526',       // 文件列表头部，略深色
-    '--file-list-border': '#2d2d2d',          // 文件列表边框，深灰色
-    '--file-item-hover': '#2a2d2e',           // 文件项悬停，中灰色
-    '--file-item-active': '#37373d',          // 文件项选中，亮灰色
-    '--file-item-text': '#cccccc',            // 文件项文字，浅灰色
-    '--file-item-icon': '#858585',            // 文件项图标，中灰色
-    
-    // 状态栏相关
-    '--status-bar-bg': '#1a1a1a',             // 状态栏背景，最深色
-    '--status-bar-text': '#cccccc',           // 状态栏文字，浅灰色
-    '--status-bar-border': '#2d2d2d',         // 状态栏边框，深灰色
-    '--status-bar-item-hover': '#2a2d2e',     // 状态栏项目悬停，中灰色
-
-    // 标签栏相关
-    '--tab-bar-bg': '#252526',                // 深色背景
-    '--tab-bar-border': '#3e3e3e',            // 稍亮的边框色
-    '--tab-item-bg': '#2d2d2d',               // 比背景稍亮的标签背景
-    '--tab-item-text': '#cccccc',             // 正常文字颜色
-    '--tab-item-active-bg': '#37373d',        // 选中背景使用稍亮的灰色
-    '--tab-item-active-text': '#89d1ff',      // 选中文字使用柔和的天蓝色
-    '--tab-item-hover-bg': '#323232',         // 悬停背景色
-
-    // 工具栏相关
-    '--toolbar-bg': '#252526',                // 工具栏背景，略深色
-    '--toolbar-border': '#2d2d2d',            // 工具栏边框，深灰色
-    '--toolbar-button-hover': '#2a2d2e',      // 工具栏按钮悬停，中灰色
-    '--toolbar-button-active': '#094771',     // 工具栏按钮激活，深蓝色
-    '--toolbar-text': '#cccccc',              // 工具栏文字，浅灰色
-    '--toolbar-icon': '#858585',              // 工具栏图标，中灰色
-
-    // 设置面板相关
-    '--settings-input-bg': '#1d1d1d',         // 设置输入框背景，深色
-    '--settings-input-text': '#cccccc',       // 设置输入框文字，浅灰色
-    '--settings-input-border': '#2d2d2d',     // 设置输入框边框，深灰色
-    '--settings-input-hover-border': '#4c4c4c', // 输入框悬停边框，中灰色
-    '--settings-input-focus-border': '#409eff', // 输入框焦点边框，主题蓝色
-    '--settings-label-text': '#cccccc',       // 设置标签文字，浅灰色
-  }
-}
-
-// 主题管理类
+// 主题管理：适配 Electron + 浏览器，同步系统主题
 class ThemeManager {
   constructor() {
-    this.currentTheme = 'system'
+    // 优先从本地存储读取上次的主题（持久化）
+    this.currentTheme = localStorage.getItem('app-theme') || 'system';
+    // 监听系统主题变化
+    this.initThemeListener();
+    // 初始化主题
+    this.applyTheme(this.currentTheme);
+  }
+
+  // 按需加载 Element Plus 深色样式
+  async loadElementDarkCss() {
+    if (!window.__element_dark_css_loaded) {
+      try {
+        await import('element-plus/theme-chalk/dark/css-vars.css');
+        window.__element_dark_css_loaded = true;
+      } catch (e) {
+        console.warn('加载 Element Plus 深色样式失败:', e);
+      }
+    }
+  }
+
+  // 获取实际要应用的主题（system → light/dark）
+  getTargetTheme(theme) {
+    if (theme === 'system') {
+      // Electron 环境优先用 nativeTheme，否则用浏览器的 matchMedia
+      if (window.electronAPI?.nativeTheme) {
+        return window.electronAPI.nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return theme;
   }
 
   // 应用主题
-  applyTheme(theme) {
-    let targetTheme = theme
-    
-    // 如果是跟随系统，则根据系统主题设置
-    if (theme === 'system') {
-      targetTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  async applyTheme(theme) {
+    const targetTheme = this.getTargetTheme(theme);
+
+    // 深色主题加载 Element 样式
+    if (targetTheme === 'dark') {
+      await this.loadElementDarkCss();
     }
-    
-    // 应用主题变量
-    const themeVars = themes[targetTheme]
-    for (const [key, value] of Object.entries(themeVars)) {
-      document.documentElement.style.setProperty(key, value)
-    }
-    
-    // 保存当前主题
-    this.currentTheme = theme
-    
-    // 设置 body 的主题类名
-    document.body.className = targetTheme
+
+    // 切换 html 类名（核心：和 SCSS 中的 .light/.dark 对应）
+    const html = document.documentElement;
+    html.classList.remove('light', 'dark');
+    html.classList.add(targetTheme);
+
+    // 保存当前主题到本地存储
+    this.currentTheme = theme;
+    localStorage.setItem('app-theme', theme);
   }
 
-  // 监听系统主题变化
-  watchSystemTheme() {
+  // 监听系统主题变化（浏览器 + Electron）
+  initThemeListener() {
+    // 浏览器端监听
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
       if (this.currentTheme === 'system') {
-        this.applyTheme('system')
+        this.applyTheme('system');
       }
-    })
+    });
+
+    // Electron 端监听（需主进程暴露 nativeTheme 事件）
+    if (window.electronAPI?.onThemeChange) {
+      window.electronAPI.onThemeChange(() => {
+        if (this.currentTheme === 'system') {
+          this.applyTheme('system');
+        }
+      });
+    }
   }
 
-  // 获取当前主题
+  // 切换主题（外部调用：如按钮切换 light/dark/system）
+  switchTheme(theme) {
+    if (['light', 'dark', 'system'].includes(theme)) {
+      this.applyTheme(theme);
+    }
+  }
+
   getCurrentTheme() {
-    return this.currentTheme
+    return this.currentTheme;
   }
 }
 
-export const themeManager = new ThemeManager() 
+export const themeManager = new ThemeManager();

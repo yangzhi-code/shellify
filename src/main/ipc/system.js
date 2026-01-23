@@ -170,6 +170,17 @@ function handleTerminalFontUpdate(event, fontConfig) {
 }
 
 export function setupSystemHandlers() {
+  // 获取应用版本号
+  ipcMain.handle('system:get-app-version', async () => {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'))
+      return packageJson.version || ''
+    } catch (error) {
+      console.error('获取应用版本失败:', error)
+      return ''
+    }
+  })
+
   // 获取系统字体列表
   ipcMain.handle('system:get-fonts', async () => {
     return getSystemFonts()

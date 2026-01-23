@@ -1,0 +1,10 @@
+// 深色主题：引入 Token 并导出 CSS 变量
+@use '../tokens/_colors' as colors;
+
+html.dark {
+  // 导出全局 CSS 变量
+  @include colors.export-css-vars(colors.$dark);
+  
+  // 可选：覆盖 Element Plus 深色模式的局部样式
+  --el-color-primary: var(--app-primary);
+}
