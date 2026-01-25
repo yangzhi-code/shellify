@@ -100,7 +100,7 @@ class ThemeManager {
 
     // 再应用页面主题
     await this.applyTheme(theme);
-  }
+    }
 
   // 事件系统
   addListener(callback) {
