@@ -817,41 +817,71 @@ class FileManager {
   }
 
   /**
-   * 删除文件或空文件夹
+   * 删除文件或文件夹（支持递归删除）
    * @param {string} connectionId - SSH连接ID
    * @param {string} path - 文件或文件夹路径
    * @param {boolean} isDirectory - 是否是文件夹
+   * @param {boolean} recursive - 是否允许递归删除（默认 false）
    */
-  async deleteFile(connectionId, path, isDirectory) {
+  async deleteFile(connectionId, path, isDirectory, recursive = false) {
     try {
+      const remotePath = (path || '').trim()
+
+      // 安全限制：禁止删除根目录或无效路径
+      if (!remotePath || remotePath === '/' || remotePath === '~' || remotePath === '.' || remotePath === '..') {
+        throw new Error('禁止删除根目录或无效路径')
+      }
+
       // 获取 SFTP 会话
       const sftp = await SSHConnectionManager.getSFTPSession(connectionId)
       if (!sftp) {
         throw new Error('SFTP 会话未建立')
       }
 
-      // 使用 Promise 包装删除操作
-      await new Promise((resolve, reject) => {
-        if (isDirectory) {
-          sftp.rmdir(path, (err) => {
-            if (err) {
-              reject(new Error(err.message))
-            } else {
-              resolve()
-            }
+      // 如果是目录且不允许递归，优先尝试 rmdir（只删除空目录）
+      if (isDirectory && !recursive) {
+        await new Promise((resolve, reject) => {
+          sftp.rmdir(remotePath, (err) => {
+            if (err) reject(new Error(err.message))
+            else resolve()
           })
-        } else {
-          sftp.unlink(path, (err) => {
-            if (err) {
-              reject(new Error(err.message))
-            } else {
-              resolve()
-            }
-          })
-        }
-      })
+        })
+        return true
+      }
 
-      return true
+      // 如果是文件或允许递归删除目录，先尝试 SFTP 的非递归删除（file -> unlink；dir -> rmdir）
+      try {
+        await new Promise((resolve, reject) => {
+          if (isDirectory) {
+            sftp.rmdir(remotePath, (err) => {
+              if (err) reject(err)
+              else resolve()
+            })
+          } else {
+            sftp.unlink(remotePath, (err) => {
+              if (err) reject(err)
+              else resolve()
+            })
+          }
+        })
+        return true
+      } catch (err) {
+        const msg = err && err.message ? err.message : String(err)
+        // 如果是目录且 rmdir 失败（通常是非空），并且允许递归删除，则使用远程命令 rm -rf 处理
+        if (isDirectory && (recursive || /not empty|directory not empty|enotempty/i.test(msg))) {
+          try {
+            // 对路径进行简单转义，避免基础注入风险
+            const safePath = remotePath.replace(/(["'`\\\$])/g, '\\$1')
+            const command = `rm -rf "${safePath}"`
+            await SSHConnectionManager.execCommand(connectionId, command)
+            return true
+          } catch (execErr) {
+            throw new Error(execErr.message || '远程递归删除失败')
+          }
+        }
+        // 其它错误直接抛出
+        throw new Error(msg)
+      }
     } catch (error) {
       console.error('删除文件失败:', error)
       // 优化错误消息

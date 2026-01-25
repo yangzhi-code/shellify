@@ -203,17 +203,11 @@ const startCountdown = () => {
 
 const deleteFile = async (file) => {
   try {
-    // 如果是目录，先检查是否为空
-    if (file.type === 'directory') {
-      const files = await window.electron.ipcRenderer.invoke('ssh:list-files', {
-        connectionId: props.connectionId,
-        path: file.path
-      })
-      
-      if (files.length > 0) {
-        ElMessage.warning('不能删除非空文件夹')
-        return
-      }
+    // 安全检查：禁止删除根路径或空路径
+    const normalized = (file.path || '').trim();
+    if (!normalized || normalized === '/' || normalized === '~' || normalized === '.' || normalized === '..') {
+      ElMessage.error('禁止删除根目录或无效路径');
+      return;
     }
 
     // 重置倒计时
@@ -221,7 +215,7 @@ const deleteFile = async (file) => {
     let timer = startCountdown()
 
     try {
-      // 显示确认对话框
+      // 显示确认对话框（与之前行为一致）
       await ElMessageBox.confirm(
         h('div', { class: 'delete-confirm-content' }, [
           h('p', { class: 'warning-text' }, '⚠️ 警告：删除后将无法恢复'),
@@ -259,11 +253,12 @@ const deleteFile = async (file) => {
         }
       )
 
-      // 执行删除操作
+      // 调用删除（允许递归删除 directory）
       await window.electron.ipcRenderer.invoke('ssh:delete-file', {
         connectionId: props.connectionId,
         path: file.path,
-        isDirectory: file.type === 'directory'
+        isDirectory: file.type === 'directory',
+        recursive: true
       })
 
       // 刷新文件列表
@@ -271,10 +266,10 @@ const deleteFile = async (file) => {
       ElMessage.success('删除成功')
     } catch (error) {
       // 只有在不是取消操作时才显示错误
-      const errorStr = error.toString().toLowerCase()
+      const errorStr = (error && error.toString && error.toString().toLowerCase()) || ''
       if (!errorStr.includes('cancel') && !errorStr.includes('close')) {
         console.error('删除失败:', error)
-        ElMessage.error('删除失败: ' + error.message)
+        ElMessage.error('删除失败: ' + (error.message || errorStr || '未知错误'))
       }
       // 确保清理定时器
       if (timer) {
@@ -282,8 +277,8 @@ const deleteFile = async (file) => {
       }
     }
   } catch (error) {
-    console.error('检查目录失败:', error)
-    ElMessage.error('检查目录失败: ' + error.message)
+    console.error('删除流程失败:', error)
+    ElMessage.error('删除失败: ' + error.message)
   }
 }
 
