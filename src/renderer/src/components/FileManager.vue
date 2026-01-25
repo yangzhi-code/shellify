@@ -253,6 +253,46 @@ const deleteFile = async (file) => {
         }
       )
 
+      // 在执行删除前：如果是目录且非空，要求额外确认（输入目录名以确认递归删除）
+      if (file.type === 'directory') {
+        try {
+          const filesInDir = await window.electron.ipcRenderer.invoke('ssh:list-files', {
+            connectionId: props.connectionId,
+            path: file.path
+          })
+          if (Array.isArray(filesInDir) && filesInDir.length > 0) {
+            // 要求用户输入目录名以确认递归删除，防止误删
+            try {
+              const { value } = await ElMessageBox.prompt(
+                `目录 "${file.name}" 非空，递归删除将删除该目录及其所有内容。为确认请在下面输入目录名称：`,
+                '确认递归删除',
+                {
+                  confirmButtonText: '递归删除',
+                  cancelButtonText: '取消',
+                  inputPlaceholder: '请输入目录名称以确认',
+                  inputValue: ''
+                }
+              )
+              if (value !== file.name) {
+                ElMessage.error('输入名称不匹配，已取消递归删除')
+                if (timer) clearInterval(timer)
+                return
+              }
+            } catch (promptErr) {
+              // 用户取消或出错
+              if (timer) clearInterval(timer)
+              return
+            }
+          }
+        } catch (listErr) {
+          // 无法获取目录列表时，出于安全考虑中止操作
+          console.error('无法检查目录是否为空，已取消删除:', listErr)
+          ElMessage.error('无法验证目录是否为空，已取消删除')
+          if (timer) clearInterval(timer)
+          return
+        }
+      }
+
       // 调用删除（允许递归删除 directory）
       await window.electron.ipcRenderer.invoke('ssh:delete-file', {
         connectionId: props.connectionId,
