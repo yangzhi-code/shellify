@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow, nativeTheme } from 'electron';
 import SettingsManager from '../services/SQLite/SettingsManager';
 import settingsStore from '../services/stores/settingsStore';
 import connectionStore from '../services/stores/connectStore';
@@ -135,5 +135,51 @@ export function setupSettingsHandlers() {
             console.error('导入连接配置失败:', error);
             throw new Error('导入连接配置失败：' + error.message);
         }
+    });
+
+    // 直接设置主题
+    ipcMain.handle('dark-mode:set', async (event, theme) => {
+        if (['light', 'dark', 'system'].includes(theme)) {
+            nativeTheme.themeSource = theme;
+            // 立即通知所有窗口状态变化
+            setTimeout(() => {
+                BrowserWindow.getAllWindows().forEach(window => {
+                    if (!window.isDestroyed()) {
+                        window.webContents.send('native-theme:changed');
+                    }
+                });
+            }, 50); // 给 nativeTheme 一点时间来更新状态
+        }
+    });
+
+    // 主题切换处理
+    ipcMain.handle('dark-mode:toggle', () => {
+        if (nativeTheme.shouldUseDarkColors) {
+            nativeTheme.themeSource = 'light'
+        } else {
+            nativeTheme.themeSource = 'dark'
+        }
+        return nativeTheme.shouldUseDarkColors
+    })
+
+    ipcMain.handle('dark-mode:system', () => {
+        nativeTheme.themeSource = 'system'
+    })
+
+    // 获取当前主题状态
+    ipcMain.handle('dark-mode:get', () => {
+        return {
+            shouldUseDarkColors: nativeTheme.shouldUseDarkColors,
+            themeSource: nativeTheme.themeSource
+        }
+    })
+
+    // 手动触发系统主题检查（用于调试或强制刷新）
+    ipcMain.handle('dark-mode:refresh', () => {
+        BrowserWindow.getAllWindows().forEach(window => {
+            if (!window.isDestroyed()) {
+                window.webContents.send('native-theme:changed');
+            }
+        });
     });
 }

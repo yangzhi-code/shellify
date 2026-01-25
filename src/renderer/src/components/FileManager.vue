@@ -203,17 +203,11 @@ const startCountdown = () => {
 
 const deleteFile = async (file) => {
   try {
-    // 如果是目录，先检查是否为空
-    if (file.type === 'directory') {
-      const files = await window.electron.ipcRenderer.invoke('ssh:list-files', {
-        connectionId: props.connectionId,
-        path: file.path
-      })
-      
-      if (files.length > 0) {
-        ElMessage.warning('不能删除非空文件夹')
-        return
-      }
+    // 安全检查：禁止删除根路径或空路径
+    const normalized = (file.path || '').trim();
+    if (!normalized || normalized === '/' || normalized === '~' || normalized === '.' || normalized === '..') {
+      ElMessage.error('禁止删除根目录或无效路径');
+      return;
     }
 
     // 重置倒计时
@@ -221,7 +215,7 @@ const deleteFile = async (file) => {
     let timer = startCountdown()
 
     try {
-      // 显示确认对话框
+      // 显示确认对话框（与之前行为一致）
       await ElMessageBox.confirm(
         h('div', { class: 'delete-confirm-content' }, [
           h('p', { class: 'warning-text' }, '⚠️ 警告：删除后将无法恢复'),
@@ -259,11 +253,52 @@ const deleteFile = async (file) => {
         }
       )
 
-      // 执行删除操作
+      // 在执行删除前：如果是目录且非空，要求额外确认（输入目录名以确认递归删除）
+      if (file.type === 'directory') {
+        try {
+          const filesInDir = await window.electron.ipcRenderer.invoke('ssh:list-files', {
+            connectionId: props.connectionId,
+            path: file.path
+          })
+          if (Array.isArray(filesInDir) && filesInDir.length > 0) {
+            // 要求用户输入目录名以确认递归删除，防止误删
+            try {
+              const { value } = await ElMessageBox.prompt(
+                `目录 "${file.name}" 非空，递归删除将删除该目录及其所有内容。为确认请在下面输入目录名称：`,
+                '确认递归删除',
+                {
+                  confirmButtonText: '递归删除',
+                  cancelButtonText: '取消',
+                  inputPlaceholder: '请输入目录名称以确认',
+                  inputValue: ''
+                }
+              )
+              if (value !== file.name) {
+                ElMessage.error('输入名称不匹配，已取消递归删除')
+                if (timer) clearInterval(timer)
+                return
+              }
+            } catch (promptErr) {
+              // 用户取消或出错
+              if (timer) clearInterval(timer)
+              return
+            }
+          }
+        } catch (listErr) {
+          // 无法获取目录列表时，出于安全考虑中止操作
+          console.error('无法检查目录是否为空，已取消删除:', listErr)
+          ElMessage.error('无法验证目录是否为空，已取消删除')
+          if (timer) clearInterval(timer)
+          return
+        }
+      }
+
+      // 调用删除（允许递归删除 directory）
       await window.electron.ipcRenderer.invoke('ssh:delete-file', {
         connectionId: props.connectionId,
         path: file.path,
-        isDirectory: file.type === 'directory'
+        isDirectory: file.type === 'directory',
+        recursive: true
       })
 
       // 刷新文件列表
@@ -271,10 +306,10 @@ const deleteFile = async (file) => {
       ElMessage.success('删除成功')
     } catch (error) {
       // 只有在不是取消操作时才显示错误
-      const errorStr = error.toString().toLowerCase()
+      const errorStr = (error && error.toString && error.toString().toLowerCase()) || ''
       if (!errorStr.includes('cancel') && !errorStr.includes('close')) {
         console.error('删除失败:', error)
-        ElMessage.error('删除失败: ' + error.message)
+        ElMessage.error('删除失败: ' + (error.message || errorStr || '未知错误'))
       }
       // 确保清理定时器
       if (timer) {
@@ -282,8 +317,8 @@ const deleteFile = async (file) => {
       }
     }
   } catch (error) {
-    console.error('检查目录失败:', error)
-    ElMessage.error('检查目录失败: ' + error.message)
+    console.error('删除流程失败:', error)
+    ElMessage.error('删除失败: ' + error.message)
   }
 }
 

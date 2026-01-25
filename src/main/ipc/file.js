@@ -89,10 +89,10 @@ export function setupFileHandlers() {
     }
   });
 
-  // 删除文件或文件夹
-  ipcMain.handle('ssh:delete-file', async (event, { connectionId, path, isDirectory }) => {
+  // 删除文件或文件夹（支持递归删除）
+  ipcMain.handle('ssh:delete-file', async (event, { connectionId, path, isDirectory, recursive = false }) => {
     try {
-      await FileManager.deleteFile(connectionId, path, isDirectory)
+      await FileManager.deleteFile(connectionId, path, isDirectory, recursive)
       return true
     } catch (error) {
       console.error('删除文件失败:', error)

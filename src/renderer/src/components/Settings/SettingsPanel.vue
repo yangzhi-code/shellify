@@ -289,9 +289,9 @@ watch(settings, (newSettings) => {
 }, { deep: true })
 
 // 单独监听主题变化
-watch(() => settings.value.theme, (newTheme) => {
+watch(() => settings.value.theme, async (newTheme) => {
   console.log('主题变化:', newTheme)
-  themeManager.applyTheme(newTheme)
+  await themeManager.switchTheme(newTheme)
 })
 
 // 导出 SSH 连接配置

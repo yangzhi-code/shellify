@@ -8,7 +8,8 @@
   >
     <el-table-column prop="name" label="文件名" min-width="200">
       <template #default="{ row }">
-        <div class="file-name-cell" :data-row-id="row.path">
+        <!-- 互斥渲染：非编辑状态 或 编辑状态 -->
+        <div v-if="!row.isEditing" class="file-name-cell" :data-row-id="row.path">
           <el-icon v-if="row.type === 'directory'"><Folder /></el-icon>
           <el-icon v-else><Document /></el-icon>
 
@@ -36,8 +37,7 @@
           </span>
         </div>
 
-        <!-- 编辑状态 -->
-        <div v-if="row.isEditing" class="file-name-cell">
+        <div v-else class="file-name-cell">
           <el-icon v-if="row.type === 'directory'"><Folder /></el-icon>
           <el-icon v-else><Document /></el-icon>
 

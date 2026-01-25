@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -65,6 +65,36 @@ app.whenReady().then(async () => {
   ipcMain.on('ping', () => console.log('pong'))
 
   setupIpcHandlers();
+
+  // 增强的系统主题监听
+  let lastThemeState = nativeTheme.shouldUseDarkColors;
+
+  // 轮询检查系统主题变化（作为 nativeTheme.on('updated') 的补充）
+  const checkThemeChange = () => {
+    const currentThemeState = nativeTheme.shouldUseDarkColors;
+    if (currentThemeState !== lastThemeState) {
+      lastThemeState = currentThemeState;
+      // 通知所有窗口
+      BrowserWindow.getAllWindows().forEach(window => {
+        if (!window.isDestroyed()) {
+          window.webContents.send('native-theme:changed');
+        }
+      });
+    }
+  };
+
+  // 每秒检查一次系统主题变化
+  setInterval(checkThemeChange, 1000);
+
+  // 原有的监听也保留
+  nativeTheme.on('updated', () => {
+    // 立即通知所有窗口
+    BrowserWindow.getAllWindows().forEach(window => {
+      if (!window.isDestroyed()) {
+        window.webContents.send('native-theme:changed');
+      }
+    });
+  });
 
   // 确保设置管理器已初始化
   await SettingsManager.init();
