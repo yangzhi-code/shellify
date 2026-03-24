@@ -60,7 +60,7 @@ const currentFullPath = computed(() => {
 const fileList = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(100)
 const isCreatingNewFolder = ref(false)
 
 // 计算当前页的数据
