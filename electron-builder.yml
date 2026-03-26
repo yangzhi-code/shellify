@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: me.yangzhi.shellify
 productName: shellify
 directories:
   buildResources: build
@@ -10,6 +10,10 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
 asarUnpack:
   - resources/**
+  - node_modules/better-sqlite3/**/*
+  - node_modules/better-sqlite3/build/Release/*.node
+  - node_modules/ssh2/**/*
+  - node_modules/cpu-features/**/*
 win:
   executableName: shellify
 nsis:
@@ -26,15 +30,20 @@ nsis:
   perMachine: true
   include: "./build/installer.nsh"
 mac:
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
-  identity: null  # 开发版本，不进行代码签名
-  hardenedRuntime: false
+  # Developer ID Application 证书名称（Xcode 管理里看到的证书全名）
+  identity: "zhi yang (6KQ684K3H7)"
+  # 启用公证
+  notarize:
+    teamId: "6KQ684K3H7"
+  # 启用强化运行时
+  hardenedRuntime: true
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
@@ -50,5 +59,3 @@ npmRebuild: true
 publish:
   provider: generic
   url: https://example.com/auto-updates
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/
