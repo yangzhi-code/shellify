@@ -1,0 +1,163 @@
+name: Build for Mac App Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.9.0)'
+        required: false
+        type: string
+  release:
+    types: [ published ]
+    tags:
+      - 'v*.*.*-mas'  # 仅当 tag 格式为 vX.Y.Z-mas 时触发
+
+permissions:
+  contents: write
+
+jobs:
+  # ARM64 构建 (macos-latest = Apple Silicon)
+  build-arm64:
+    runs-on: macos-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          elif [ "${{ inputs.version }}" != "" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+            VERSION="v$VERSION"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION (arm64)"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules
+        run: npm rebuild better-sqlite3 ssh2 cpu-features
+
+      # CSC_* = 3rd Party Mac Developer Application (.p12)
+      # CSC_INSTALLER_* = 3rd Party Mac Developer Installer (.p12)，见 https://www.electron.build/code-signing
+      - name: Build for MAS (arm64)
+        run: npm run build && electron-builder --mac mas --arm64 --config electron-builder.store.yml
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          CSC_INSTALLER_LINK: ${{ secrets.PKG_CSC_LINK }}
+          CSC_INSTALLER_KEY_PASSWORD: ${{ secrets.PKG_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+
+      - name: Upload arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shellify-mas-arm64-${{ steps.get_version.outputs.version }}
+          path: dist-store/*.pkg
+          if-no-files-found: error
+
+  # x64 构建 (macos-13 = Intel)
+  build-x64:
+    runs-on: macos-13
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          elif [ "${{ inputs.version }}" != "" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+            VERSION="v$VERSION"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION (x64)"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules
+        run: npm rebuild better-sqlite3 ssh2 cpu-features
+
+      - name: Build for MAS (x64)
+        run: npm run build && electron-builder --mac mas --x64 --config electron-builder.store.yml
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          CSC_INSTALLER_LINK: ${{ secrets.PKG_CSC_LINK }}
+          CSC_INSTALLER_KEY_PASSWORD: ${{ secrets.PKG_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+
+      - name: Upload x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shellify-mas-x64-${{ steps.get_version.outputs.version }}
+          path: dist-store/*.pkg
+          if-no-files-found: error
+
+  # 合并 artifacts 并上传
+  release:
+    needs: [build-arm64, build-x64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: |
+          echo "=== Artifacts downloaded ==="
+          find artifacts -type f -name "*.pkg" | head -20
+
+      - name: Merge artifacts
+        run: |
+          mkdir -p dist-mas
+          cp artifacts/shellify-mas-arm64-*/*.pkg dist-mas/ || true
+          cp artifacts/shellify-mas-x64-*/*.pkg dist-mas/ || true
+          echo "=== Final MAS artifacts ==="
+          ls -la dist-mas/
+
+      - name: Upload MAS artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.build-arm64.outputs.version }}-mas
+          name: ${{ needs.build-arm64.outputs.version }} (Mac App Store)
+          body: |
+            ## Mac App Store Build
+
+            Both architectures included:
+            - arm64 (Apple Silicon)
+            - x64 (Intel)
+
+            Use [Transporter](https://apps.apple.com/us/app/transporter/id1450874781) to upload to App Store Connect.
+          files: dist-mas/*.pkg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

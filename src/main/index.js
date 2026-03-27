@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setupIpcHandlers } from './ipc';
 import SettingsManager from './services/SQLite/SettingsManager';
-import './services/SystemEventHandler'; // 导入事件处理器
+import systemEventHandler from './services/SystemEventHandler';
 require('@electron/remote/main').initialize()
 
 
@@ -101,11 +101,7 @@ app.whenReady().then(async () => {
 
   createWindow()
 
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
+  systemEventHandler.setupActivateListener(createWindow)
 })
 
 // 导出 createWindow 函数供其他模块使用

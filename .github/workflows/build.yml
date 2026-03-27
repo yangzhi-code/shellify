@@ -103,9 +103,12 @@ jobs:
         npm run build:mac || echo "macOS build failed, continue..."
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # 可选：添加macOS代码签名环境变量（需提前配置密钥）
-        # CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-        # CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        CSC_LINK: ${{ secrets.DEVELOPER_ID_CSC_LINK }}
+        CSC_KEY_PASSWORD: ${{ secrets.DEVELOPER_ID_CSC_KEY_PASSWORD }}
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        # 覆盖 electron-builder.yml 中的 identity，强制使用 CSC_LINK 证书
+        ELECTRON_BUILDER_MAC_IDENTITY: ""
 
     # 优化：添加if-no-files-found=warn，避免文件缺失报错
     - name: Upload Linux artifacts

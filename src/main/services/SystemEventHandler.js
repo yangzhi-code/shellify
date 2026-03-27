@@ -1,20 +1,22 @@
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import DownloadManager from './SQLite/DownloadManager';
 
 class SystemEventHandler {
   constructor() {
-    this.setupEventListeners();
+    this.setupBaseEventListeners();
   }
 
-  setupEventListeners() {
-    // 监听应用退出事件
+  setupBaseEventListeners() {
     app.on('before-quit', this.handleBeforeQuit);
-
-    // 监听窗口全部关闭事件
     app.on('window-all-closed', this.handleWindowAllClosed);
+  }
 
-    // 监听应用激活事件 (macOS)
-    app.on('activate', this.handleActivate);
+  setupActivateListener(createWindow) {
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
   }
 
   handleBeforeQuit = async (event) => {
@@ -31,14 +33,6 @@ class SystemEventHandler {
   handleWindowAllClosed = () => {
     if (process.platform !== 'darwin') {
       app.quit();
-    }
-  }
-
-  handleActivate = () => {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
     }
   }
 }
