@@ -31,6 +31,7 @@ mac:
 
 # 上架 MAS 核心配置
 mas:
+  target: [pkg]              # MAS 必须用 pkg 安装包格式
   # 交给自动发现，会自动匹配 3rd Party Mac Developer Application
   entitlements: build/entitlements.mas.plist
   entitlementsInherit: build/entitlements.mas.inherit.plist
