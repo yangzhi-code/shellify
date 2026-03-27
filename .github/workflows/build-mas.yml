@@ -51,11 +51,15 @@ jobs:
       - name: Rebuild native modules
         run: npm rebuild better-sqlite3 ssh2 cpu-features
 
+      # CSC_* = 3rd Party Mac Developer Application (.p12)
+      # CSC_INSTALLER_* = 3rd Party Mac Developer Installer (.p12)，见 https://www.electron.build/code-signing
       - name: Build for MAS (arm64)
         run: npm run build && electron-builder --mac mas --arm64 --config electron-builder.store.yml
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          CSC_INSTALLER_LINK: ${{ secrets.PKG_CSC_LINK }}
+          CSC_INSTALLER_KEY_PASSWORD: ${{ secrets.PKG_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
 
@@ -106,6 +110,8 @@ jobs:
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          CSC_INSTALLER_LINK: ${{ secrets.PKG_CSC_LINK }}
+          CSC_INSTALLER_KEY_PASSWORD: ${{ secrets.PKG_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
 
