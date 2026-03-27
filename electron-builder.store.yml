@@ -22,17 +22,14 @@ asarUnpack:
 
 mac:
   category: public.app-category.utilities
-  # 交给自动发现，MAS 构建会匹配 3rd Party Mac Developer Application
+  preAutoEntitlements: false
   notarize: false
-  hardenedRuntime: false       # 上架 MAS 必须关
-  gatekeeperAssess: false      # 上架 MAS 必须关
-  extendInfo:
-    ElectronTeamID: "6KQ684K3H7"
+  hardenedRuntime: false
+  gatekeeperAssess: false
 
 # 上架 MAS 核心配置
 mas:
-  target: [pkg]              # MAS 必须用 pkg 安装包格式
-  # 交给自动发现，会自动匹配 3rd Party Mac Developer Application
+  target: [pkg]
   entitlements: build/entitlements.mas.plist
   entitlementsInherit: build/entitlements.mas.inherit.plist
   timestamp: false
@@ -40,7 +37,6 @@ mas:
 
 pkg:
   artifactName: ${name}-${version}.${ext}
-  # App Store 安装包必须使用 3rd Party Mac Developer Installer 证书！
   identity: "5AA46EF07204AD7552FFD2EE2644ECC79F8800DA"
 
 npmRebuild: false

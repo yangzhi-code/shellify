@@ -17,6 +17,10 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:mac:store": "npm run build && electron-builder --mac mas --config electron-builder.store.yml",
+    "build:mac:store:arm64": "npm rebuild --arch=arm64 && npm run build && electron-builder --mac mas --arm64 --config electron-builder.store.yml",
+    "build:mac:store:x64": "npm rebuild --arch=x64 && npm run build && electron-builder --mac mas --x64 --config electron-builder.store.yml",
+    "build:mac:store:all": "npm rebuild --arch=arm64 && npm run build && electron-builder --mac mas --arm64 --config electron-builder.store.yml && npm rebuild --arch=x64 && electron-builder --mac mas --x64 --config electron-builder.store.yml",
+    "build:mac:store:universal": "bash scripts/build-mas-universal.sh",
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
