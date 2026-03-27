@@ -53,7 +53,8 @@ jobs:
 
       - name: Import code signing certificates
         run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP signing_temp.keychain
+          set -e
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing_temp.keychain
           security create-keychain -p actions $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p actions $KEYCHAIN_PATH
@@ -132,7 +133,8 @@ jobs:
 
       - name: Import code signing certificates
         run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP signing_temp.keychain
+          set -e
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing_temp.keychain
           security create-keychain -p actions $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p actions $KEYCHAIN_PATH
