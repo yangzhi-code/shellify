@@ -103,8 +103,8 @@ jobs:
         npm run build:mac || echo "macOS build failed, continue..."
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-        CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        CSC_LINK: ${{ secrets.DEVELOPER_ID_CSC_LINK }}
+        CSC_KEY_PASSWORD: ${{ secrets.DEVELOPER_ID_CSC_KEY_PASSWORD }}
         APPLE_ID: ${{ secrets.APPLE_ID }}
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         # 覆盖 electron-builder.yml 中的 identity，强制使用 CSC_LINK 证书
