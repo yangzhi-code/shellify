@@ -23,7 +23,6 @@ asarUnpack:
 mac:
   category: public.app-category.utilities
   # 交给自动发现，MAS 构建会匹配 3rd Party Mac Developer Application
-  # identity: "F2353EA6847AD4DDE254C7A8E756718A75797EDA"
   notarize: false
   hardenedRuntime: false       # 上架 MAS 必须关
   gatekeeperAssess: false      # 上架 MAS 必须关
@@ -33,7 +32,6 @@ mac:
 # 上架 MAS 核心配置
 mas:
   # 交给自动发现，会自动匹配 3rd Party Mac Developer Application
-  # identity: "F2353EA6847AD4DDE254C7A8E756718A75797EDA"
   entitlements: build/entitlements.mas.plist
   entitlementsInherit: build/entitlements.mas.inherit.plist
   timestamp: false
