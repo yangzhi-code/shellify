@@ -52,16 +52,23 @@ jobs:
         run: npm rebuild better-sqlite3 ssh2 cpu-features
 
       - name: Import code signing certificates
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.MAC_CSC_LINK }}
-          p12-password: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP signing_temp.keychain
+          security create-keychain -p actions $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p actions $KEYCHAIN_PATH
 
-      - name: Import installer signing certificates
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.PKG_CSC_LINK }}
-          p12-password: ${{ secrets.PKG_CSC_KEY_PASSWORD }}
+          echo -n "${{ secrets.MAC_CSC_LINK }}" | base64 --decode > $RUNNER_TEMP/app.p12
+          security import $RUNNER_TEMP/app.p12 -k $KEYCHAIN_PATH -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -P "${{ secrets.MAC_CSC_KEY_PASSWORD }}"
+          rm -f $RUNNER_TEMP/app.p12
+
+          echo -n "${{ secrets.PKG_CSC_LINK }}" | base64 --decode > $RUNNER_TEMP/installer.p12
+          security import $RUNNER_TEMP/installer.p12 -k $KEYCHAIN_PATH -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -P "${{ secrets.PKG_CSC_KEY_PASSWORD }}"
+          rm -f $RUNNER_TEMP/installer.p12
+
+          security set-key-partition-list -S apple-tool:,apple: -k actions $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH
+          security default-keychain -s $KEYCHAIN_PATH
 
       # Step 1: 打包 .app 目录（--dir 不生成 pkg）
       - name: Build .app for MAS (arm64)
@@ -124,16 +131,23 @@ jobs:
         run: npm rebuild better-sqlite3 ssh2 cpu-features
 
       - name: Import code signing certificates
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.MAC_CSC_LINK }}
-          p12-password: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP signing_temp.keychain
+          security create-keychain -p actions $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p actions $KEYCHAIN_PATH
 
-      - name: Import installer signing certificates
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.PKG_CSC_LINK }}
-          p12-password: ${{ secrets.PKG_CSC_KEY_PASSWORD }}
+          echo -n "${{ secrets.MAC_CSC_LINK }}" | base64 --decode > $RUNNER_TEMP/app.p12
+          security import $RUNNER_TEMP/app.p12 -k $KEYCHAIN_PATH -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -P "${{ secrets.MAC_CSC_KEY_PASSWORD }}"
+          rm -f $RUNNER_TEMP/app.p12
+
+          echo -n "${{ secrets.PKG_CSC_LINK }}" | base64 --decode > $RUNNER_TEMP/installer.p12
+          security import $RUNNER_TEMP/installer.p12 -k $KEYCHAIN_PATH -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -P "${{ secrets.PKG_CSC_KEY_PASSWORD }}"
+          rm -f $RUNNER_TEMP/installer.p12
+
+          security set-key-partition-list -S apple-tool:,apple: -k actions $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH
+          security default-keychain -s $KEYCHAIN_PATH
 
       # Step 1: 打包 .app 目录（--dir 不生成 pkg）
       - name: Build .app for MAS (x64)
