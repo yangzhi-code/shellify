@@ -51,10 +51,18 @@ jobs:
       - name: Rebuild native modules
         run: npm rebuild better-sqlite3 ssh2 cpu-features
 
-      # CSC_* = 3rd Party Mac Developer Application (.p12)
-      # CSC_INSTALLER_* = 3rd Party Mac Developer Installer (.p12)，见 https://www.electron.build/code-signing
-      - name: Build for MAS (arm64)
-        run: npm run build && npx electron-builder --mac mas --arm64 --config electron-builder.store.yml
+      # Step 1: 打包 .app 目录（--dir 不生成 pkg）
+      - name: Build .app for MAS (arm64)
+        run: npm run build && npx electron-builder --mac mas --arm64 --dir --config electron-builder.store.yml
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+
+      # Step 2: 基于 .app 生成 .pkg 安装包
+      - name: Build .pkg for MAS (arm64)
+        run: npx electron-builder --mac mas --arm64 --pkg --config electron-builder.store.yml
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
@@ -105,8 +113,18 @@ jobs:
       - name: Rebuild native modules
         run: npm rebuild better-sqlite3 ssh2 cpu-features
 
-      - name: Build for MAS (x64)
-        run: npm run build && npx electron-builder --mac mas --x64 --config electron-builder.store.yml
+      # Step 1: 打包 .app 目录（--dir 不生成 pkg）
+      - name: Build .app for MAS (x64)
+        run: npm run build && npx electron-builder --mac mas --x64 --dir --config electron-builder.store.yml
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+
+      # Step 2: 基于 .app 生成 .pkg 安装包
+      - name: Build .pkg for MAS (x64)
+        run: npx electron-builder --mac mas --x64 --pkg --config electron-builder.store.yml
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
