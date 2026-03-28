@@ -33,6 +33,7 @@ mas:
   target: [pkg]
   entitlements: build/entitlements.mas.plist
   entitlementsInherit: build/entitlements.mas.inherit.plist
+  provisioningProfile: build/shellify.provisionprofile 
   timestamp: false
   hardenedRuntime: false
 

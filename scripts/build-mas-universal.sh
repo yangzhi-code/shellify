@@ -65,11 +65,7 @@ for node_file in $(find "dist-store/mas-arm64/shellify.app/Contents/Resources/ap
         "$UNPACK_DIR/$rel_path"
 done
 
-# Step 4: 重新签名
-echo "=== Re-signing universal app ==="
-codesign -f -s "3rd Party Mac Developer Application: zhi yang (6KQ684K3H7)" "$UNIVERSAL_APP"
-
-# Step 5: 打包为 pkg
+# Step 4: 打包为 pkg（让 electron-builder 处理签名和 provisioning profile）
 echo "=== Creating pkg ==="
 productbuild \
     --component "$UNIVERSAL_APP" /Applications \
