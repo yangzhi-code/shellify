@@ -26,6 +26,7 @@ mac:
   notarize: false
   hardenedRuntime: false
   gatekeeperAssess: false
+  minimumSystemVersion: "12.0"  
 
 # 上架 MAS 核心配置
 mas:
