@@ -41,4 +41,4 @@ pkg:
   artifactName: ${name}-${version}.${ext}
   identity: "5AA46EF07204AD7552FFD2EE2644ECC79F8800DA"
 
-npmRebuild: false
+npmRebuild: true

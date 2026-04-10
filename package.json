@@ -1,6 +1,6 @@
 {
   "name": "shellify",
-  "version": "0.9.1",
+  "version": "0.9.3",
   "description": "An Electron application with Vue",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -50,7 +50,6 @@
     "better-sqlite3": "^12.6.0",
     "echarts": "^5.5.1",
     "electron-store": "^10.0.0",
-    "electron-updater": "^6.1.7",
     "element-plus": "^2.9.1",
     "node-ssh": "^13.2.0",
     "pinia": "^2.3.0",
