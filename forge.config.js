@@ -12,6 +12,7 @@ export default {
     appBundleId: 'me.yangzhi.shellify',
     appCopyright: 'Copyright (C) 2024 zhi yang',
     appCategoryType: 'public.app-category.utilities',
+    icon: './build/icon.icns',
     extraResource: ['resources'],
   },
   rebuildConfig: {},
@@ -29,24 +30,13 @@ export default {
       name: 'shellify',
       format: 'ULFO',
       icon: './build/icon.icns',
-      contents: [
-        {
-          x: 130,
-          y: 220,
-          type: 'file',
-          path: null,
-        },
-        {
-          x: 410,
-          y: 220,
-          type: 'link',
-          path: '/Applications',
-        },
-      ],
     }),
     new MakerPKG({
       productName: 'shellify',
       identifier: 'me.yangzhi.shellify',
+      pkg: {
+        disableSymlinks: true,
+      },
     }),
   ],
   plugins: [

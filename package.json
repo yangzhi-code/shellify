@@ -2,14 +2,14 @@
   "name": "shellify",
   "version": "0.9.8",
   "description": "An Electron application with Vue",
-  "main": "./out/main/index.js",
+  "main": ".vite/build/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "start": "electron-forge start",
-    "build": "electron-forge make",
+    "build": "electron-forge make --targets @electron-forge/maker-dmg",
     "build:mac:store": "electron-forge make --platform=darwin --targets=@electron-forge/maker-pkg"
   },
   "dependencies": {
